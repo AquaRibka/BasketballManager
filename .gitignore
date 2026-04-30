@@ -10,12 +10,17 @@ Thumbs.db
 # Environment files
 .env
 .env.*
+!.env.example
 
 # Dependencies / build artifacts
 node_modules/
 dist/
 build/
 coverage/
+target/
+
+# Local infrastructure runtime data
+.local/
 
 # Python cache
 __pycache__/
