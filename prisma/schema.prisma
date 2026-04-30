@@ -6,9 +6,41 @@ datasource db {
   provider = "postgresql"
 }
 
+enum PlayerPosition {
+  PG
+  SG
+  SF
+  PF
+  C
+}
+
 model Team {
   id        String   @id @default(cuid())
-  name      String
+  name      String   @db.VarChar(120)
+  city      String   @db.VarChar(120)
+  shortName String   @unique @db.VarChar(10)
+  rating    Int      @default(60)
+  players   Player[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Player {
+  id          String         @id @default(cuid())
+  name        String         @db.VarChar(120)
+  age         Int
+  position    PlayerPosition
+  shooting    Int
+  passing     Int
+  defense     Int
+  rebounding  Int
+  athleticism Int
+  potential   Int
+  overall     Int
+  teamId      String?
+  team        Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([teamId])
 }
