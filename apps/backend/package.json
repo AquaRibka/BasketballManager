@@ -1,0 +1,15 @@
+{
+  "name": "@basketball-manager/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node src/index.mjs",
+    "db:test": "node src/test-db.mjs",
+    "check": "node src/test-db.mjs"
+  },
+  "dependencies": {
+    "@basketball-manager/shared": "0.1.0",
+    "@basketball-manager/simulation-engine": "0.1.0"
+  }
+}

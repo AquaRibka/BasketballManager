@@ -1,0 +1,13 @@
+{
+  "name": "@basketball-manager/frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node src/index.mjs",
+    "check": "node src/index.mjs"
+  },
+  "dependencies": {
+    "@basketball-manager/shared": "0.1.0"
+  }
+}
