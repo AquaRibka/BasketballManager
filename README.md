@@ -168,3 +168,31 @@ npm run dev --workspace @basketball-manager/frontend
 ```bash
 npm run db:test
 ```
+
+---
+
+## Конфигурация
+
+Проект использует локальный `.env`, который не должен попадать в Git.
+
+Базовый порядок настройки:
+
+```bash
+cp .env.example .env
+```
+
+Ключевые переменные MVP:
+
+- `NODE_ENV`
+- `API_HOST`
+- `API_PORT`
+- `FRONTEND_API_URL`
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_PORT`
+- `DATABASE_URL`
+- `DIRECT_URL`
+- `DATABASE_URL_DOCKER`
+
+Подробная схема конфигурации описана в [docs/configuration-schema.md](/home/newuser/Documents/BM/docs/configuration-schema.md:1).
