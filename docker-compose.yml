@@ -1,4 +1,36 @@
 services:
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: basketballmanager-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: 3000
+      HOST: 0.0.0.0
+      DATABASE_URL: ${DATABASE_URL_DOCKER:-postgresql://bm_user:bm_dev_password@postgres:5432/basketball_manager?schema=public}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health').then((res)=>process.exit(res.ok?0:1)).catch(()=>process.exit(1))"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - dev-network
+
   postgres:
     image: postgres:16-alpine
     container_name: basketballmanager-postgres
