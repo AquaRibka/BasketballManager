@@ -2,15 +2,33 @@
   "name": "@basketball-manager/backend",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
-    "start": "node src/index.mjs",
-    "dev": "node src/index.mjs",
-    "db:test": "node src/test-db.mjs",
-    "check": "node src/test-db.mjs"
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "dev": "nest start --watch",
+    "db:test": "ts-node --project tsconfig.json src/scripts/test-db.ts",
+    "check": "npm run build"
   },
   "dependencies": {
+    "@nestjs/common": "^11.1.6",
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/core": "^11.1.6",
+    "@nestjs/platform-express": "^11.1.6",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
     "@basketball-manager/shared": "0.1.0",
-    "@basketball-manager/simulation-engine": "0.1.0"
+    "@basketball-manager/simulation-engine": "0.1.0",
+    "dotenv": "^17.2.3",
+    "pg": "^8.16.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.10",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.9.0",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.9.3"
   }
 }

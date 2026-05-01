@@ -12,6 +12,8 @@ RUN npm install
 
 COPY . .
 
+RUN npm run build --workspace @basketball-manager/backend
+
 EXPOSE 3000
 
 CMD ["npm", "run", "start", "--workspace", "@basketball-manager/backend"]
