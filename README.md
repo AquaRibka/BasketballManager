@@ -140,6 +140,10 @@ npm install
 ```bash
 npm run dev
 npm run check
+npm run lint
+npm run lint:fix
+npm run format
+npm run format:check
 npm run db:test
 npm run prisma:generate
 npm run prisma:migrate

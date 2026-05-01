@@ -1,1 +1,1 @@
-console.log("Frontend workspace is configured.");
+console.log('Frontend workspace is configured.');

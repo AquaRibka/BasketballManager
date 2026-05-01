@@ -7,8 +7,9 @@ export class HealthService {
 
   async check() {
     try {
-      const [{ databaseName }] =
-        await this.prisma.$queryRaw<{ databaseName: string }[]>`SELECT current_database() AS "databaseName"`;
+      const [{ databaseName }] = await this.prisma.$queryRaw<
+        { databaseName: string }[]
+      >`SELECT current_database() AS "databaseName"`;
 
       return {
         httpStatus: 200,
@@ -22,8 +23,7 @@ export class HealthService {
         },
       };
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Database connection failed';
+      const message = error instanceof Error ? error.message : 'Database connection failed';
 
       return {
         httpStatus: 503,

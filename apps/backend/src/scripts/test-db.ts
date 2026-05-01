@@ -10,8 +10,9 @@ async function main() {
 
   try {
     const prisma = app.get(PrismaService);
-    const [{ databaseName }] =
-      await prisma.$queryRaw<{ databaseName: string }[]>`SELECT current_database() AS "databaseName"`;
+    const [{ databaseName }] = await prisma.$queryRaw<
+      { databaseName: string }[]
+    >`SELECT current_database() AS "databaseName"`;
 
     const team = await prisma.team.upsert({
       where: { shortName: 'BMN' },

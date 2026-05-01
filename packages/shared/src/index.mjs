@@ -1,1 +1,1 @@
-export const workspaceName = "shared";
+export const workspaceName = 'shared';

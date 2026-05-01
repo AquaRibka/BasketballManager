@@ -1,1 +1,1 @@
-export const workspaceName = "simulation-engine";
+export const workspaceName = 'simulation-engine';
