@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { INestApplication } from '@nestjs/common';
+import { ConflictException, INestApplication, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
@@ -7,25 +7,267 @@ import { ApiExceptionFilter } from '../src/common/errors/api-exception.filter';
 import { createApiValidationPipe } from '../src/common/pipes/create-api-validation-pipe';
 import { PrismaService } from '../src/prisma/prisma.service';
 
-const VALID_CUID = 'cmolpef3i0000f3sbsx7ulstg';
+const TEAM_ID = 'cmolpef3i0000f3sbsx7ulstg';
+const PLAYER_ID = 'cmon3yv4y0003qfsbfdn5nihz';
+const OTHER_TEAM_ID = 'cmon47b2400008csbqzi34a1a';
 
-describe('API validation', () => {
+type TeamRecord = ReturnType<typeof createTeamRecord>;
+type PlayerRecord = ReturnType<typeof createPlayerRecord>;
+
+function createTeamRecord(overrides = {}) {
+  return {
+    id: TEAM_ID,
+    name: 'Basketball Manager Night',
+    city: 'Moscow',
+    shortName: 'BMN',
+    rating: 82,
+    createdAt: new Date('2026-05-01T15:33:17.116Z'),
+    updatedAt: new Date('2026-05-01T15:33:17.116Z'),
+    ...overrides,
+  };
+}
+
+function createPlayerRecord(overrides = {}) {
+  return {
+    id: PLAYER_ID,
+    name: 'Alex Carter',
+    age: 22,
+    position: 'PG',
+    shooting: 78,
+    passing: 84,
+    defense: 71,
+    rebounding: 52,
+    athleticism: 80,
+    potential: 88,
+    overall: 79,
+    teamId: TEAM_ID,
+    createdAt: new Date('2026-05-01T15:33:17.140Z'),
+    updatedAt: new Date('2026-05-01T15:33:17.140Z'),
+    ...overrides,
+  };
+}
+
+describe('Team and Player API', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
+    let teamCounter = 0;
+    let playerCounter = 0;
+    let teams = [
+      createTeamRecord(),
+      createTeamRecord({ id: OTHER_TEAM_ID, name: 'Demo Wolves', shortName: 'DWV' }),
+    ];
+    let players = [createPlayerRecord()];
+
+    const attachTeam = (player: PlayerRecord) => {
+      const team = teams.find((candidate) => candidate.id === player.teamId);
+
+      return {
+        ...player,
+        team: team
+          ? {
+              id: team.id,
+              name: team.name,
+              shortName: team.shortName,
+            }
+          : null,
+      };
+    };
+
     const prismaMock = {
       $queryRaw: jest.fn(),
       team: {
-        findMany: jest.fn(),
-        findUnique: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
+        findMany: jest.fn(({ orderBy, select } = {}) => {
+          let result = [...teams];
+
+          if (orderBy?.[0]?.name === 'asc') {
+            result.sort((left, right) => left.name.localeCompare(right.name));
+          }
+
+          if (select?.id) {
+            return result.map((team) => ({ id: team.id }));
+          }
+
+          return result;
+        }),
+        findUnique: jest.fn(({ where, include, select }) => {
+          const team = teams.find(
+            (candidate) =>
+              (where.id && candidate.id === where.id) ||
+              (where.shortName && candidate.shortName === where.shortName),
+          );
+
+          if (!team) {
+            return null;
+          }
+
+          if (select?.id) {
+            return { id: team.id };
+          }
+
+          if (include?.players) {
+            const teamPlayers = players
+              .filter((player) => player.teamId === team.id)
+              .sort(
+                (left, right) =>
+                  right.overall - left.overall || left.name.localeCompare(right.name),
+              );
+
+            return {
+              ...team,
+              players: teamPlayers,
+            };
+          }
+
+          return team;
+        }),
+        create: jest.fn(({ data }) => {
+          if (teams.some((team) => team.shortName === data.shortName)) {
+            const error = new Error('Unique constraint failed') as Error & { code?: string };
+            error.code = 'P2002';
+            throw error;
+          }
+
+          teamCounter += 1;
+
+          const team = createTeamRecord({
+            id: `cteamcreate${String(teamCounter).padStart(14, '0')}`,
+            ...data,
+            createdAt: new Date('2026-05-02T10:00:00.000Z'),
+            updatedAt: new Date('2026-05-02T10:00:00.000Z'),
+          });
+
+          teams = [...teams, team];
+
+          return team;
+        }),
+        update: jest.fn(({ where, data }) => {
+          const index = teams.findIndex((team) => team.id === where.id);
+
+          if (index === -1) {
+            throw new NotFoundException('Team not found');
+          }
+
+          if (
+            typeof data.shortName === 'string' &&
+            teams.some((team) => team.id !== where.id && team.shortName === data.shortName)
+          ) {
+            const error = new Error('Unique constraint failed') as Error & { code?: string };
+            error.code = 'P2002';
+            throw error;
+          }
+
+          const updatedTeam = {
+            ...teams[index],
+            ...data,
+            updatedAt: new Date('2026-05-02T10:05:00.000Z'),
+          };
+
+          teams[index] = updatedTeam;
+
+          return updatedTeam;
+        }),
       },
       player: {
-        findMany: jest.fn(),
-        findUnique: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
+        findMany: jest.fn(({ where, include, orderBy } = {}) => {
+          let result = [...players];
+
+          if (where?.teamId) {
+            result = result.filter((player) => player.teamId === where.teamId);
+          }
+
+          if (orderBy?.[0]?.position === 'asc') {
+            result.sort((left, right) => {
+              if (left.position !== right.position) {
+                return left.position.localeCompare(right.position);
+              }
+
+              if (right.overall !== left.overall) {
+                return right.overall - left.overall;
+              }
+
+              return left.name.localeCompare(right.name);
+            });
+          } else if (orderBy?.[0]?.overall === 'desc') {
+            result.sort(
+              (left, right) => right.overall - left.overall || left.name.localeCompare(right.name),
+            );
+          }
+
+          if (include?.team) {
+            return result.map(attachTeam);
+          }
+
+          return result;
+        }),
+        findUnique: jest.fn(({ where, include }) => {
+          const player = players.find((candidate) => candidate.id === where.id);
+
+          if (!player) {
+            return null;
+          }
+
+          if (include?.team) {
+            return attachTeam(player);
+          }
+
+          return player;
+        }),
+        create: jest.fn(({ data, include }) => {
+          if (data.team?.connect?.id && !teams.some((team) => team.id === data.team.connect.id)) {
+            throw new NotFoundException('Team not found');
+          }
+
+          playerCounter += 1;
+
+          const player = createPlayerRecord({
+            id: `cplayercreate${String(playerCounter).padStart(12, '0')}`,
+            ...data,
+            teamId: data.team?.connect?.id ?? null,
+            createdAt: new Date('2026-05-02T11:00:00.000Z'),
+            updatedAt: new Date('2026-05-02T11:00:00.000Z'),
+          });
+
+          players = [...players, player];
+
+          return include?.team ? attachTeam(player) : player;
+        }),
+        update: jest.fn(({ where, data, include }) => {
+          const index = players.findIndex((player) => player.id === where.id);
+
+          if (index === -1) {
+            throw new NotFoundException('Player not found');
+          }
+
+          const nextTeamId =
+            typeof data.team?.connect?.id === 'string'
+              ? data.team.connect.id
+              : players[index].teamId;
+
+          if (nextTeamId && !teams.some((team) => team.id === nextTeamId)) {
+            throw new NotFoundException('Team not found');
+          }
+
+          const nextOverall =
+            typeof data.overall === 'number' ? data.overall : players[index].overall;
+          const nextPotential =
+            typeof data.potential === 'number' ? data.potential : players[index].potential;
+
+          if (nextOverall > nextPotential) {
+            throw new ConflictException('Invalid player state');
+          }
+
+          const updatedPlayer = {
+            ...players[index],
+            ...data,
+            teamId: nextTeamId ?? null,
+            updatedAt: new Date('2026-05-02T11:05:00.000Z'),
+          };
+
+          players[index] = updatedPlayer;
+
+          return include?.team ? attachTeam(updatedPlayer) : updatedPlayer;
+        }),
       },
     };
 
@@ -45,6 +287,78 @@ describe('API validation', () => {
 
   afterAll(async () => {
     await app.close();
+  });
+
+  it('creates a team successfully', async () => {
+    const response = await request(app.getHttpServer()).post('/teams').send({
+      name: 'QA Lions',
+      city: 'Kazan',
+      shortName: 'qal',
+      rating: 77,
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body.name).toBe('QA Lions');
+    expect(response.body.city).toBe('Kazan');
+    expect(response.body.shortName).toBe('QAL');
+    expect(response.body.rating).toBe(77);
+    expect(response.body.id).toMatch(/^c/);
+  });
+
+  it('returns a team by id with roster', async () => {
+    const response = await request(app.getHttpServer()).get(`/teams/${TEAM_ID}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.id).toBe(TEAM_ID);
+    expect(response.body.name).toBe('Basketball Manager Night');
+    expect(response.body.players).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: PLAYER_ID,
+          name: 'Alex Carter',
+        }),
+      ]),
+    );
+  });
+
+  it('creates a player successfully', async () => {
+    const response = await request(app.getHttpServer()).post('/players').send({
+      name: 'QA Guard',
+      age: 23,
+      position: 'PG',
+      shooting: 81,
+      passing: 85,
+      defense: 74,
+      rebounding: 51,
+      athleticism: 83,
+      potential: 88,
+      overall: 82,
+      teamId: TEAM_ID,
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body.name).toBe('QA Guard');
+    expect(response.body.teamId).toBe(TEAM_ID);
+    expect(response.body.team).toEqual(
+      expect.objectContaining({
+        id: TEAM_ID,
+        shortName: 'BMN',
+      }),
+    );
+  });
+
+  it('returns a player by id', async () => {
+    const response = await request(app.getHttpServer()).get(`/players/${PLAYER_ID}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.id).toBe(PLAYER_ID);
+    expect(response.body.name).toBe('Alex Carter');
+    expect(response.body.team).toEqual(
+      expect.objectContaining({
+        id: TEAM_ID,
+        shortName: 'BMN',
+      }),
+    );
   });
 
   it('rejects blank team names', async () => {
@@ -130,18 +444,27 @@ describe('API validation', () => {
     );
   });
 
-  it('returns unified shape for not found errors', async () => {
-    const response = await request(app.getHttpServer()).get('/players/cmolpef3i0000f3sbsx7ulstg');
+  it('returns unified shape for team not found errors', async () => {
+    const response = await request(app.getHttpServer()).get('/teams/cmolpef3i0001f3sbsx7ulsth');
+
+    expect(response.status).toBe(404);
+    expect(response.body.code).toBe('NOT_FOUND');
+    expect(response.body.message).toBe('Team not found');
+    expect(response.body.details).toBeNull();
+  });
+
+  it('returns unified shape for player not found errors', async () => {
+    const response = await request(app.getHttpServer()).get('/players/cmolpef3i0002f3sbsx7ulsti');
 
     expect(response.status).toBe(404);
     expect(response.body.code).toBe('NOT_FOUND');
     expect(response.body.message).toBe('Player not found');
     expect(response.body.details).toBeNull();
-    expect(response.body.path).toBe('/players/cmolpef3i0000f3sbsx7ulstg');
+    expect(response.body.path).toBe('/players/cmolpef3i0002f3sbsx7ulsti');
   });
 
   it('rejects player attributes outside the allowed range', async () => {
-    const response = await request(app.getHttpServer()).patch(`/players/${VALID_CUID}`).send({
+    const response = await request(app.getHttpServer()).patch(`/players/${PLAYER_ID}`).send({
       shooting: 101,
     });
 

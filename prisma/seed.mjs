@@ -1,20 +1,9 @@
-import 'dotenv/config';
-import { PrismaPg } from '@prisma/adapter-pg';
+import { createPrismaClient } from './lib/create-prisma-client.mjs';
 import prismaClientPkg from '@prisma/client';
 
-const { PrismaClient, PlayerPosition } = prismaClientPkg;
+const { PlayerPosition } = prismaClientPkg;
 
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-  throw new Error('DATABASE_URL is not configured');
-}
-
-const adapter = new PrismaPg({
-  connectionString,
-});
-
-const prisma = new PrismaClient({ adapter });
+const prisma = createPrismaClient();
 
 const positions = [
   PlayerPosition.PG,

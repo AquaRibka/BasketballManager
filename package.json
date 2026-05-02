@@ -21,6 +21,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:reset": "prisma migrate reset --force",
     "prisma:seed": "prisma db seed",
+    "prisma:seed:test": "node prisma/seed-test.mjs",
+    "prisma:reset:test": "prisma migrate reset --force --skip-seed && node prisma/seed-test.mjs",
     "db:seed": "npm run prisma:seed",
     "db:test": "npm run db:test --workspace @basketball-manager/backend"
   },
