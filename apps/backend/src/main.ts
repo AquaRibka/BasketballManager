@@ -23,6 +23,7 @@ async function bootstrap() {
     .setDescription(SWAGGER_API_GUIDE)
     .setVersion('1.0')
     .addTag('Health', 'Service and database health checks')
+    .addTag('Matches', 'Match simulation endpoints')
     .addTag('Teams', 'Team and roster endpoints')
     .addTag('Players', 'Player endpoints')
     .build();

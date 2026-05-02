@@ -3,11 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "types": "./src/index.d.ts",
   "scripts": {
     "test": "node --test"
   },
   "exports": {
-    ".": "./src/index.mjs"
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.mjs",
+      "require": "./src/index.cjs",
+      "default": "./src/index.mjs"
+    }
   },
   "dependencies": {
     "@basketball-manager/shared": "0.1.0"

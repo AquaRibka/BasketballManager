@@ -10,6 +10,8 @@ import { PrismaService } from '../src/prisma/prisma.service';
 const TEAM_ID = 'cmolpef3i0000f3sbsx7ulstg';
 const PLAYER_ID = 'cmon3yv4y0003qfsbfdn5nihz';
 const OTHER_TEAM_ID = 'cmon47b2400008csbqzi34a1a';
+const MATCH_ID = 'cmolpef3i0004f3sbsx7ulstu';
+const MISSING_MATCH_ID = 'cmolpef3i0005f3sbsx7ulstv';
 
 type TeamRecord = ReturnType<typeof createTeamRecord>;
 type PlayerRecord = ReturnType<typeof createPlayerRecord>;
@@ -58,6 +60,20 @@ describe('Team and Player API', () => {
       createTeamRecord({ id: OTHER_TEAM_ID, name: 'Demo Wolves', shortName: 'DWV' }),
     ];
     let players = [createPlayerRecord()];
+    let matches = [
+      {
+        id: MATCH_ID,
+        homeTeamId: TEAM_ID,
+        awayTeamId: OTHER_TEAM_ID,
+        status: 'SCHEDULED',
+        homeScore: null,
+        awayScore: null,
+        winnerTeamId: null,
+        playedAt: null,
+        createdAt: new Date('2026-05-02T12:00:00.000Z'),
+        updatedAt: new Date('2026-05-02T12:00:00.000Z'),
+      },
+    ];
 
     const attachTeam = (player: PlayerRecord) => {
       const team = teams.find((candidate) => candidate.id === player.teamId);
@@ -269,6 +285,88 @@ describe('Team and Player API', () => {
           return include?.team ? attachTeam(updatedPlayer) : updatedPlayer;
         }),
       },
+      match: {
+        findUnique: jest.fn(({ where, include }) => {
+          const match = matches.find((candidate) => candidate.id === where.id);
+
+          if (!match) {
+            return null;
+          }
+
+          if (include?.homeTeam || include?.awayTeam) {
+            const homeTeam = teams.find((team) => team.id === match.homeTeamId);
+            const awayTeam = teams.find((team) => team.id === match.awayTeamId);
+
+            if (!homeTeam || !awayTeam) {
+              throw new Error('Match references a missing team in test fixtures');
+            }
+
+            return {
+              ...match,
+              homeTeam: include?.homeTeam?.include?.players
+                ? {
+                    ...homeTeam,
+                    players: players
+                      .filter((player) => player.teamId === homeTeam.id)
+                      .map((player) => ({ overall: player.overall })),
+                  }
+                : homeTeam,
+              awayTeam: include?.awayTeam?.include?.players
+                ? {
+                    ...awayTeam,
+                    players: players
+                      .filter((player) => player.teamId === awayTeam.id)
+                      .map((player) => ({ overall: player.overall })),
+                  }
+                : awayTeam,
+            };
+          }
+
+          return match;
+        }),
+        update: jest.fn(({ where, data, include }) => {
+          const index = matches.findIndex((match) => match.id === where.id);
+
+          if (index === -1) {
+            throw new NotFoundException('Match not found');
+          }
+
+          const updatedMatch = {
+            ...matches[index],
+            ...data,
+            updatedAt: new Date('2026-05-02T12:05:00.000Z'),
+          };
+
+          matches[index] = updatedMatch;
+
+          if (include?.homeTeam || include?.awayTeam) {
+            const homeTeam = teams.find((team) => team.id === updatedMatch.homeTeamId);
+            const awayTeam = teams.find((team) => team.id === updatedMatch.awayTeamId);
+
+            return {
+              ...updatedMatch,
+              homeTeam: homeTeam
+                ? {
+                    id: homeTeam.id,
+                    name: homeTeam.name,
+                    shortName: homeTeam.shortName,
+                    rating: homeTeam.rating,
+                  }
+                : null,
+              awayTeam: awayTeam
+                ? {
+                    id: awayTeam.id,
+                    name: awayTeam.name,
+                    shortName: awayTeam.shortName,
+                    rating: awayTeam.rating,
+                  }
+                : null,
+            };
+          }
+
+          return updatedMatch;
+        }),
+      },
     };
 
     const moduleFixture = await Test.createTestingModule({
@@ -359,6 +457,18 @@ describe('Team and Player API', () => {
         shortName: 'BMN',
       }),
     );
+  });
+
+  it('simulates a match successfully', async () => {
+    const response = await request(app.getHttpServer()).post(`/matches/${MATCH_ID}/simulate`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.id).toBe(MATCH_ID);
+    expect(response.body.status).toBe('COMPLETED');
+    expect(response.body.homeTeam.id).toBe(TEAM_ID);
+    expect(response.body.awayTeam.id).toBe(OTHER_TEAM_ID);
+    expect(response.body.homeScore).not.toBe(response.body.awayScore);
+    expect([TEAM_ID, OTHER_TEAM_ID]).toContain(response.body.winnerTeamId);
   });
 
   it('rejects blank team names', async () => {
@@ -461,6 +571,26 @@ describe('Team and Player API', () => {
     expect(response.body.message).toBe('Player not found');
     expect(response.body.details).toBeNull();
     expect(response.body.path).toBe('/players/cmolpef3i0002f3sbsx7ulsti');
+  });
+
+  it('returns unified shape for match not found errors', async () => {
+    const response = await request(app.getHttpServer()).post(
+      `/matches/${MISSING_MATCH_ID}/simulate`,
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.body.code).toBe('NOT_FOUND');
+    expect(response.body.message).toBe('Match not found');
+    expect(response.body.details).toBeNull();
+  });
+
+  it('prevents duplicate match simulation', async () => {
+    const response = await request(app.getHttpServer()).post(`/matches/${MATCH_ID}/simulate`);
+
+    expect(response.status).toBe(409);
+    expect(response.body.code).toBe('CONFLICT');
+    expect(response.body.message).toBe('Match has already been simulated');
+    expect(response.body.details).toBeNull();
   });
 
   it('rejects player attributes outside the allowed range', async () => {
