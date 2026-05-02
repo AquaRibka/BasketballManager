@@ -4,24 +4,98 @@ import { simulateMatch } from '../src/index.mjs';
 
 const homeTeam = {
   id: 'team_home',
+  name: 'Home Team',
+  shortName: 'HOME',
   rating: 84,
-  players: [{ overall: 84 }, { overall: 82 }, { overall: 80 }],
+  players: [
+    {
+      id: 'home_pg',
+      name: 'Home PG',
+      position: 'PG',
+      overall: 84,
+      shooting: 81,
+      passing: 85,
+      defense: 76,
+      rebounding: 60,
+      athleticism: 82,
+    },
+    {
+      id: 'home_sg',
+      name: 'Home SG',
+      position: 'SG',
+      overall: 82,
+      shooting: 84,
+      passing: 77,
+      defense: 73,
+      rebounding: 58,
+      athleticism: 80,
+    },
+    {
+      id: 'home_c',
+      name: 'Home C',
+      position: 'C',
+      overall: 80,
+      shooting: 68,
+      passing: 65,
+      defense: 82,
+      rebounding: 84,
+      athleticism: 76,
+    },
+  ],
 };
 
 const awayTeam = {
   id: 'team_away',
+  name: 'Away Team',
+  shortName: 'AWAY',
   rating: 79,
-  players: [{ overall: 78 }, { overall: 77 }, { overall: 76 }],
+  players: [
+    {
+      id: 'away_pg',
+      name: 'Away PG',
+      position: 'PG',
+      overall: 78,
+      shooting: 76,
+      passing: 79,
+      defense: 70,
+      rebounding: 55,
+      athleticism: 77,
+    },
+    {
+      id: 'away_sf',
+      name: 'Away SF',
+      position: 'SF',
+      overall: 77,
+      shooting: 75,
+      passing: 72,
+      defense: 74,
+      rebounding: 69,
+      athleticism: 78,
+    },
+    {
+      id: 'away_c',
+      name: 'Away C',
+      position: 'C',
+      overall: 76,
+      shooting: 66,
+      passing: 61,
+      defense: 78,
+      rebounding: 81,
+      athleticism: 73,
+    },
+  ],
 };
 
 test('simulateMatch is deterministic for the same match id', () => {
   const first = simulateMatch({
     matchId: 'match_1',
+    seed: 'match_1',
     homeTeam,
     awayTeam,
   });
   const second = simulateMatch({
     matchId: 'match_1',
+    seed: 'match_1',
     homeTeam,
     awayTeam,
   });
@@ -32,12 +106,81 @@ test('simulateMatch is deterministic for the same match id', () => {
 test('simulateMatch always returns a winner and no draws', () => {
   const result = simulateMatch({
     matchId: 'match_2',
+    seed: 'match_2',
     homeTeam,
     awayTeam,
   });
 
   assert.notEqual(result.homeScore, result.awayScore);
-  assert.ok(
-    result.winnerTeamId === homeTeam.id || result.winnerTeamId === awayTeam.id,
+  assert.equal(Number.isInteger(result.overtimeCount), true);
+  assert.equal(result.overtimeCount >= 0, true);
+  assert.ok(result.winnerTeamId === homeTeam.id || result.winnerTeamId === awayTeam.id);
+});
+
+test('simulateMatch returns score and statistics consistent with the result', () => {
+  const result = simulateMatch({
+    matchId: 'match_3',
+    seed: 'match_3',
+    homeTeam,
+    awayTeam,
+  });
+
+  assert.equal(result.score.home, result.homeScore);
+  assert.equal(result.score.away, result.awayScore);
+  assert.equal(result.homeScore >= 55, true);
+  assert.equal(result.awayScore >= 55, true);
+  assert.equal(result.homeScore <= 162, true);
+  assert.equal(result.awayScore <= 162, true);
+  assert.equal(
+    result.statistics.homeTeam.fieldGoalsMade <= result.statistics.homeTeam.fieldGoalsAttempted,
+    true,
   );
+  assert.equal(
+    result.statistics.awayTeam.fieldGoalsMade <= result.statistics.awayTeam.fieldGoalsAttempted,
+    true,
+  );
+  assert.equal(
+    result.statistics.homeTeam.threePointsMade <= result.statistics.homeTeam.threePointsAttempted,
+    true,
+  );
+  assert.equal(
+    result.statistics.awayTeam.threePointsMade <= result.statistics.awayTeam.threePointsAttempted,
+    true,
+  );
+});
+
+test('simulateMatch resolves ties through overtime instead of a direct +1 adjustment', () => {
+  const balancedHomeTeam = {
+    ...homeTeam,
+    id: 'balanced_home',
+    rating: 80,
+    players: awayTeam.players,
+  };
+  const balancedAwayTeam = {
+    ...awayTeam,
+    id: 'balanced_away',
+    rating: 80,
+    players: awayTeam.players,
+  };
+
+  let overtimeResult = null;
+
+  for (let index = 0; index < 500; index += 1) {
+    const result = simulateMatch({
+      matchId: `overtime_search_${index}`,
+      seed: `overtime_search_${index}`,
+      homeTeam: balancedHomeTeam,
+      awayTeam: balancedAwayTeam,
+    });
+
+    if (result.overtimeCount > 0) {
+      overtimeResult = result;
+      break;
+    }
+  }
+
+  assert.notEqual(overtimeResult, null);
+  assert.equal(overtimeResult.homeScore === overtimeResult.awayScore, false);
+  assert.equal(overtimeResult.overtimeCount > 0, true);
+  assert.equal(Math.abs(overtimeResult.homeScore - overtimeResult.awayScore) >= 1, true);
 });

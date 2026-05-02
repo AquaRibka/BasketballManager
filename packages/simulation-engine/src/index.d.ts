@@ -1,23 +1,13 @@
-export interface SimulateMatchPlayerInput {
-  overall: number;
-}
+import type {
+  MatchSimulationInput,
+  MatchSimulationPlayerSnapshot,
+  MatchSimulationResult,
+  MatchSimulationTeamSnapshot,
+} from '@basketball-manager/shared';
 
-export interface SimulateMatchTeamInput {
-  id: string;
-  rating: number;
-  players?: SimulateMatchPlayerInput[];
-}
+export type SimulateMatchPlayerInput = MatchSimulationPlayerSnapshot;
+export type SimulateMatchTeamInput = MatchSimulationTeamSnapshot;
+export type SimulateMatchInput = MatchSimulationInput;
+export type SimulateMatchResult = MatchSimulationResult;
 
-export interface SimulateMatchInput {
-  matchId: string;
-  homeTeam: SimulateMatchTeamInput;
-  awayTeam: SimulateMatchTeamInput;
-}
-
-export interface SimulateMatchResult {
-  homeScore: number;
-  awayScore: number;
-  winnerTeamId: string;
-}
-
-export function simulateMatch(input: SimulateMatchInput): SimulateMatchResult;
+export function simulateMatch(input: MatchSimulationInput): MatchSimulationResult;

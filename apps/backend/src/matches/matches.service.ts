@@ -1,7 +1,52 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { MatchStatus } from '@prisma/client';
+import type {
+  MatchSimulationInput,
+  MatchSimulationPlayerSnapshot,
+  MatchSimulationTeamSnapshot,
+} from '@basketball-manager/shared';
 import { simulateMatch } from '@basketball-manager/simulation-engine';
 import { PrismaService } from '../prisma/prisma.service';
+
+function toMatchSimulationPlayerSnapshot(player: {
+  id: string;
+  name: string;
+  position: MatchSimulationPlayerSnapshot['position'];
+  overall: number;
+  shooting: number;
+  passing: number;
+  defense: number;
+  rebounding: number;
+  athleticism: number;
+}): MatchSimulationPlayerSnapshot {
+  return {
+    id: player.id,
+    name: player.name,
+    position: player.position,
+    overall: player.overall,
+    shooting: player.shooting,
+    passing: player.passing,
+    defense: player.defense,
+    rebounding: player.rebounding,
+    athleticism: player.athleticism,
+  };
+}
+
+function toMatchSimulationTeamSnapshot(team: {
+  id: string;
+  name: string;
+  shortName: string;
+  rating: number;
+  players: Array<Parameters<typeof toMatchSimulationPlayerSnapshot>[0]>;
+}): MatchSimulationTeamSnapshot {
+  return {
+    id: team.id,
+    name: team.name,
+    shortName: team.shortName,
+    rating: team.rating,
+    players: team.players.map(toMatchSimulationPlayerSnapshot),
+  };
+}
 
 @Injectable()
 export class MatchesService {
@@ -15,7 +60,15 @@ export class MatchesService {
           include: {
             players: {
               select: {
+                id: true,
+                name: true,
+                position: true,
                 overall: true,
+                shooting: true,
+                passing: true,
+                defense: true,
+                rebounding: true,
+                athleticism: true,
               },
             },
           },
@@ -24,7 +77,15 @@ export class MatchesService {
           include: {
             players: {
               select: {
+                id: true,
+                name: true,
+                position: true,
                 overall: true,
+                shooting: true,
+                passing: true,
+                defense: true,
+                rebounding: true,
+                athleticism: true,
               },
             },
           },
@@ -40,11 +101,13 @@ export class MatchesService {
       throw new ConflictException('Match has already been simulated');
     }
 
-    const result = simulateMatch({
+    const simulationInput: MatchSimulationInput = {
       matchId: match.id,
-      homeTeam: match.homeTeam,
-      awayTeam: match.awayTeam,
-    });
+      seed: match.id,
+      homeTeam: toMatchSimulationTeamSnapshot(match.homeTeam),
+      awayTeam: toMatchSimulationTeamSnapshot(match.awayTeam),
+    };
+    const result = simulateMatch(simulationInput);
 
     const updatedMatch = await this.prisma.match.update({
       where: { id },

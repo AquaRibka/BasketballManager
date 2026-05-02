@@ -19,7 +19,7 @@ function createRandom(seed) {
 }
 
 function averageOverall(players) {
-  if (!players || players.length === 0) {
+  if (players.length === 0) {
     return 60;
   }
 
@@ -27,39 +27,257 @@ function averageOverall(players) {
   return total / players.length;
 }
 
-function buildTeamStrength(team) {
-  const rosterAverage = averageOverall(team.players);
-  return team.rating * 0.45 + rosterAverage * 0.55;
-}
-
-function simulateMatch(input) {
-  const random = createRandom(stringToSeed(input.matchId));
-  const homeStrength = buildTeamStrength(input.homeTeam);
-  const awayStrength = buildTeamStrength(input.awayTeam);
-  const strengthDelta = homeStrength - awayStrength;
-  const homeBase = 72 + homeStrength * 0.22 + strengthDelta * 0.18;
-  const awayBase = 72 + awayStrength * 0.22 - strengthDelta * 0.12;
-
-  let homeScore = Math.round(homeBase + random() * 16 - 8);
-  let awayScore = Math.round(awayBase + random() * 16 - 8);
-
-  homeScore = Math.max(50, Math.min(130, homeScore));
-  awayScore = Math.max(50, Math.min(130, awayScore));
-
-  if (homeScore === awayScore) {
-    if (random() >= 0.5) {
-      homeScore += 1;
-    } else {
-      awayScore += 1;
-    }
+function averageAttribute(players, key) {
+  if (players.length === 0) {
+    return 60;
   }
 
-  const winnerTeamId = homeScore > awayScore ? input.homeTeam.id : input.awayTeam.id;
+  const total = players.reduce((sum, player) => sum + player[key], 0);
+  return total / players.length;
+}
+
+function buildTeamProfile(team) {
+  const players = team.players ?? [];
+
+  return {
+    overall: averageOverall(players),
+    shooting: averageAttribute(players, 'shooting'),
+    passing: averageAttribute(players, 'passing'),
+    defense: averageAttribute(players, 'defense'),
+    rebounding: averageAttribute(players, 'rebounding'),
+    athleticism: averageAttribute(players, 'athleticism'),
+  };
+}
+
+function buildTeamStrength(team) {
+  const profile = buildTeamProfile(team);
+
+  return (
+    team.rating * 0.38 +
+    profile.overall * 0.3 +
+    profile.shooting * 0.12 +
+    profile.defense * 0.1 +
+    profile.rebounding * 0.05 +
+    profile.athleticism * 0.05
+  );
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function buildGameContext(homeProfile, awayProfile, homeStrength, awayStrength) {
+  const paceBase =
+    91 +
+    (homeProfile.athleticism + awayProfile.athleticism) / 12 +
+    (homeProfile.passing + awayProfile.passing) / 18;
+  const pace = clamp(Math.round(paceBase), 84, 108);
+  const strengthDelta = homeStrength - awayStrength;
+
+  return {
+    pace,
+    strengthDelta,
+    homeEfficiency: clamp(
+      0.97 +
+        homeStrength / 210 +
+        (homeProfile.shooting - awayProfile.defense) / 300 +
+        strengthDelta / 240,
+      0.88,
+      1.28,
+    ),
+    awayEfficiency: clamp(
+      0.95 +
+        awayStrength / 210 +
+        (awayProfile.shooting - homeProfile.defense) / 300 -
+        strengthDelta / 260,
+      0.86,
+      1.24,
+    ),
+  };
+}
+
+function generateRegulationScore(context, random) {
+  const paceSwing = 7;
+  const scoringSwing = 9;
+  const homePossessions = clamp(
+    Math.round(context.pace + random() * paceSwing * 2 - paceSwing + 1),
+    82,
+    112,
+  );
+  const awayPossessions = clamp(
+    Math.round(context.pace + random() * paceSwing * 2 - paceSwing - 1),
+    82,
+    112,
+  );
+
+  const homeScore = clamp(
+    Math.round(
+      homePossessions * context.homeEfficiency + (random() * scoringSwing * 2 - scoringSwing),
+    ),
+    55,
+    138,
+  );
+  const awayScore = clamp(
+    Math.round(
+      awayPossessions * context.awayEfficiency + (random() * scoringSwing * 2 - scoringSwing),
+    ),
+    55,
+    138,
+  );
 
   return {
     homeScore,
     awayScore,
+  };
+}
+
+function resolveOvertime(homeScore, awayScore, context, random) {
+  let resolvedHomeScore = homeScore;
+  let resolvedAwayScore = awayScore;
+  let overtimeCount = 0;
+
+  while (resolvedHomeScore === resolvedAwayScore) {
+    overtimeCount += 1;
+
+    const overtimePace = clamp(Math.round(context.pace / 5), 8, 16);
+    const homeOvertimeScore = clamp(
+      Math.round(
+        overtimePace * context.homeEfficiency + (random() * 6 - 2.5) + context.strengthDelta / 40,
+      ),
+      4,
+      24,
+    );
+    const awayOvertimeScore = clamp(
+      Math.round(
+        overtimePace * context.awayEfficiency + (random() * 6 - 2.5) - context.strengthDelta / 40,
+      ),
+      4,
+      24,
+    );
+
+    resolvedHomeScore += homeOvertimeScore;
+    resolvedAwayScore += awayOvertimeScore;
+  }
+
+  return {
+    homeScore: resolvedHomeScore,
+    awayScore: resolvedAwayScore,
+    overtimeCount,
+  };
+}
+
+function buildTeamStatistics(score, teamProfile, opponentProfile, random) {
+  const freeThrowsMade = clamp(
+    Math.round(score * (0.14 + teamProfile.athleticism / 900) + random() * 3),
+    8,
+    Math.max(12, score - 12),
+  );
+  const fieldGoalsMade = clamp(
+    Math.round((score - freeThrowsMade) / 2.35),
+    18,
+    Math.max(24, score),
+  );
+  const threePointsMade = clamp(
+    Math.round(fieldGoalsMade * (0.22 + teamProfile.shooting / 500)),
+    4,
+    fieldGoalsMade,
+  );
+  const fieldGoalPercentage = clamp(
+    0.41 + (teamProfile.shooting - opponentProfile.defense) / 300,
+    0.38,
+    0.58,
+  );
+  const threePointPercentage = clamp(
+    0.28 + (teamProfile.shooting - opponentProfile.defense) / 400,
+    0.24,
+    0.47,
+  );
+  const freeThrowPercentage = clamp(0.68 + teamProfile.shooting / 500, 0.68, 0.92);
+
+  const threePointsAttempted = clamp(
+    Math.round(threePointsMade / threePointPercentage),
+    threePointsMade,
+    fieldGoalsMade + 18,
+  );
+  const fieldGoalsAttempted = clamp(
+    Math.round(fieldGoalsMade / fieldGoalPercentage),
+    fieldGoalsMade,
+    fieldGoalsMade + 35,
+  );
+  const freeThrowsAttempted = clamp(
+    Math.round(freeThrowsMade / freeThrowPercentage),
+    freeThrowsMade,
+    freeThrowsMade + 10,
+  );
+
+  return {
+    possessions: clamp(
+      Math.round(
+        fieldGoalsAttempted +
+          freeThrowsAttempted * 0.44 +
+          11 +
+          random() * 8 +
+          teamProfile.athleticism / 18,
+      ),
+      68,
+      108,
+    ),
+    fieldGoalsMade,
+    fieldGoalsAttempted,
+    threePointsMade,
+    threePointsAttempted,
+    freeThrowsMade,
+    freeThrowsAttempted,
+    assists: clamp(
+      Math.round(fieldGoalsMade * (0.46 + teamProfile.passing / 220)),
+      10,
+      fieldGoalsMade,
+    ),
+    rebounds: clamp(Math.round(28 + teamProfile.rebounding / 2.8 + random() * 8), 24, 62),
+    turnovers: clamp(Math.round(18 - teamProfile.passing / 12 + random() * 5), 7, 22),
+    steals: clamp(Math.round(5 + teamProfile.defense / 20 + random() * 4), 3, 16),
+    blocks: clamp(Math.round(2 + teamProfile.defense / 28 + random() * 3), 1, 11),
+    fouls: clamp(Math.round(14 + opponentProfile.athleticism / 16 + random() * 6), 10, 30),
+  };
+}
+
+function simulateMatch(input) {
+  const seed = input.seed ?? input.matchId;
+  const random = createRandom(stringToSeed(seed));
+  const homeStrength = buildTeamStrength(input.homeTeam);
+  const awayStrength = buildTeamStrength(input.awayTeam);
+  const homeProfile = buildTeamProfile(input.homeTeam);
+  const awayProfile = buildTeamProfile(input.awayTeam);
+  const context = buildGameContext(homeProfile, awayProfile, homeStrength, awayStrength);
+  const regulationScore = generateRegulationScore(context, random);
+  const resolvedScore = resolveOvertime(
+    regulationScore.homeScore,
+    regulationScore.awayScore,
+    context,
+    random,
+  );
+
+  const { homeScore, awayScore, overtimeCount } = resolvedScore;
+
+  const winnerTeamId = homeScore > awayScore ? input.homeTeam.id : input.awayTeam.id;
+  const loserTeamId = winnerTeamId === input.homeTeam.id ? input.awayTeam.id : input.homeTeam.id;
+
+  return {
+    matchId: input.matchId,
+    seed,
+    homeScore,
+    awayScore,
+    overtimeCount,
+    score: {
+      home: homeScore,
+      away: awayScore,
+    },
     winnerTeamId,
+    loserTeamId,
+    statistics: {
+      homeTeam: buildTeamStatistics(homeScore, homeProfile, awayProfile, random),
+      awayTeam: buildTeamStatistics(awayScore, awayProfile, homeProfile, random),
+    },
   };
 }
 
