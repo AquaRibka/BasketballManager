@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
+import { createApiValidationPipe } from './common/pipes/create-api-validation-pipe';
 import { PrismaService } from './prisma/prisma.service';
 
 async function bootstrap() {
@@ -11,6 +12,7 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
   prismaService.enableShutdownHooks(app);
+  app.useGlobalPipes(createApiValidationPipe());
 
   const host = configService.get<string>('HOST', '0.0.0.0');
   const port = Number(configService.get<string>('PORT', '3000'));
