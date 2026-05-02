@@ -129,8 +129,8 @@ test('simulateMatch returns score and statistics consistent with the result', ()
   assert.equal(result.score.away, result.awayScore);
   assert.equal(result.homeScore >= 55, true);
   assert.equal(result.awayScore >= 55, true);
-  assert.equal(result.homeScore <= 162, true);
-  assert.equal(result.awayScore <= 162, true);
+  assert.equal(result.homeScore <= 138 + result.overtimeCount * 24, true);
+  assert.equal(result.awayScore <= 138 + result.overtimeCount * 24, true);
   assert.equal(
     result.statistics.homeTeam.fieldGoalsMade <= result.statistics.homeTeam.fieldGoalsAttempted,
     true,

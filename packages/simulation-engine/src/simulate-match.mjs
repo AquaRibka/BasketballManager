@@ -1,3 +1,5 @@
+import { calculateTeamStrengthV1 } from './team-strength-v1.mjs';
+
 function stringToSeed(value) {
   let hash = 2166136261;
 
@@ -47,19 +49,6 @@ function buildTeamProfile(team) {
     rebounding: averageAttribute(players, 'rebounding'),
     athleticism: averageAttribute(players, 'athleticism'),
   };
-}
-
-function buildTeamStrength(team) {
-  const profile = buildTeamProfile(team);
-
-  return (
-    team.rating * 0.38 +
-    profile.overall * 0.3 +
-    profile.shooting * 0.12 +
-    profile.defense * 0.1 +
-    profile.rebounding * 0.05 +
-    profile.athleticism * 0.05
-  );
 }
 
 function clamp(value, min, max) {
@@ -244,8 +233,12 @@ function buildTeamStatistics(score, teamProfile, opponentProfile, random) {
 export function simulateMatch(input) {
   const seed = input.seed ?? input.matchId;
   const random = createRandom(stringToSeed(seed));
-  const homeStrength = buildTeamStrength(input.homeTeam);
-  const awayStrength = buildTeamStrength(input.awayTeam);
+  const homeStrength = calculateTeamStrengthV1(input.homeTeam, {
+    randomValue: random(),
+  });
+  const awayStrength = calculateTeamStrengthV1(input.awayTeam, {
+    randomValue: random(),
+  });
   const homeProfile = buildTeamProfile(input.homeTeam);
   const awayProfile = buildTeamProfile(input.awayTeam);
   const context = buildGameContext(homeProfile, awayProfile, homeStrength, awayStrength);
