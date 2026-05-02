@@ -18,7 +18,8 @@
     "format:check": "prettier . --check",
     "check": "npm run check --workspaces --if-present",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev --name init",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:reset": "prisma migrate reset --force",
     "prisma:seed": "prisma db seed",
     "db:seed": "npm run prisma:seed",
     "db:test": "npm run db:test --workspace @basketball-manager/backend"

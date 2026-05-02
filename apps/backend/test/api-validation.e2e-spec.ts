@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { ApiExceptionFilter } from '../src/common/errors/api-exception.filter';
 import { createApiValidationPipe } from '../src/common/pipes/create-api-validation-pipe';
 import { PrismaService } from '../src/prisma/prisma.service';
 
@@ -37,6 +38,7 @@ describe('API validation', () => {
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(createApiValidationPipe());
+    app.useGlobalFilters(new ApiExceptionFilter());
 
     await app.init();
   });
@@ -54,21 +56,50 @@ describe('API validation', () => {
     });
 
     expect(response.status).toBe(400);
-    expect(response.body.message).toContain('name should not be empty');
+    expect(response.body.code).toBe('VALIDATION_ERROR');
+    expect(response.body.message).toBe('Request validation failed');
+    expect(response.body.path).toBe('/teams');
+    expect(response.body.details.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'name',
+          messages: expect.arrayContaining(['name should not be empty']),
+        }),
+      ]),
+    );
   });
 
   it('rejects invalid team ids', async () => {
     const response = await request(app.getHttpServer()).get('/teams/not-a-cuid');
 
     expect(response.status).toBe(400);
-    expect(response.body.message).toContain('id must be a valid cuid');
+    expect(response.body.code).toBe('VALIDATION_ERROR');
+    expect(response.body.message).toBe('Request validation failed');
+    expect(response.body.details.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'id',
+          messages: expect.arrayContaining(['id must be a valid cuid']),
+        }),
+      ]),
+    );
+    expect(response.body.path).toBe('/teams/not-a-cuid');
   });
 
   it('rejects invalid roster ids', async () => {
     const response = await request(app.getHttpServer()).get('/teams/not-a-cuid/players');
 
     expect(response.status).toBe(400);
-    expect(response.body.message).toContain('id must be a valid cuid');
+    expect(response.body.code).toBe('VALIDATION_ERROR');
+    expect(response.body.details.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'id',
+          messages: expect.arrayContaining(['id must be a valid cuid']),
+        }),
+      ]),
+    );
+    expect(response.body.path).toBe('/teams/not-a-cuid/players');
   });
 
   it('rejects invalid player positions', async () => {
@@ -86,9 +117,27 @@ describe('API validation', () => {
     });
 
     expect(response.status).toBe(400);
-    expect(response.body.message).toContain(
-      'position must be one of the following values: PG, SG, SF, PF, C',
+    expect(response.body.code).toBe('VALIDATION_ERROR');
+    expect(response.body.details.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'position',
+          messages: expect.arrayContaining([
+            'position must be one of the following values: PG, SG, SF, PF, C',
+          ]),
+        }),
+      ]),
     );
+  });
+
+  it('returns unified shape for not found errors', async () => {
+    const response = await request(app.getHttpServer()).get('/players/cmolpef3i0000f3sbsx7ulstg');
+
+    expect(response.status).toBe(404);
+    expect(response.body.code).toBe('NOT_FOUND');
+    expect(response.body.message).toBe('Player not found');
+    expect(response.body.details).toBeNull();
+    expect(response.body.path).toBe('/players/cmolpef3i0000f3sbsx7ulstg');
   });
 
   it('rejects player attributes outside the allowed range', async () => {
@@ -97,7 +146,15 @@ describe('API validation', () => {
     });
 
     expect(response.status).toBe(400);
-    expect(response.body.message).toContain('shooting must not be greater than 100');
+    expect(response.body.code).toBe('VALIDATION_ERROR');
+    expect(response.body.details.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'shooting',
+          messages: expect.arrayContaining(['shooting must not be greater than 100']),
+        }),
+      ]),
+    );
   });
 
   it('rejects invalid team ids inside player payloads', async () => {
@@ -116,6 +173,14 @@ describe('API validation', () => {
     });
 
     expect(response.status).toBe(400);
-    expect(response.body.message).toContain('teamId must be a valid cuid');
+    expect(response.body.code).toBe('VALIDATION_ERROR');
+    expect(response.body.details.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'teamId',
+          messages: expect.arrayContaining(['teamId must be a valid cuid']),
+        }),
+      ]),
+    );
   });
 });
