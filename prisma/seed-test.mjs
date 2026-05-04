@@ -219,24 +219,31 @@ const testLeague = [
 ];
 
 const TEST_TEAM_SHORT_NAMES = testLeague.map((entry) => entry.team.shortName);
+const TEST_SEASON = {
+  id: 'season_test_2026',
+  name: 'Test League 2026',
+  year: 2026,
+  status: 'IN_PROGRESS',
+  currentRound: 1,
+};
 const TEST_MATCHES = [
   {
     key: 'TSTA_TSTB_001',
-    seasonId: 'season_test_2026',
+    seasonId: TEST_SEASON.id,
     round: 1,
     homeShortName: 'TSTA',
     awayShortName: 'TSTB',
   },
   {
     key: 'TSTB_TSTG_001',
-    seasonId: 'season_test_2026',
+    seasonId: TEST_SEASON.id,
     round: 1,
     homeShortName: 'TSTB',
     awayShortName: 'TSTG',
   },
   {
     key: 'TSTG_TSTA_001',
-    seasonId: 'season_test_2026',
+    seasonId: TEST_SEASON.id,
     round: 2,
     homeShortName: 'TSTG',
     awayShortName: 'TSTA',
@@ -244,6 +251,20 @@ const TEST_MATCHES = [
 ];
 
 async function seedTestData() {
+  await prisma.season.upsert({
+    where: {
+      id: TEST_SEASON.id,
+    },
+    update: {
+      name: TEST_SEASON.name,
+      year: TEST_SEASON.year,
+      status: TEST_SEASON.status,
+      currentRound: TEST_SEASON.currentRound,
+      finishedAt: null,
+    },
+    create: TEST_SEASON,
+  });
+
   const existingTeams = await prisma.team.findMany({
     where: {
       shortName: {
@@ -339,6 +360,24 @@ async function seedTestData() {
     })),
   });
 
+  await prisma.standing.deleteMany({
+    where: {
+      seasonId: TEST_SEASON.id,
+    },
+  });
+
+  await prisma.standing.createMany({
+    data: teams.map((team) => ({
+      seasonId: TEST_SEASON.id,
+      teamId: team.id,
+      wins: 0,
+      losses: 0,
+      pointsFor: 0,
+      pointsAgainst: 0,
+      pointDiff: 0,
+    })),
+  });
+
   const seededTeams = await prisma.team.count({
     where: {
       shortName: {
@@ -376,9 +415,19 @@ async function seedTestData() {
       ],
     },
   });
+  const seededStandings = await prisma.standing.count({
+    where: {
+      seasonId: TEST_SEASON.id,
+    },
+  });
+  const seededSeasons = await prisma.season.count({
+    where: {
+      id: TEST_SEASON.id,
+    },
+  });
 
   console.log(
-    `Seeded ${seededTeams} test teams, ${seededPlayers} test players, and ${seededMatches} test matches.`,
+    `Seeded ${seededSeasons} test season, ${seededTeams} test teams, ${seededPlayers} test players, ${seededMatches} test matches, and ${seededStandings} standings rows.`,
   );
 }
 

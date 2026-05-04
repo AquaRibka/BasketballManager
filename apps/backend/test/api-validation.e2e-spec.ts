@@ -12,6 +12,7 @@ const PLAYER_ID = 'cmon3yv4y0003qfsbfdn5nihz';
 const OTHER_TEAM_ID = 'cmon47b2400008csbqzi34a1a';
 const MATCH_ID = 'cmolpef3i0004f3sbsx7ulstu';
 const MISSING_MATCH_ID = 'cmolpef3i0005f3sbsx7ulstv';
+const TEST_SEASON_ID = 'season_test_2026';
 
 type TeamRecord = ReturnType<typeof createTeamRecord>;
 type PlayerRecord = ReturnType<typeof createPlayerRecord>;
@@ -71,6 +72,18 @@ function createOtherTeamPlayerRecord(overrides = {}) {
 
 describe('Team and Player API', () => {
   let app: INestApplication;
+  let standings: Array<{
+    id: string;
+    seasonId: string;
+    teamId: string;
+    wins: number;
+    losses: number;
+    pointsFor: number;
+    pointsAgainst: number;
+    pointDiff: number;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
 
   beforeAll(async () => {
     let teamCounter = 0;
@@ -80,10 +93,36 @@ describe('Team and Player API', () => {
       createTeamRecord({ id: OTHER_TEAM_ID, name: 'Demo Wolves', shortName: 'DWV' }),
     ];
     let players = [createPlayerRecord(), createOtherTeamPlayerRecord()];
+    standings = [
+      {
+        id: 'cstanding000000000000000001',
+        seasonId: TEST_SEASON_ID,
+        teamId: TEAM_ID,
+        wins: 0,
+        losses: 0,
+        pointsFor: 0,
+        pointsAgainst: 0,
+        pointDiff: 0,
+        createdAt: new Date('2026-05-02T12:00:00.000Z'),
+        updatedAt: new Date('2026-05-02T12:00:00.000Z'),
+      },
+      {
+        id: 'cstanding000000000000000002',
+        seasonId: TEST_SEASON_ID,
+        teamId: OTHER_TEAM_ID,
+        wins: 0,
+        losses: 0,
+        pointsFor: 0,
+        pointsAgainst: 0,
+        pointDiff: 0,
+        createdAt: new Date('2026-05-02T12:00:00.000Z'),
+        updatedAt: new Date('2026-05-02T12:00:00.000Z'),
+      },
+    ];
     let matches = [
       {
         id: MATCH_ID,
-        seasonId: 'season_test_2026',
+        seasonId: TEST_SEASON_ID,
         round: 1,
         homeTeamId: TEAM_ID,
         awayTeamId: OTHER_TEAM_ID,
@@ -309,6 +348,55 @@ describe('Team and Player API', () => {
           players[index] = updatedPlayer;
 
           return include?.team ? attachTeam(updatedPlayer) : updatedPlayer;
+        }),
+      },
+      standing: {
+        findUnique: jest.fn(({ where, select }) => {
+          const standing = standings.find(
+            (candidate) =>
+              candidate.seasonId === where.seasonId_teamId.seasonId &&
+              candidate.teamId === where.seasonId_teamId.teamId,
+          );
+
+          if (!standing) {
+            return null;
+          }
+
+          if (select) {
+            return Object.fromEntries(
+              Object.keys(select).map((key) => [key, standing[key as keyof typeof standing]]),
+            );
+          }
+
+          return standing;
+        }),
+        upsert: jest.fn(({ where, update, create }) => {
+          const index = standings.findIndex(
+            (candidate) =>
+              candidate.seasonId === where.seasonId_teamId.seasonId &&
+              candidate.teamId === where.seasonId_teamId.teamId,
+          );
+
+          if (index === -1) {
+            const createdStanding = {
+              id: `cstandingcreate${String(standings.length + 1).padStart(10, '0')}`,
+              ...create,
+              createdAt: new Date('2026-05-02T12:05:00.000Z'),
+              updatedAt: new Date('2026-05-02T12:05:00.000Z'),
+            };
+
+            standings = [...standings, createdStanding];
+            return createdStanding;
+          }
+
+          const updatedStanding = {
+            ...standings[index],
+            ...update,
+            updatedAt: new Date('2026-05-02T12:05:00.000Z'),
+          };
+
+          standings[index] = updatedStanding;
+          return updatedStanding;
         }),
       },
       match: {
@@ -568,7 +656,35 @@ describe('Team and Player API', () => {
     expect(response.body.awayTeam.id).toBe(OTHER_TEAM_ID);
     expect(response.body.homeScore).not.toBe(response.body.awayScore);
     expect([TEAM_ID, OTHER_TEAM_ID]).toContain(response.body.winnerTeamId);
-    expect(response.body.standingsUpdateRequired).toBe(true);
+    expect(response.body.standingsUpdateRequired).toBe(false);
+
+    const homeStanding = standings.find(
+      (standing) => standing.seasonId === TEST_SEASON_ID && standing.teamId === TEAM_ID,
+    );
+    const awayStanding = standings.find(
+      (standing) => standing.seasonId === TEST_SEASON_ID && standing.teamId === OTHER_TEAM_ID,
+    );
+
+    expect(homeStanding).toBeDefined();
+    expect(awayStanding).toBeDefined();
+    expect(homeStanding!.pointsFor).toBe(response.body.homeScore);
+    expect(homeStanding!.pointsAgainst).toBe(response.body.awayScore);
+    expect(homeStanding!.pointDiff).toBe(response.body.homeScore - response.body.awayScore);
+    expect(awayStanding!.pointsFor).toBe(response.body.awayScore);
+    expect(awayStanding!.pointsAgainst).toBe(response.body.homeScore);
+    expect(awayStanding!.pointDiff).toBe(response.body.awayScore - response.body.homeScore);
+
+    if (response.body.winnerTeamId === TEAM_ID) {
+      expect(homeStanding!.wins).toBe(1);
+      expect(homeStanding!.losses).toBe(0);
+      expect(awayStanding!.wins).toBe(0);
+      expect(awayStanding!.losses).toBe(1);
+    } else {
+      expect(homeStanding!.wins).toBe(0);
+      expect(homeStanding!.losses).toBe(1);
+      expect(awayStanding!.wins).toBe(1);
+      expect(awayStanding!.losses).toBe(0);
+    }
   });
 
   it('rejects blank team names', async () => {

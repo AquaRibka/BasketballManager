@@ -19,17 +19,40 @@ enum MatchStatus {
   COMPLETED
 }
 
+enum SeasonStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+model Season {
+  id           String       @id @default(cuid())
+  name         String       @db.VarChar(120)
+  year         Int
+  status       SeasonStatus @default(IN_PROGRESS)
+  currentRound Int          @default(1)
+  startedAt    DateTime     @default(now())
+  finishedAt   DateTime?
+  matches      Match[]
+  standings    Standing[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([status])
+  @@index([year])
+}
+
 model Team {
-  id         String  @id @default(cuid())
-  name       String  @db.VarChar(120)
-  city       String  @db.VarChar(120)
-  shortName  String  @unique @db.VarChar(10)
-  rating     Int     @default(60)
-  players    Player[]
-  homeMatches Match[] @relation("HomeTeamMatches")
-  awayMatches Match[] @relation("AwayTeamMatches")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String     @id @default(cuid())
+  name        String     @db.VarChar(120)
+  city        String     @db.VarChar(120)
+  shortName   String     @unique @db.VarChar(10)
+  rating      Int        @default(60)
+  players     Player[]
+  homeMatches Match[]    @relation("HomeTeamMatches")
+  awayMatches Match[]    @relation("AwayTeamMatches")
+  standings   Standing[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 model Player {
@@ -53,23 +76,43 @@ model Player {
 }
 
 model Match {
-  id          String      @id @default(cuid())
-  seasonId    String?
-  round       Int?
-  homeTeamId  String
-  awayTeamId  String
-  homeTeam    Team        @relation("HomeTeamMatches", fields: [homeTeamId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  awayTeam    Team        @relation("AwayTeamMatches", fields: [awayTeamId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  status      MatchStatus @default(SCHEDULED)
-  homeScore   Int?
-  awayScore   Int?
-  winnerTeamId String?
-  standingsUpdateRequired Boolean @default(false)
-  playedAt    DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id                      String      @id @default(cuid())
+  seasonId                String?
+  season                  Season?     @relation(fields: [seasonId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  round                   Int?
+  homeTeamId              String
+  awayTeamId              String
+  homeTeam                Team        @relation("HomeTeamMatches", fields: [homeTeamId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  awayTeam                Team        @relation("AwayTeamMatches", fields: [awayTeamId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  status                  MatchStatus @default(SCHEDULED)
+  homeScore               Int?
+  awayScore               Int?
+  winnerTeamId            String?
+  standingsUpdateRequired Boolean     @default(false)
+  playedAt                DateTime?
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
 
   @@index([seasonId, round])
   @@index([homeTeamId])
   @@index([awayTeamId])
+}
+
+model Standing {
+  id            String   @id @default(cuid())
+  seasonId      String
+  season        Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  teamId        String
+  team          Team     @relation(fields: [teamId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  wins          Int      @default(0)
+  losses        Int      @default(0)
+  pointsFor     Int      @default(0)
+  pointsAgainst Int      @default(0)
+  pointDiff     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([seasonId, teamId])
+  @@index([seasonId])
+  @@index([teamId])
 }

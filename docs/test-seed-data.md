@@ -51,9 +51,11 @@ Test seed:
 
 Итог:
 
+- `1` test season
 - `3` test teams
 - `15` test players
 - `3` scheduled test matches
+- `3` standings rows for `season_test_2026`
 
 Все значения:
 

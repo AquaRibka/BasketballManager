@@ -101,6 +101,65 @@ function toMatchSimulationTeamSnapshot(team: {
   };
 }
 
+async function updateStandingForTeam(
+  tx: any,
+  input: {
+    seasonId: string;
+    teamId: string;
+    isWinner: boolean;
+    pointsFor: number;
+    pointsAgainst: number;
+  },
+) {
+  const existing = await tx.standing.findUnique({
+    where: {
+      seasonId_teamId: {
+        seasonId: input.seasonId,
+        teamId: input.teamId,
+      },
+    },
+    select: {
+      id: true,
+      wins: true,
+      losses: true,
+      pointsFor: true,
+      pointsAgainst: true,
+      pointDiff: true,
+    },
+  });
+
+  const nextWins = (existing?.wins ?? 0) + (input.isWinner ? 1 : 0);
+  const nextLosses = (existing?.losses ?? 0) + (input.isWinner ? 0 : 1);
+  const nextPointsFor = (existing?.pointsFor ?? 0) + input.pointsFor;
+  const nextPointsAgainst = (existing?.pointsAgainst ?? 0) + input.pointsAgainst;
+  const nextPointDiff = nextPointsFor - nextPointsAgainst;
+
+  await tx.standing.upsert({
+    where: {
+      seasonId_teamId: {
+        seasonId: input.seasonId,
+        teamId: input.teamId,
+      },
+    },
+    update: {
+      wins: nextWins,
+      losses: nextLosses,
+      pointsFor: nextPointsFor,
+      pointsAgainst: nextPointsAgainst,
+      pointDiff: nextPointDiff,
+    },
+    create: {
+      seasonId: input.seasonId,
+      teamId: input.teamId,
+      wins: nextWins,
+      losses: nextLosses,
+      pointsFor: nextPointsFor,
+      pointsAgainst: nextPointsAgainst,
+      pointDiff: nextPointDiff,
+    },
+  });
+}
+
 @Injectable()
 export class MatchesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -129,6 +188,23 @@ export class MatchesService {
       const result = simulateMatch(simulationInput);
       const playedAt = new Date();
 
+      if (match.seasonId) {
+        await updateStandingForTeam(tx, {
+          seasonId: match.seasonId,
+          teamId: match.homeTeamId,
+          isWinner: result.winnerTeamId === match.homeTeamId,
+          pointsFor: result.homeScore,
+          pointsAgainst: result.awayScore,
+        });
+        await updateStandingForTeam(tx, {
+          seasonId: match.seasonId,
+          teamId: match.awayTeamId,
+          isWinner: result.winnerTeamId === match.awayTeamId,
+          pointsFor: result.awayScore,
+          pointsAgainst: result.homeScore,
+        });
+      }
+
       const updateResult = await tx.match.updateMany({
         where: {
           id,
@@ -139,7 +215,7 @@ export class MatchesService {
           homeScore: result.homeScore,
           awayScore: result.awayScore,
           winnerTeamId: result.winnerTeamId,
-          standingsUpdateRequired: match.seasonId !== null,
+          standingsUpdateRequired: false,
           playedAt,
         },
       });

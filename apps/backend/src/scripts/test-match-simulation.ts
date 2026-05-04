@@ -74,9 +74,9 @@ async function main() {
       throw new Error(`Expected completed status, received: ${response.body.status}`);
     }
 
-    if (response.body.standingsUpdateRequired !== true) {
+    if (response.body.standingsUpdateRequired !== false) {
       throw new Error(
-        `Expected standingsUpdateRequired=true, received: ${response.body.standingsUpdateRequired}`,
+        `Expected standingsUpdateRequired=false, received: ${response.body.standingsUpdateRequired}`,
       );
     }
 
