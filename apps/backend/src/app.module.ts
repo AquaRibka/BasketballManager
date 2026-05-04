@@ -5,6 +5,7 @@ import { HealthModule } from './health/health.module';
 import { MatchesModule } from './matches/matches.module';
 import { PlayersModule } from './players/players.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SeasonsModule } from './seasons/seasons.module';
 import { TeamsModule } from './teams/teams.module';
 
 @Module({
@@ -17,6 +18,7 @@ import { TeamsModule } from './teams/teams.module';
     HealthModule,
     MatchesModule,
     PlayersModule,
+    SeasonsModule,
     TeamsModule,
   ],
 })

@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { MatchStatus, type Prisma } from '@prisma/client';
 import type {
   MatchSimulationInput,
@@ -7,6 +12,8 @@ import type {
 } from '@basketball-manager/shared';
 import { simulateMatch } from '@basketball-manager/simulation-engine';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateMatchDto } from './dto/create-match.dto';
+import { ListMatchesQueryDto } from './dto/list-matches-query.dto';
 
 const MATCH_SIMULATION_ROSTER_SELECT = {
   id: true,
@@ -25,6 +32,12 @@ const MATCH_SIMULATION_RESULT_TEAM_SELECT = {
   name: true,
   shortName: true,
   rating: true,
+} satisfies Prisma.TeamSelect;
+
+const MATCH_RESULT_TEAM_SELECT = {
+  id: true,
+  name: true,
+  shortName: true,
 } satisfies Prisma.TeamSelect;
 
 const MATCH_WITH_ROSTERS_INCLUDE = {
@@ -48,6 +61,7 @@ const MATCH_RESULT_SELECT = {
   seasonId: true,
   round: true,
   status: true,
+  date: true,
   homeScore: true,
   awayScore: true,
   winnerTeamId: true,
@@ -58,6 +72,24 @@ const MATCH_RESULT_SELECT = {
   },
   awayTeam: {
     select: MATCH_SIMULATION_RESULT_TEAM_SELECT,
+  },
+} satisfies Prisma.MatchSelect;
+
+const MATCH_BASE_SELECT = {
+  id: true,
+  seasonId: true,
+  round: true,
+  status: true,
+  date: true,
+  homeScore: true,
+  awayScore: true,
+  winnerTeamId: true,
+  playedAt: true,
+  homeTeam: {
+    select: MATCH_RESULT_TEAM_SELECT,
+  },
+  awayTeam: {
+    select: MATCH_RESULT_TEAM_SELECT,
   },
 } satisfies Prisma.MatchSelect;
 
@@ -164,6 +196,82 @@ async function updateStandingForTeam(
 export class MatchesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async getMatches(query: ListMatchesQueryDto) {
+    await this.ensureSeasonExists(query.seasonId);
+
+    const items = await this.prisma.match.findMany({
+      where: {
+        seasonId: query.seasonId,
+        round: query.round,
+        status: query.status,
+        ...(query.teamId
+          ? {
+              OR: [{ homeTeamId: query.teamId }, { awayTeamId: query.teamId }],
+            }
+          : {}),
+      },
+      select: MATCH_BASE_SELECT,
+      orderBy: [{ round: 'asc' }, { date: 'asc' }, { createdAt: 'asc' }],
+    });
+
+    return {
+      items,
+      total: items.length,
+    };
+  }
+
+  async getMatchById(id: string) {
+    const match = await this.prisma.match.findUnique({
+      where: { id },
+      select: MATCH_BASE_SELECT,
+    });
+
+    if (!match) {
+      throw new NotFoundException('Match not found');
+    }
+
+    return match;
+  }
+
+  async createMatch(createMatchDto: CreateMatchDto) {
+    await this.ensureSeasonExists(createMatchDto.seasonId);
+    await this.ensureTeamExists(createMatchDto.homeTeamId);
+    await this.ensureTeamExists(createMatchDto.awayTeamId);
+
+    if (createMatchDto.homeTeamId === createMatchDto.awayTeamId) {
+      throw new UnprocessableEntityException('Match teams must be different');
+    }
+
+    try {
+      return await this.prisma.match.create({
+        data: {
+          season: {
+            connect: {
+              id: createMatchDto.seasonId,
+            },
+          },
+          round: createMatchDto.round,
+          date: createMatchDto.date ? new Date(createMatchDto.date) : undefined,
+          homeTeam: {
+            connect: {
+              id: createMatchDto.homeTeamId,
+            },
+          },
+          awayTeam: {
+            connect: {
+              id: createMatchDto.awayTeamId,
+            },
+          },
+          status: MatchStatus.SCHEDULED,
+          standingsUpdateRequired: false,
+        },
+        select: MATCH_BASE_SELECT,
+      });
+    } catch (error) {
+      this.handlePersistenceError(error);
+    }
+  }
+
   async simulateMatch(id: string) {
     return this.prisma.$transaction(async (tx) => {
       const match = await tx.match.findUnique({
@@ -229,5 +337,31 @@ export class MatchesService {
         select: MATCH_RESULT_SELECT,
       });
     });
+  }
+
+  private async ensureSeasonExists(id: string) {
+    const season = await this.prisma.season.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!season) {
+      throw new NotFoundException('Season not found');
+    }
+  }
+
+  private async ensureTeamExists(id: string) {
+    const team = await this.prisma.team.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!team) {
+      throw new NotFoundException('Team not found');
+    }
+  }
+
+  private handlePersistenceError(_error: unknown): never {
+    throw new UnprocessableEntityException('Match data is invalid');
   }
 }

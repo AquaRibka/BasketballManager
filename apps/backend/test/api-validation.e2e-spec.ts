@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { ConflictException, INestApplication, NotFoundException } from '@nestjs/common';
+import { SeasonStatus } from '@prisma/client';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
@@ -70,12 +71,31 @@ function createOtherTeamPlayerRecord(overrides = {}) {
   };
 }
 
+function createSeasonRecord(overrides = {}) {
+  return {
+    id: TEST_SEASON_ID,
+    name: 'Test League 2026',
+    year: 2026,
+    status: SeasonStatus.IN_PROGRESS,
+    currentRound: 1,
+    startedAt: new Date('2026-05-02T12:00:00.000Z'),
+    finishedAt: null,
+    createdAt: new Date('2026-05-02T12:00:00.000Z'),
+    updatedAt: new Date('2026-05-02T12:00:00.000Z'),
+    ...overrides,
+  };
+}
+
 describe('Team and Player API', () => {
   let app: INestApplication;
+  let createdSeasonId: string | null = null;
+  let matchCounter = 0;
+  let seasonCounter = 0;
   let standings: Array<{
     id: string;
     seasonId: string;
     teamId: string;
+    position?: number;
     wins: number;
     losses: number;
     pointsFor: number;
@@ -93,6 +113,7 @@ describe('Team and Player API', () => {
       createTeamRecord({ id: OTHER_TEAM_ID, name: 'Demo Wolves', shortName: 'DWV' }),
     ];
     let players = [createPlayerRecord(), createOtherTeamPlayerRecord()];
+    let seasons = [createSeasonRecord()];
     standings = [
       {
         id: 'cstanding000000000000000001',
@@ -124,6 +145,7 @@ describe('Team and Player API', () => {
         id: MATCH_ID,
         seasonId: TEST_SEASON_ID,
         round: 1,
+        date: new Date('2026-10-01T18:00:00.000Z'),
         homeTeamId: TEAM_ID,
         awayTeamId: OTHER_TEAM_ID,
         status: 'SCHEDULED',
@@ -152,6 +174,45 @@ describe('Team and Player API', () => {
       };
     };
 
+    const serializeMatch = (match: (typeof matches)[number], select?: any) => {
+      const homeTeam = teams.find((team) => team.id === match.homeTeamId);
+      const awayTeam = teams.find((team) => team.id === match.awayTeamId);
+
+      if (!homeTeam || !awayTeam) {
+        throw new Error('Match references a missing team in test fixtures');
+      }
+
+      const includeRating = Boolean(select?.homeTeam?.select?.rating || select?.awayTeam?.select?.rating);
+
+      return {
+        ...match,
+        homeTeam: includeRating
+          ? {
+              id: homeTeam.id,
+              name: homeTeam.name,
+              shortName: homeTeam.shortName,
+              rating: homeTeam.rating,
+            }
+          : {
+              id: homeTeam.id,
+              name: homeTeam.name,
+              shortName: homeTeam.shortName,
+            },
+        awayTeam: includeRating
+          ? {
+              id: awayTeam.id,
+              name: awayTeam.name,
+              shortName: awayTeam.shortName,
+              rating: awayTeam.rating,
+            }
+          : {
+              id: awayTeam.id,
+              name: awayTeam.name,
+              shortName: awayTeam.shortName,
+            },
+      };
+    };
+
     let prismaMock: any;
 
     prismaMock = {
@@ -165,8 +226,12 @@ describe('Team and Player API', () => {
             result.sort((left, right) => left.name.localeCompare(right.name));
           }
 
-          if (select?.id) {
-            return result.map((team) => ({ id: team.id }));
+          if (select) {
+            return result.map((team) =>
+              Object.fromEntries(
+                Object.keys(select).map((key) => [key, team[key as keyof typeof team]]),
+              ),
+            );
           }
 
           return result;
@@ -351,6 +416,39 @@ describe('Team and Player API', () => {
         }),
       },
       standing: {
+        findMany: jest.fn(({ where, select } = {}) => {
+          let result = [...standings];
+
+          if (where?.seasonId) {
+            result = result.filter((standing) => standing.seasonId === where.seasonId);
+          }
+
+          return result.map((standing) => {
+            const team = teams.find((candidate) => candidate.id === standing.teamId);
+
+            if (!select) {
+              return standing;
+            }
+
+            return Object.fromEntries(
+              Object.keys(select).map((key) => {
+                if (key === 'team') {
+                  return [
+                    key,
+                    team
+                      ? {
+                          name: team.name,
+                          shortName: team.shortName,
+                        }
+                      : null,
+                  ];
+                }
+
+                return [key, standing[key as keyof typeof standing]];
+              }),
+            );
+          });
+        }),
         findUnique: jest.fn(({ where, select }) => {
           const standing = standings.find(
             (candidate) =>
@@ -399,8 +497,107 @@ describe('Team and Player API', () => {
           return updatedStanding;
         }),
       },
+      season: {
+        findFirst: jest.fn(({ where, orderBy } = {}) => {
+          let result = [...seasons];
+
+          if (where?.status) {
+            result = result.filter((season) => season.status === where.status);
+          }
+
+          if (orderBy?.[0]?.createdAt === 'desc') {
+            result.sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+          }
+
+          return result[0] ?? null;
+        }),
+        findUnique: jest.fn(({ where }) => {
+          return seasons.find((season) => season.id === where.id) ?? null;
+        }),
+        create: jest.fn(({ data }) => {
+          seasonCounter += 1;
+
+          const createdSeason = createSeasonRecord({
+            id: data.id ?? `cseasoncreate${String(seasonCounter).padStart(11, '0')}`,
+            name: data.name,
+            year: data.year,
+            status: data.status ?? SeasonStatus.IN_PROGRESS,
+            currentRound: data.currentRound ?? 1,
+            startedAt: new Date('2026-05-03T08:00:00.000Z'),
+            finishedAt: data.finishedAt ?? null,
+            createdAt: new Date('2026-05-03T08:00:00.000Z'),
+            updatedAt: new Date('2026-05-03T08:00:00.000Z'),
+          });
+
+          seasons = [...seasons, createdSeason];
+
+          return createdSeason;
+        }),
+        update: jest.fn(({ where, data }) => {
+          const index = seasons.findIndex((season) => season.id === where.id);
+
+          if (index === -1) {
+            throw new NotFoundException('Season not found');
+          }
+
+          const updatedSeason = {
+            ...seasons[index],
+            ...data,
+            updatedAt: new Date('2026-05-03T08:05:00.000Z'),
+          };
+
+          seasons[index] = updatedSeason;
+          return updatedSeason;
+        }),
+      },
       match: {
-        findUnique: jest.fn(({ where, include }) => {
+        findMany: jest.fn(({ where, select, orderBy } = {}) => {
+          let result = [...matches];
+
+          if (where?.seasonId) {
+            result = result.filter((match) => match.seasonId === where.seasonId);
+          }
+
+          if (typeof where?.round === 'number') {
+            result = result.filter((match) => match.round === where.round);
+          }
+
+          if (where?.status) {
+            result = result.filter((match) => match.status === where.status);
+          }
+
+          if (where?.OR) {
+            result = result.filter((match) =>
+              where.OR.some(
+                (candidate: any) =>
+                  match.homeTeamId === candidate.homeTeamId || match.awayTeamId === candidate.awayTeamId,
+              ),
+            );
+          }
+
+          if (orderBy?.[0]?.round === 'asc') {
+            result.sort((left, right) => {
+              const leftRound = left.round ?? Number.MAX_SAFE_INTEGER;
+              const rightRound = right.round ?? Number.MAX_SAFE_INTEGER;
+
+              if (leftRound !== rightRound) {
+                return leftRound - rightRound;
+              }
+
+              const leftDate = left.date?.getTime() ?? Number.MAX_SAFE_INTEGER;
+              const rightDate = right.date?.getTime() ?? Number.MAX_SAFE_INTEGER;
+
+              if (leftDate !== rightDate) {
+                return leftDate - rightDate;
+              }
+
+              return left.createdAt.getTime() - right.createdAt.getTime();
+            });
+          }
+
+          return select ? result.map((match) => serializeMatch(match, select)) : result;
+        }),
+        findUnique: jest.fn(({ where, include, select }) => {
           const match = matches.find((candidate) => candidate.id === where.id);
 
           if (!match) {
@@ -456,7 +653,35 @@ describe('Team and Player API', () => {
             };
           }
 
+          if (select) {
+            return serializeMatch(match, select);
+          }
+
           return match;
+        }),
+        create: jest.fn(({ data, select }) => {
+          matchCounter += 1;
+
+          const createdMatch = {
+            id: `cmatchcreate${String(matchCounter).padStart(13, '0')}`,
+            seasonId: data.season?.connect?.id ?? null,
+            round: data.round ?? null,
+            date: data.date ?? null,
+            homeTeamId: data.homeTeam.connect.id,
+            awayTeamId: data.awayTeam.connect.id,
+            status: data.status,
+            homeScore: null,
+            awayScore: null,
+            winnerTeamId: null,
+            standingsUpdateRequired: data.standingsUpdateRequired ?? false,
+            playedAt: null,
+            createdAt: new Date('2026-05-03T09:00:00.000Z'),
+            updatedAt: new Date('2026-05-03T09:00:00.000Z'),
+          };
+
+          matches = [...matches, createdMatch];
+
+          return select ? serializeMatch(createdMatch, select) : createdMatch;
         }),
         update: jest.fn(({ where, data, include }) => {
           const index = matches.findIndex((match) => match.id === where.id);
@@ -524,32 +749,7 @@ describe('Team and Player API', () => {
             throw new NotFoundException('Match not found');
           }
 
-          const homeTeam = teams.find((team) => team.id === match.homeTeamId);
-          const awayTeam = teams.find((team) => team.id === match.awayTeamId);
-
-          if (!homeTeam || !awayTeam) {
-            throw new Error('Match references a missing team in test fixtures');
-          }
-
-          return {
-            ...match,
-            homeTeam: select?.homeTeam?.select
-              ? {
-                  id: homeTeam.id,
-                  name: homeTeam.name,
-                  shortName: homeTeam.shortName,
-                  rating: homeTeam.rating,
-                }
-              : homeTeam,
-            awayTeam: select?.awayTeam?.select
-              ? {
-                  id: awayTeam.id,
-                  name: awayTeam.name,
-                  shortName: awayTeam.shortName,
-                  rating: awayTeam.rating,
-                }
-              : awayTeam,
-          };
+          return serializeMatch(match, select);
         }),
       },
     };
@@ -644,6 +844,81 @@ describe('Team and Player API', () => {
     );
   });
 
+  it('returns matches filtered by season', async () => {
+    const response = await request(app.getHttpServer()).get('/matches').query({
+      seasonId: TEST_SEASON_ID,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.total).toBe(1);
+    expect(response.body.items).toEqual([
+      expect.objectContaining({
+        id: MATCH_ID,
+        seasonId: TEST_SEASON_ID,
+        round: 1,
+        status: 'SCHEDULED',
+      }),
+    ]);
+  });
+
+  it('returns a single match by id', async () => {
+    const response = await request(app.getHttpServer()).get(`/matches/${MATCH_ID}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.id).toBe(MATCH_ID);
+    expect(response.body.seasonId).toBe(TEST_SEASON_ID);
+    expect(response.body.homeTeam).toEqual(
+      expect.objectContaining({
+        id: TEAM_ID,
+        shortName: 'BMN',
+      }),
+    );
+    expect(response.body.awayTeam).toEqual(
+      expect.objectContaining({
+        id: OTHER_TEAM_ID,
+        shortName: 'DWV',
+      }),
+    );
+  });
+
+  it('creates a match successfully', async () => {
+    const response = await request(app.getHttpServer()).post('/matches').send({
+      seasonId: TEST_SEASON_ID,
+      round: 2,
+      date: '2026-10-08T19:00:00.000Z',
+      homeTeamId: OTHER_TEAM_ID,
+      awayTeamId: TEAM_ID,
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body.id).toMatch(/^cmatchcreate/);
+    expect(response.body.seasonId).toBe(TEST_SEASON_ID);
+    expect(response.body.round).toBe(2);
+    expect(response.body.status).toBe('SCHEDULED');
+    expect(response.body.date).toBe('2026-10-08T19:00:00.000Z');
+    expect(response.body.homeTeam.id).toBe(OTHER_TEAM_ID);
+    expect(response.body.awayTeam.id).toBe(TEAM_ID);
+  });
+
+  it('filters matches by season and round', async () => {
+    const response = await request(app.getHttpServer()).get('/matches').query({
+      seasonId: TEST_SEASON_ID,
+      round: 2,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.total).toBe(1);
+    expect(response.body.items).toEqual([
+      expect.objectContaining({
+        seasonId: TEST_SEASON_ID,
+        round: 2,
+        homeTeam: expect.objectContaining({
+          id: OTHER_TEAM_ID,
+        }),
+      }),
+    ]);
+  });
+
   it('simulates a match successfully', async () => {
     const response = await request(app.getHttpServer()).post(`/matches/${MATCH_ID}/simulate`);
 
@@ -685,6 +960,168 @@ describe('Team and Player API', () => {
       expect(awayStanding!.wins).toBe(1);
       expect(awayStanding!.losses).toBe(0);
     }
+  });
+
+  it('returns the current season', async () => {
+    const response = await request(app.getHttpServer()).get('/seasons/current');
+
+    expect(response.status).toBe(200);
+    expect(response.body.id).toBe(TEST_SEASON_ID);
+    expect(response.body.name).toBe('Test League 2026');
+    expect(response.body.status).toBe('IN_PROGRESS');
+    expect(response.body.currentRound).toBe(1);
+    expect(response.body.finishedAt).toBeNull();
+  });
+
+  it('prevents creating a new current season when one already exists', async () => {
+    const response = await request(app.getHttpServer()).post('/seasons').send({
+      name: 'Second League 2027',
+      year: 2027,
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body.message).toBe('Current season already exists');
+  });
+
+  it('updates the season status to completed', async () => {
+    const response = await request(app.getHttpServer())
+      .patch(`/seasons/${TEST_SEASON_ID}/status`)
+      .send({
+        status: 'COMPLETED',
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.id).toBe(TEST_SEASON_ID);
+    expect(response.body.status).toBe('COMPLETED');
+    expect(response.body.finishedAt).not.toBeNull();
+  });
+
+  it('rejects reversing a completed season back to in-progress', async () => {
+    const response = await request(app.getHttpServer())
+      .patch(`/seasons/${TEST_SEASON_ID}/status`)
+      .send({
+        status: 'IN_PROGRESS',
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body.message).toBe('Season status transition is not allowed');
+  });
+
+  it('creates a season when there is no current season', async () => {
+    await request(app.getHttpServer()).patch(`/seasons/${TEST_SEASON_ID}/status`).send({
+      status: 'COMPLETED',
+    });
+
+    const response = await request(app.getHttpServer()).post('/seasons').send({
+      name: 'Fresh League 2027',
+      year: 2027,
+    });
+
+    expect(response.status).toBe(201);
+    createdSeasonId = response.body.id;
+    expect(response.body.name).toBe('Fresh League 2027');
+    expect(response.body.year).toBe(2027);
+    expect(response.body.status).toBe('IN_PROGRESS');
+    expect(response.body.currentRound).toBe(1);
+    expect(response.body.finishedAt).toBeNull();
+  });
+
+  it('returns an empty standings table for a season without rows', async () => {
+    const response = await request(app.getHttpServer()).get(`/seasons/${createdSeasonId}/standings`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.seasonId).toBe(createdSeasonId);
+    expect(response.body.updatedAt).toBeNull();
+    expect(response.body.items).toEqual([]);
+  });
+
+  it('generates a season schedule grouped by rounds', async () => {
+    const response = await request(app.getHttpServer()).post(
+      `/seasons/${createdSeasonId}/schedule`,
+    );
+
+    expect(response.status).toBe(201);
+    expect(response.body.seasonId).toBe(createdSeasonId);
+    expect(response.body.totalRounds).toBe(12);
+    expect(response.body.totalMatches).toBe(12);
+    expect(response.body.rounds).toHaveLength(12);
+    expect(response.body.rounds[0]).toEqual(
+      expect.objectContaining({
+        round: 1,
+        status: 'SCHEDULED',
+      }),
+    );
+    expect(response.body.rounds[0].matches).toHaveLength(1);
+    expect(response.body.rounds[0].matches[0]).toEqual(
+      expect.objectContaining({
+        seasonId: createdSeasonId,
+        round: 1,
+        status: 'SCHEDULED',
+      }),
+    );
+  });
+
+  it('returns an existing season schedule grouped by rounds', async () => {
+    const response = await request(app.getHttpServer()).get(`/seasons/${createdSeasonId}/schedule`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.seasonId).toBe(createdSeasonId);
+    expect(response.body.totalRounds).toBe(12);
+    expect(response.body.totalMatches).toBe(12);
+    expect(response.body.rounds).toHaveLength(12);
+    expect(response.body.rounds.map((round: { round: number }) => round.round)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+    ]);
+  });
+
+  it('rejects duplicate schedule generation for the same season', async () => {
+    const response = await request(app.getHttpServer()).post(
+      `/seasons/${createdSeasonId}/schedule`,
+    );
+
+    expect(response.status).toBe(409);
+    expect(response.body.message).toBe('Schedule already exists for this season');
+  });
+
+  it('returns sorted standings for a season', async () => {
+    const response = await request(app.getHttpServer()).get(`/seasons/${TEST_SEASON_ID}/standings`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.seasonId).toBe(TEST_SEASON_ID);
+    expect(response.body.items).toHaveLength(2);
+    expect(response.body.items[0]).toEqual(
+      expect.objectContaining({
+        position: 1,
+        wins: 1,
+        losses: 0,
+        pointDiff: expect.any(Number),
+        gamesPlayed: 1,
+        winPercentage: 1,
+      }),
+    );
+    expect(response.body.items[1]).toEqual(
+      expect.objectContaining({
+        position: 2,
+        wins: 0,
+        losses: 1,
+        gamesPlayed: 1,
+        winPercentage: 0,
+      }),
+    );
+    expect(
+      [TEAM_ID, OTHER_TEAM_ID].includes(response.body.items[0].teamId) &&
+        [TEAM_ID, OTHER_TEAM_ID].includes(response.body.items[1].teamId),
+    ).toBe(true);
+  });
+
+  it('returns updated standings data after match simulation', async () => {
+    const response = await request(app.getHttpServer()).get(`/seasons/${TEST_SEASON_ID}/standings`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.updatedAt).not.toBeNull();
+    expect(response.body.items.every((item: { pointsFor: number; pointsAgainst: number }) => {
+      return Number.isInteger(item.pointsFor) && Number.isInteger(item.pointsAgainst);
+    })).toBe(true);
   });
 
   it('rejects blank team names', async () => {
