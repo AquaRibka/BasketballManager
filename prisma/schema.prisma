@@ -80,6 +80,7 @@ model Match {
   seasonId                String?
   season                  Season?     @relation(fields: [seasonId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   round                   Int?
+  date                    DateTime?
   homeTeamId              String
   awayTeamId              String
   homeTeam                Team        @relation("HomeTeamMatches", fields: [homeTeamId], references: [id], onDelete: Restrict, onUpdate: Cascade)
@@ -94,6 +95,7 @@ model Match {
   updatedAt               DateTime    @updatedAt
 
   @@index([seasonId, round])
+  @@index([date])
   @@index([homeTeamId])
   @@index([awayTeamId])
 }
@@ -104,6 +106,7 @@ model Standing {
   season        Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   teamId        String
   team          Team     @relation(fields: [teamId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  position      Int      @default(0)
   wins          Int      @default(0)
   losses        Int      @default(0)
   pointsFor     Int      @default(0)
@@ -114,5 +117,6 @@ model Standing {
 
   @@unique([seasonId, teamId])
   @@index([seasonId])
+  @@index([seasonId, position])
   @@index([teamId])
 }
