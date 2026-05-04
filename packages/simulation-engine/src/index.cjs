@@ -1,5 +1,7 @@
 const { randomUUID } = require('node:crypto');
 
+const REQUIRED_PLAYER_ATTRIBUTES = ['overall', 'shooting', 'passing', 'defense', 'rebounding'];
+
 function stringToSeed(value) {
   let hash = 2166136261;
 
@@ -175,6 +177,70 @@ function centeredRandom(random, amplitude = 1) {
 
 function roundTo(value, digits = 3) {
   return Number(value.toFixed(digits));
+}
+
+function assertFiniteNumber(name, value) {
+  if (!Number.isFinite(value)) {
+    throw new TypeError(`${name} must be a finite number`);
+  }
+}
+
+function validateTeam(team, label) {
+  if (!team || typeof team !== 'object') {
+    throw new TypeError(`${label} must be an object`);
+  }
+
+  if (typeof team.id !== 'string' || team.id.trim() === '') {
+    throw new TypeError(`${label}.id must be a non-empty string`);
+  }
+
+  if (team.players == null) {
+    return;
+  }
+
+  if (!Array.isArray(team.players)) {
+    throw new TypeError(`${label}.players must be an array`);
+  }
+
+  team.players.forEach((player, index) => {
+    if (!player || typeof player !== 'object') {
+      throw new TypeError(`${label}.players[${index}] must be an object`);
+    }
+
+    for (const attribute of REQUIRED_PLAYER_ATTRIBUTES) {
+      assertFiniteNumber(`${label}.players[${index}].${attribute}`, player[attribute]);
+    }
+
+    if (typeof player.athleticism !== 'number' && typeof player.stamina !== 'number') {
+      throw new TypeError(`${label}.players[${index}].athleticism is required`);
+    }
+
+    assertFiniteNumber(
+      `${label}.players[${index}].athleticism`,
+      player.athleticism ?? player.stamina,
+    );
+  });
+}
+
+function validateSimulationInput(input) {
+  if (!input || typeof input !== 'object') {
+    throw new TypeError('input must be an object');
+  }
+
+  if (typeof input.matchId !== 'string' || input.matchId.trim() === '') {
+    throw new TypeError('matchId must be a non-empty string');
+  }
+
+  if (input.seed != null && typeof input.seed !== 'string') {
+    throw new TypeError('seed must be a string');
+  }
+
+  validateTeam(input.homeTeam, 'homeTeam');
+  validateTeam(input.awayTeam, 'awayTeam');
+
+  if (input.homeTeam.id === input.awayTeam.id) {
+    throw new RangeError('homeTeam and awayTeam must be different teams');
+  }
 }
 
 function calculatePaceModifier(teamProfile, opponentProfile) {
@@ -482,6 +548,8 @@ function finalizeTeamStatistics(teamStats) {
 }
 
 function simulateMatch(input) {
+  validateSimulationInput(input);
+
   const seed = input.seed ?? randomUUID();
   const random = createRandom(stringToSeed(seed));
   const homeStrength = calculateTeamStrengthV1(input.homeTeam, {

@@ -108,6 +108,44 @@ const slowAwayTeam = {
   })),
 };
 
+const emptyRosterTeam = {
+  id: 'team_empty',
+  name: 'Empty Roster Team',
+  shortName: 'EMPTY',
+  rating: 50,
+  players: [],
+};
+
+const extremeStrongTeam = {
+  ...homeTeam,
+  id: 'team_extreme_strong',
+  rating: 99,
+  players: homeTeam.players.map((player) => ({
+    ...player,
+    overall: 99,
+    shooting: 99,
+    passing: 99,
+    defense: 99,
+    rebounding: 99,
+    athleticism: 99,
+  })),
+};
+
+const extremeWeakTeam = {
+  ...awayTeam,
+  id: 'team_extreme_weak',
+  rating: 1,
+  players: awayTeam.players.map((player) => ({
+    ...player,
+    overall: 1,
+    shooting: 1,
+    passing: 1,
+    defense: 1,
+    rebounding: 1,
+    athleticism: 1,
+  })),
+};
+
 test('simulateMatch is deterministic for the same input and explicit seed', () => {
   const first = simulateMatch({
     matchId: 'match_1',
@@ -141,6 +179,81 @@ test('simulateMatch uses a default random seed when seed is omitted', () => {
   assert.equal(typeof second.seed, 'string');
   assert.notEqual(first.seed, second.seed);
   assert.notDeepEqual(first, second);
+});
+
+test('simulateMatch returns a valid result for teams without a roster', () => {
+  const result = simulateMatch({
+    matchId: 'empty_roster_match',
+    seed: 'empty-roster-seed',
+    homeTeam: emptyRosterTeam,
+    awayTeam: awayTeam,
+  });
+
+  assert.equal(typeof result.seed, 'string');
+  assert.equal(result.homeScore > 0, true);
+  assert.equal(result.awayScore > 0, true);
+  assert.equal(result.statistics.homeTeam.points, result.homeScore);
+  assert.equal(result.statistics.homeTeam.possessions >= 78, true);
+});
+
+test('simulateMatch rejects identical home and away teams', () => {
+  assert.throws(
+    () =>
+      simulateMatch({
+        matchId: 'same-team-match',
+        seed: 'same-team-seed',
+        homeTeam,
+        awayTeam: {
+          ...homeTeam,
+        },
+      }),
+    {
+      name: 'RangeError',
+      message: 'homeTeam and awayTeam must be different teams',
+    },
+  );
+});
+
+test('simulateMatch handles extreme rating gaps without crashing', () => {
+  const result = simulateMatch({
+    matchId: 'extreme-ratings-match',
+    seed: 'extreme-ratings-seed',
+    homeTeam: extremeStrongTeam,
+    awayTeam: extremeWeakTeam,
+  });
+
+  assert.equal(result.homeScore > result.awayScore, true);
+  assert.equal(result.statistics.homeTeam.fieldGoalPercentage >= 0.4, true);
+  assert.equal(result.statistics.awayTeam.fieldGoalPercentage <= 0.55, true);
+  assert.equal(result.statistics.homeTeam.points, result.homeScore);
+  assert.equal(result.statistics.awayTeam.points, result.awayScore);
+});
+
+test('simulateMatch rejects players with missing required attributes', () => {
+  const brokenTeam = {
+    ...homeTeam,
+    id: 'broken_team',
+    players: [
+      {
+        ...homeTeam.players[0],
+        shooting: undefined,
+      },
+    ],
+  };
+
+  assert.throws(
+    () =>
+      simulateMatch({
+        matchId: 'broken-match',
+        seed: 'broken-seed',
+        homeTeam: brokenTeam,
+        awayTeam,
+      }),
+    {
+      name: 'TypeError',
+      message: 'homeTeam.players[0].shooting must be a finite number',
+    },
+  );
 });
 
 test('simulateMatch always returns a winner and no draws', () => {
