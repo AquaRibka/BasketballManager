@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { calculateTeamStrengthV1 } from './team-strength-v1.mjs';
 
 function stringToSeed(value) {
@@ -368,7 +369,7 @@ function finalizeTeamStatistics(teamStats) {
 }
 
 export function simulateMatch(input) {
-  const seed = input.seed ?? input.matchId;
+  const seed = input.seed ?? randomUUID();
   const random = createRandom(stringToSeed(seed));
   const homeStrength = calculateTeamStrengthV1(input.homeTeam, {
     randomValue: random(),

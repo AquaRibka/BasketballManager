@@ -108,21 +108,39 @@ const slowAwayTeam = {
   })),
 };
 
-test('simulateMatch is deterministic for the same match id', () => {
+test('simulateMatch is deterministic for the same input and explicit seed', () => {
   const first = simulateMatch({
     matchId: 'match_1',
-    seed: 'match_1',
+    seed: 'debug-seed-1',
     homeTeam,
     awayTeam,
   });
   const second = simulateMatch({
     matchId: 'match_1',
-    seed: 'match_1',
+    seed: 'debug-seed-1',
     homeTeam,
     awayTeam,
   });
 
   assert.deepEqual(first, second);
+});
+
+test('simulateMatch uses a default random seed when seed is omitted', () => {
+  const first = simulateMatch({
+    matchId: 'match_without_seed',
+    homeTeam,
+    awayTeam,
+  });
+  const second = simulateMatch({
+    matchId: 'match_without_seed',
+    homeTeam,
+    awayTeam,
+  });
+
+  assert.equal(typeof first.seed, 'string');
+  assert.equal(typeof second.seed, 'string');
+  assert.notEqual(first.seed, second.seed);
+  assert.notDeepEqual(first, second);
 });
 
 test('simulateMatch always returns a winner and no draws', () => {

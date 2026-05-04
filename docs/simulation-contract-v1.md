@@ -170,6 +170,12 @@ interface MatchSimulationTeamStatistics {
 }
 ```
 
+### Seed rule
+
+- если `seed` передан во входе, engine обязан вернуть воспроизводимый результат для того же `input + seed`;
+- если `seed` не передан, engine обязан сгенерировать runtime seed сам;
+- сгенерированный seed возвращается в `result.seed` и может быть использован повторно для отладки.
+
 ### MVP правило результата
 
 В MVP backend обязан сохранять как минимум:
@@ -204,7 +210,7 @@ Backend должен выполнять явный mapping,
 ### Источник данных
 
 - `Match.id -> matchId`
-- `Match.id -> seed`
+- `Match.id -> seed` только если backend хочет воспроизводимую симуляцию;
 - `Match.homeTeam -> homeTeam`
 - `Match.awayTeam -> awayTeam`
 - `Team.players -> team.players`

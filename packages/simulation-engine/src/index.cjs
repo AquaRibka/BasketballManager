@@ -1,3 +1,5 @@
+const { randomUUID } = require('node:crypto');
+
 function stringToSeed(value) {
   let hash = 2166136261;
 
@@ -480,7 +482,7 @@ function finalizeTeamStatistics(teamStats) {
 }
 
 function simulateMatch(input) {
-  const seed = input.seed ?? input.matchId;
+  const seed = input.seed ?? randomUUID();
   const random = createRandom(stringToSeed(seed));
   const homeStrength = calculateTeamStrengthV1(input.homeTeam, {
     randomValue: random(),

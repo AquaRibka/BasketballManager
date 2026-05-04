@@ -44,7 +44,7 @@ export interface MatchSimulationTeamSnapshot {
 
 export interface MatchSimulationInput {
   matchId: string;
-  seed: string;
+  seed?: string;
   homeTeam: MatchSimulationTeamSnapshot;
   awayTeam: MatchSimulationTeamSnapshot;
 }
