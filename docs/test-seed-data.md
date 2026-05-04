@@ -53,12 +53,29 @@ Test seed:
 
 - `3` test teams
 - `15` test players
+- `3` scheduled test matches
 
 Все значения:
 
 - фиксированы;
 - не зависят от генерации;
 - могут быть пересозданы одинаково на любой локальной базе.
+
+---
+
+## Test matches
+
+В test seed дополнительно создаются матчи:
+
+- `TSTA` vs `TSTB`
+- `TSTB` vs `TSTG`
+- `TSTG` vs `TSTA`
+
+Все они создаются в статусе `SCHEDULED`.
+
+Это позволяет проверять backend simulation endpoint
+на реальных данных из БД сразу после test seed,
+без ручного создания матча.
 
 ---
 
@@ -75,6 +92,19 @@ npm run prisma:seed:test
 ```bash
 npm run prisma:reset:test
 ```
+
+### Проверить backend simulation на реальной БД
+
+```bash
+npm run db:test:simulation --workspace @basketball-manager/backend
+```
+
+Скрипт:
+
+1. запускает backend application context;
+2. ищет первый `SCHEDULED` test match;
+3. вызывает endpoint `POST /matches/:id/simulate`;
+4. проверяет, что backend возвращает валидный результат симуляции.
 
 ---
 

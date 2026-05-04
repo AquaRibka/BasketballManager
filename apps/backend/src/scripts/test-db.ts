@@ -56,6 +56,7 @@ async function main() {
     console.log(`Database: ${databaseName}`);
     console.log(`Team: ${team.name} (${team.shortName})`);
     console.log(`Player: ${player.name} -> ${team.shortName}`);
+    console.log('Backend DB smoke-test completed successfully.');
   } finally {
     await app.close();
   }

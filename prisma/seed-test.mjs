@@ -1,7 +1,7 @@
 import prismaClientPkg from '@prisma/client';
 import { createPrismaClient } from './lib/create-prisma-client.mjs';
 
-const { PlayerPosition } = prismaClientPkg;
+const { MatchStatus, PlayerPosition } = prismaClientPkg;
 
 const prisma = createPrismaClient();
 
@@ -219,6 +219,29 @@ const testLeague = [
 ];
 
 const TEST_TEAM_SHORT_NAMES = testLeague.map((entry) => entry.team.shortName);
+const TEST_MATCHES = [
+  {
+    key: 'TSTA_TSTB_001',
+    seasonId: 'season_test_2026',
+    round: 1,
+    homeShortName: 'TSTA',
+    awayShortName: 'TSTB',
+  },
+  {
+    key: 'TSTB_TSTG_001',
+    seasonId: 'season_test_2026',
+    round: 1,
+    homeShortName: 'TSTB',
+    awayShortName: 'TSTG',
+  },
+  {
+    key: 'TSTG_TSTA_001',
+    seasonId: 'season_test_2026',
+    round: 2,
+    homeShortName: 'TSTG',
+    awayShortName: 'TSTA',
+  },
+];
 
 async function seedTestData() {
   const existingTeams = await prisma.team.findMany({
@@ -269,6 +292,53 @@ async function seedTestData() {
     });
   }
 
+  const teams = await prisma.team.findMany({
+    where: {
+      shortName: {
+        in: TEST_TEAM_SHORT_NAMES,
+      },
+    },
+    select: {
+      id: true,
+      shortName: true,
+    },
+  });
+
+  const teamIds = teams.map((team) => team.id);
+  const teamIdByShortName = new Map(teams.map((team) => [team.shortName, team.id]));
+
+  await prisma.match.deleteMany({
+    where: {
+      OR: [
+        {
+          homeTeamId: {
+            in: teamIds,
+          },
+        },
+        {
+          awayTeamId: {
+            in: teamIds,
+          },
+        },
+      ],
+    },
+  });
+
+  await prisma.match.createMany({
+    data: TEST_MATCHES.map((match) => ({
+      seasonId: match.seasonId,
+      round: match.round,
+      homeTeamId: teamIdByShortName.get(match.homeShortName),
+      awayTeamId: teamIdByShortName.get(match.awayShortName),
+      status: MatchStatus.SCHEDULED,
+      homeScore: null,
+      awayScore: null,
+      winnerTeamId: null,
+      standingsUpdateRequired: false,
+      playedAt: null,
+    })),
+  });
+
   const seededTeams = await prisma.team.count({
     where: {
       shortName: {
@@ -286,13 +356,42 @@ async function seedTestData() {
       },
     },
   });
+  const seededMatches = await prisma.match.count({
+    where: {
+      OR: [
+        {
+          homeTeam: {
+            shortName: {
+              in: TEST_TEAM_SHORT_NAMES,
+            },
+          },
+        },
+        {
+          awayTeam: {
+            shortName: {
+              in: TEST_TEAM_SHORT_NAMES,
+            },
+          },
+        },
+      ],
+    },
+  });
 
-  console.log(`Seeded ${seededTeams} test teams and ${seededPlayers} test players.`);
+  console.log(
+    `Seeded ${seededTeams} test teams, ${seededPlayers} test players, and ${seededMatches} test matches.`,
+  );
 }
 
 seedTestData()
   .catch((error) => {
     console.error('Prisma test seed failed.');
+
+    if (error?.code === 'P2021' && error?.meta?.modelName === 'Match') {
+      console.error(
+        'The Match table is missing in the current database. Apply the latest Prisma migrations before running test seed.',
+      );
+    }
+
     console.error(error);
     process.exitCode = 1;
   })

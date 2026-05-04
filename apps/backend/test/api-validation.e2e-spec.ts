@@ -49,6 +49,26 @@ function createPlayerRecord(overrides = {}) {
   };
 }
 
+function createOtherTeamPlayerRecord(overrides = {}) {
+  return {
+    id: 'cmon4yv4y0003qfsbfdn5nih0',
+    name: 'Mikhail Stone',
+    age: 24,
+    position: 'SG',
+    shooting: 75,
+    passing: 73,
+    defense: 69,
+    rebounding: 55,
+    athleticism: 77,
+    potential: 82,
+    overall: 74,
+    teamId: OTHER_TEAM_ID,
+    createdAt: new Date('2026-05-01T15:34:17.140Z'),
+    updatedAt: new Date('2026-05-01T15:34:17.140Z'),
+    ...overrides,
+  };
+}
+
 describe('Team and Player API', () => {
   let app: INestApplication;
 
@@ -59,16 +79,19 @@ describe('Team and Player API', () => {
       createTeamRecord(),
       createTeamRecord({ id: OTHER_TEAM_ID, name: 'Demo Wolves', shortName: 'DWV' }),
     ];
-    let players = [createPlayerRecord()];
+    let players = [createPlayerRecord(), createOtherTeamPlayerRecord()];
     let matches = [
       {
         id: MATCH_ID,
+        seasonId: 'season_test_2026',
+        round: 1,
         homeTeamId: TEAM_ID,
         awayTeamId: OTHER_TEAM_ID,
         status: 'SCHEDULED',
         homeScore: null,
         awayScore: null,
         winnerTeamId: null,
+        standingsUpdateRequired: false,
         playedAt: null,
         createdAt: new Date('2026-05-02T12:00:00.000Z'),
         updatedAt: new Date('2026-05-02T12:00:00.000Z'),
@@ -90,8 +113,11 @@ describe('Team and Player API', () => {
       };
     };
 
-    const prismaMock = {
+    let prismaMock: any;
+
+    prismaMock = {
       $queryRaw: jest.fn(),
+      $transaction: jest.fn(async (callback: (tx: any) => unknown) => callback(prismaMock)),
       team: {
         findMany: jest.fn(({ orderBy, select } = {}) => {
           let result = [...teams];
@@ -308,7 +334,17 @@ describe('Team and Player API', () => {
                     ...homeTeam,
                     players: players
                       .filter((player) => player.teamId === homeTeam.id)
-                      .map((player) => ({ overall: player.overall })),
+                      .map((player) => ({
+                        id: player.id,
+                        name: player.name,
+                        position: player.position,
+                        overall: player.overall,
+                        shooting: player.shooting,
+                        passing: player.passing,
+                        defense: player.defense,
+                        rebounding: player.rebounding,
+                        athleticism: player.athleticism,
+                      })),
                   }
                 : homeTeam,
               awayTeam: include?.awayTeam?.include?.players
@@ -316,7 +352,17 @@ describe('Team and Player API', () => {
                     ...awayTeam,
                     players: players
                       .filter((player) => player.teamId === awayTeam.id)
-                      .map((player) => ({ overall: player.overall })),
+                      .map((player) => ({
+                        id: player.id,
+                        name: player.name,
+                        position: player.position,
+                        overall: player.overall,
+                        shooting: player.shooting,
+                        passing: player.passing,
+                        defense: player.defense,
+                        rebounding: player.rebounding,
+                        athleticism: player.athleticism,
+                      })),
                   }
                 : awayTeam,
             };
@@ -365,6 +411,57 @@ describe('Team and Player API', () => {
           }
 
           return updatedMatch;
+        }),
+        updateMany: jest.fn(({ where, data }) => {
+          const index = matches.findIndex(
+            (match) => match.id === where.id && match.status === where.status,
+          );
+
+          if (index === -1) {
+            return { count: 0 };
+          }
+
+          matches[index] = {
+            ...matches[index],
+            ...data,
+            updatedAt: new Date('2026-05-02T12:05:00.000Z'),
+          };
+
+          return { count: 1 };
+        }),
+        findUniqueOrThrow: jest.fn(({ where, select }) => {
+          const match = matches.find((candidate) => candidate.id === where.id);
+
+          if (!match) {
+            throw new NotFoundException('Match not found');
+          }
+
+          const homeTeam = teams.find((team) => team.id === match.homeTeamId);
+          const awayTeam = teams.find((team) => team.id === match.awayTeamId);
+
+          if (!homeTeam || !awayTeam) {
+            throw new Error('Match references a missing team in test fixtures');
+          }
+
+          return {
+            ...match,
+            homeTeam: select?.homeTeam?.select
+              ? {
+                  id: homeTeam.id,
+                  name: homeTeam.name,
+                  shortName: homeTeam.shortName,
+                  rating: homeTeam.rating,
+                }
+              : homeTeam,
+            awayTeam: select?.awayTeam?.select
+              ? {
+                  id: awayTeam.id,
+                  name: awayTeam.name,
+                  shortName: awayTeam.shortName,
+                  rating: awayTeam.rating,
+                }
+              : awayTeam,
+          };
         }),
       },
     };
@@ -464,11 +561,14 @@ describe('Team and Player API', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.id).toBe(MATCH_ID);
+    expect(response.body.seasonId).toBe('season_test_2026');
+    expect(response.body.round).toBe(1);
     expect(response.body.status).toBe('COMPLETED');
     expect(response.body.homeTeam.id).toBe(TEAM_ID);
     expect(response.body.awayTeam.id).toBe(OTHER_TEAM_ID);
     expect(response.body.homeScore).not.toBe(response.body.awayScore);
     expect([TEAM_ID, OTHER_TEAM_ID]).toContain(response.body.winnerTeamId);
+    expect(response.body.standingsUpdateRequired).toBe(true);
   });
 
   it('rejects blank team names', async () => {
