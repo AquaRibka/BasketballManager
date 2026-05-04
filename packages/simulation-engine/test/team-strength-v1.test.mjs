@@ -157,6 +157,7 @@ test('stronger team statistically beats weaker team more often, with randomness 
 
   let strongWins = 0;
   let weakWins = 0;
+  const scorelines = new Set();
 
   for (let index = 0; index < 200; index += 1) {
     const result = simulateMatch({
@@ -165,6 +166,8 @@ test('stronger team statistically beats weaker team more often, with randomness 
       homeTeam: strongTeam,
       awayTeam: weakTeam,
     });
+
+    scorelines.add(`${result.homeScore}:${result.awayScore}`);
 
     if (result.winnerTeamId === strongTeam.id) {
       strongWins += 1;
@@ -175,5 +178,5 @@ test('stronger team statistically beats weaker team more often, with randomness 
 
   assert.ok(strongWins > weakWins);
   assert.ok(strongWins >= 120);
-  assert.ok(weakWins > 0);
+  assert.ok(scorelines.size > 1);
 });

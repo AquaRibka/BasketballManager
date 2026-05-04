@@ -86,6 +86,28 @@ const awayTeam = {
   ],
 };
 
+const fastHomeTeam = {
+  ...homeTeam,
+  id: 'fast_home',
+  players: homeTeam.players.map((player) => ({
+    ...player,
+    passing: Math.min(99, player.passing + 10),
+    athleticism: Math.min(99, player.athleticism + 12),
+    rebounding: Math.min(99, player.rebounding + 6),
+  })),
+};
+
+const slowAwayTeam = {
+  ...awayTeam,
+  id: 'slow_away',
+  players: awayTeam.players.map((player) => ({
+    ...player,
+    passing: Math.max(45, player.passing - 12),
+    athleticism: Math.max(45, player.athleticism - 14),
+    rebounding: Math.max(45, player.rebounding - 6),
+  })),
+};
+
 test('simulateMatch is deterministic for the same match id', () => {
   const first = simulateMatch({
     matchId: 'match_1',
@@ -183,4 +205,56 @@ test('simulateMatch resolves ties through overtime instead of a direct +1 adjust
   assert.equal(overtimeResult.homeScore === overtimeResult.awayScore, false);
   assert.equal(overtimeResult.overtimeCount > 0, true);
   assert.equal(Math.abs(overtimeResult.homeScore - overtimeResult.awayScore) >= 1, true);
+});
+
+test('simulateMatch applies pace modifiers so faster teams create more possessions on average', () => {
+  let fastPacePossessions = 0;
+  let slowPacePossessions = 0;
+
+  for (let index = 0; index < 40; index += 1) {
+    const fastResult = simulateMatch({
+      matchId: `fast_match_${index}`,
+      seed: `fast_match_${index}`,
+      homeTeam: fastHomeTeam,
+      awayTeam,
+    });
+    const slowResult = simulateMatch({
+      matchId: `slow_match_${index}`,
+      seed: `slow_match_${index}`,
+      homeTeam,
+      awayTeam: slowAwayTeam,
+    });
+
+    fastPacePossessions +=
+      fastResult.statistics.homeTeam.possessions + fastResult.statistics.awayTeam.possessions;
+    slowPacePossessions +=
+      slowResult.statistics.homeTeam.possessions + slowResult.statistics.awayTeam.possessions;
+  }
+
+  const fastAveragePossessions = fastPacePossessions / 80;
+  const slowAveragePossessions = slowPacePossessions / 80;
+
+  assert.equal(fastAveragePossessions > slowAveragePossessions + 3, true);
+});
+
+test('simulateMatch uses seed-driven variance so possessions and score are not locked to one outcome', () => {
+  const results = Array.from({ length: 8 }, (_, index) =>
+    simulateMatch({
+      matchId: `variance_match_${index}`,
+      seed: `variance_match_${index}`,
+      homeTeam,
+      awayTeam,
+    }),
+  );
+
+  const uniqueScores = new Set(results.map((result) => `${result.homeScore}:${result.awayScore}`));
+  const uniquePossessionPairs = new Set(
+    results.map(
+      (result) =>
+        `${result.statistics.homeTeam.possessions}:${result.statistics.awayTeam.possessions}`,
+    ),
+  );
+
+  assert.equal(uniqueScores.size > 1, true);
+  assert.equal(uniquePossessionPairs.size > 1, true);
 });

@@ -55,66 +55,119 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function centeredRandom(random, amplitude = 1) {
+  return (random() * 2 - 1) * amplitude;
+}
+
+function calculatePaceModifier(teamProfile, opponentProfile) {
+  return clamp(
+    (teamProfile.athleticism - 75) / 3.2 +
+      (teamProfile.passing - 75) / 4.6 +
+      (teamProfile.rebounding - opponentProfile.rebounding) / 10,
+    -6,
+    6,
+  );
+}
+
 function buildGameContext(homeProfile, awayProfile, homeStrength, awayStrength) {
   const paceBase =
-    91 +
-    (homeProfile.athleticism + awayProfile.athleticism) / 12 +
-    (homeProfile.passing + awayProfile.passing) / 18;
-  const pace = clamp(Math.round(paceBase), 84, 108);
+    90 +
+    (homeProfile.athleticism + awayProfile.athleticism) / 16 +
+    (homeProfile.passing + awayProfile.passing) / 24 +
+    (homeProfile.overall + awayProfile.overall) / 40;
   const strengthDelta = homeStrength - awayStrength;
+  const homePaceModifier = calculatePaceModifier(homeProfile, awayProfile);
+  const awayPaceModifier = calculatePaceModifier(awayProfile, homeProfile);
 
   return {
-    pace,
+    basePossessions: clamp(Math.round(paceBase), 86, 102),
+    homePaceModifier,
+    awayPaceModifier,
+    paceVariance: 4.5,
     strengthDelta,
     homeEfficiency: clamp(
-      0.97 +
-        homeStrength / 210 +
+      0.95 +
+        homeStrength / 260 +
         (homeProfile.shooting - awayProfile.defense) / 300 +
-        strengthDelta / 240,
+        strengthDelta / 360,
       0.88,
       1.28,
     ),
+    homeExecutionModifier: clamp(
+      (homeProfile.shooting - awayProfile.defense) / 340 +
+        (homeProfile.passing - awayProfile.defense) / 520,
+      -0.07,
+      0.09,
+    ),
     awayEfficiency: clamp(
-      0.95 +
-        awayStrength / 210 +
+      0.93 +
+        awayStrength / 260 +
         (awayProfile.shooting - homeProfile.defense) / 300 -
-        strengthDelta / 260,
+        strengthDelta / 380,
       0.86,
       1.24,
+    ),
+    awayExecutionModifier: clamp(
+      (awayProfile.shooting - homeProfile.defense) / 340 +
+        (awayProfile.passing - homeProfile.defense) / 520,
+      -0.08,
+      0.08,
     ),
   };
 }
 
 function generateRegulationScore(context, random) {
-  const paceSwing = 7;
-  const scoringSwing = 9;
+  const sharedPossessions = clamp(
+    Math.round(
+      context.basePossessions +
+        (context.homePaceModifier + context.awayPaceModifier) / 2 +
+        centeredRandom(random, context.paceVariance),
+    ),
+    80,
+    108,
+  );
+  const possessionSplit = clamp(
+    Math.round(
+      (context.homePaceModifier - context.awayPaceModifier) * 0.55 + centeredRandom(random, 2.2),
+    ),
+    -5,
+    5,
+  );
   const homePossessions = clamp(
-    Math.round(context.pace + random() * paceSwing * 2 - paceSwing + 1),
-    82,
+    sharedPossessions + possessionSplit,
+    78,
     112,
   );
   const awayPossessions = clamp(
-    Math.round(context.pace + random() * paceSwing * 2 - paceSwing - 1),
-    82,
+    sharedPossessions - possessionSplit,
+    78,
     112,
+  );
+  const homePointsPerPossession = clamp(
+    context.homeEfficiency + context.homeExecutionModifier + centeredRandom(random, 0.085),
+    0.85,
+    1.33,
+  );
+  const awayPointsPerPossession = clamp(
+    context.awayEfficiency + context.awayExecutionModifier + centeredRandom(random, 0.085),
+    0.83,
+    1.29,
   );
 
   const homeScore = clamp(
-    Math.round(
-      homePossessions * context.homeEfficiency + (random() * scoringSwing * 2 - scoringSwing),
-    ),
-    55,
+    Math.round(homePossessions * homePointsPerPossession + centeredRandom(random, 6.5)),
+    58,
     138,
   );
   const awayScore = clamp(
-    Math.round(
-      awayPossessions * context.awayEfficiency + (random() * scoringSwing * 2 - scoringSwing),
-    ),
-    55,
+    Math.round(awayPossessions * awayPointsPerPossession + centeredRandom(random, 6.5)),
+    56,
     138,
   );
 
   return {
+    homePossessions,
+    awayPossessions,
     homeScore,
     awayScore,
   };
@@ -128,17 +181,27 @@ function resolveOvertime(homeScore, awayScore, context, random) {
   while (resolvedHomeScore === resolvedAwayScore) {
     overtimeCount += 1;
 
-    const overtimePace = clamp(Math.round(context.pace / 5), 8, 16);
+    const overtimePace = clamp(
+      Math.round(context.basePossessions / 8 + (context.homePaceModifier + context.awayPaceModifier) / 4),
+      8,
+      16,
+    );
     const homeOvertimeScore = clamp(
       Math.round(
-        overtimePace * context.homeEfficiency + (random() * 6 - 2.5) + context.strengthDelta / 40,
+        overtimePace *
+          clamp(context.homeEfficiency + context.homeExecutionModifier, 0.88, 1.3) +
+          centeredRandom(random, 3.25) +
+          context.strengthDelta / 40,
       ),
       4,
       24,
     );
     const awayOvertimeScore = clamp(
       Math.round(
-        overtimePace * context.awayEfficiency + (random() * 6 - 2.5) - context.strengthDelta / 40,
+        overtimePace *
+          clamp(context.awayEfficiency + context.awayExecutionModifier, 0.86, 1.28) +
+          centeredRandom(random, 3.25) -
+          context.strengthDelta / 40,
       ),
       4,
       24,
@@ -155,62 +218,75 @@ function resolveOvertime(homeScore, awayScore, context, random) {
   };
 }
 
-function buildTeamStatistics(score, teamProfile, opponentProfile, random) {
-  const freeThrowsMade = clamp(
-    Math.round(score * (0.14 + teamProfile.athleticism / 900) + random() * 3),
-    8,
-    Math.max(12, score - 12),
-  );
-  const fieldGoalsMade = clamp(
-    Math.round((score - freeThrowsMade) / 2.35),
-    18,
-    Math.max(24, score),
-  );
-  const threePointsMade = clamp(
-    Math.round(fieldGoalsMade * (0.22 + teamProfile.shooting / 500)),
-    4,
-    fieldGoalsMade,
+function buildTeamStatistics(score, possessions, teamProfile, opponentProfile, random) {
+  const freeThrowPercentage = clamp(0.68 + teamProfile.shooting / 500, 0.68, 0.92);
+  const threePointPercentage = clamp(
+    0.28 + (teamProfile.shooting - opponentProfile.defense) / 400,
+    0.24,
+    0.47,
   );
   const fieldGoalPercentage = clamp(
     0.41 + (teamProfile.shooting - opponentProfile.defense) / 300,
     0.38,
     0.58,
   );
-  const threePointPercentage = clamp(
-    0.28 + (teamProfile.shooting - opponentProfile.defense) / 400,
-    0.24,
-    0.47,
+  const turnovers = clamp(
+    Math.round(
+      possessions * (0.118 - (teamProfile.passing - 70) / 520) + centeredRandom(random, 1.8),
+    ),
+    7,
+    22,
   );
-  const freeThrowPercentage = clamp(0.68 + teamProfile.shooting / 500, 0.68, 0.92);
+  const freeThrowsAttempted = clamp(
+    Math.round(
+      possessions *
+        (0.19 + teamProfile.athleticism / 1400 + centeredRandom(random, 0.025)),
+    ),
+    10,
+    38,
+  );
+  const freeThrowsMade = clamp(
+    Math.round(freeThrowsAttempted * freeThrowPercentage),
+    8,
+    freeThrowsAttempted,
+  );
+  const nonFreeThrowPoints = Math.max(0, score - freeThrowsMade);
+  const threePointShare = clamp(
+    0.24 +
+      teamProfile.shooting / 520 +
+      teamProfile.passing / 1100 -
+      opponentProfile.defense / 700 +
+      centeredRandom(random, 0.025),
+    0.2,
+    0.46,
+  );
+  const threePointsMade = clamp(
+    Math.round((nonFreeThrowPoints / 2.35) * threePointShare),
+    4,
+    Math.max(4, Math.floor(nonFreeThrowPoints / 3)),
+  );
+  const remainingTwoPointPoints = Math.max(0, nonFreeThrowPoints - threePointsMade * 3);
+  const twoPointFieldGoalsMade = Math.max(0, Math.round(remainingTwoPointPoints / 2));
+  const fieldGoalsMade = clamp(threePointsMade + twoPointFieldGoalsMade, 18, Math.max(24, score));
 
   const threePointsAttempted = clamp(
     Math.round(threePointsMade / threePointPercentage),
     threePointsMade,
-    fieldGoalsMade + 18,
+    fieldGoalsMade + 20,
   );
   const fieldGoalsAttempted = clamp(
-    Math.round(fieldGoalsMade / fieldGoalPercentage),
+    Math.round(
+      Math.max(
+        fieldGoalsMade / fieldGoalPercentage,
+        possessions - turnovers - freeThrowsAttempted * 0.44 + centeredRandom(random, 3),
+      ),
+    ),
     fieldGoalsMade,
-    fieldGoalsMade + 35,
-  );
-  const freeThrowsAttempted = clamp(
-    Math.round(freeThrowsMade / freeThrowPercentage),
-    freeThrowsMade,
-    freeThrowsMade + 10,
+    fieldGoalsMade + 38,
   );
 
   return {
-    possessions: clamp(
-      Math.round(
-        fieldGoalsAttempted +
-          freeThrowsAttempted * 0.44 +
-          11 +
-          random() * 8 +
-          teamProfile.athleticism / 18,
-      ),
-      68,
-      108,
-    ),
+    possessions,
     fieldGoalsMade,
     fieldGoalsAttempted,
     threePointsMade,
@@ -218,12 +294,12 @@ function buildTeamStatistics(score, teamProfile, opponentProfile, random) {
     freeThrowsMade,
     freeThrowsAttempted,
     assists: clamp(
-      Math.round(fieldGoalsMade * (0.46 + teamProfile.passing / 220)),
+      Math.round(fieldGoalsMade * (0.45 + teamProfile.passing / 230) + centeredRandom(random, 1.5)),
       10,
       fieldGoalsMade,
     ),
     rebounds: clamp(Math.round(28 + teamProfile.rebounding / 2.8 + random() * 8), 24, 62),
-    turnovers: clamp(Math.round(18 - teamProfile.passing / 12 + random() * 5), 7, 22),
+    turnovers,
     steals: clamp(Math.round(5 + teamProfile.defense / 20 + random() * 4), 3, 16),
     blocks: clamp(Math.round(2 + teamProfile.defense / 28 + random() * 3), 1, 11),
     fouls: clamp(Math.round(14 + opponentProfile.athleticism / 16 + random() * 6), 10, 30),
@@ -254,8 +330,21 @@ export function simulateMatch(input) {
 
   const winnerTeamId = homeScore > awayScore ? input.homeTeam.id : input.awayTeam.id;
   const loserTeamId = winnerTeamId === input.homeTeam.id ? input.awayTeam.id : input.homeTeam.id;
-  const homeStatistics = buildTeamStatistics(homeScore, homeProfile, awayProfile, random);
-  const awayStatistics = buildTeamStatistics(awayScore, awayProfile, homeProfile, random);
+  const overtimePossessions = overtimeCount * clamp(Math.round(context.basePossessions / 8), 8, 16);
+  const homeStatistics = buildTeamStatistics(
+    homeScore,
+    regulationScore.homePossessions + overtimePossessions,
+    homeProfile,
+    awayProfile,
+    random,
+  );
+  const awayStatistics = buildTeamStatistics(
+    awayScore,
+    regulationScore.awayPossessions + overtimePossessions,
+    awayProfile,
+    homeProfile,
+    random,
+  );
 
   return {
     matchId: input.matchId,
