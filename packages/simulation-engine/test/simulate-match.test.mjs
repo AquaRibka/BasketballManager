@@ -149,6 +149,8 @@ test('simulateMatch returns score and statistics consistent with the result', ()
 
   assert.equal(result.score.home, result.homeScore);
   assert.equal(result.score.away, result.awayScore);
+  assert.equal(result.statistics.homeTeam.points, result.homeScore);
+  assert.equal(result.statistics.awayTeam.points, result.awayScore);
   assert.equal(result.homeScore >= 55, true);
   assert.equal(result.awayScore >= 55, true);
   assert.equal(result.homeScore <= 138 + result.overtimeCount * 24, true);
@@ -169,6 +171,60 @@ test('simulateMatch returns score and statistics consistent with the result', ()
     result.statistics.awayTeam.threePointsMade <= result.statistics.awayTeam.threePointsAttempted,
     true,
   );
+  assert.equal(result.statistics.homeTeam.fieldGoalPercentage >= 0.35, true);
+  assert.equal(result.statistics.homeTeam.fieldGoalPercentage <= 0.65, true);
+  assert.equal(result.statistics.awayTeam.fieldGoalPercentage >= 0.35, true);
+  assert.equal(result.statistics.awayTeam.fieldGoalPercentage <= 0.65, true);
+  assert.equal(
+    result.statistics.homeTeam.fieldGoalPercentage,
+    Number(
+      (
+        result.statistics.homeTeam.fieldGoalsMade /
+        result.statistics.homeTeam.fieldGoalsAttempted
+      ).toFixed(3),
+    ),
+  );
+  assert.equal(
+    result.statistics.awayTeam.fieldGoalPercentage,
+    Number(
+      (
+        result.statistics.awayTeam.fieldGoalsMade /
+        result.statistics.awayTeam.fieldGoalsAttempted
+      ).toFixed(3),
+    ),
+  );
+  assert.equal(result.statistics.homeTeam.assists <= result.statistics.homeTeam.fieldGoalsMade, true);
+  assert.equal(result.statistics.awayTeam.assists <= result.statistics.awayTeam.fieldGoalsMade, true);
+  assert.equal(result.statistics.homeTeam.rebounds >= 20, true);
+  assert.equal(result.statistics.awayTeam.rebounds >= 20, true);
+});
+
+test('simulateMatch generates team-level box score stats that stay tied to score and shot profile', () => {
+  const result = simulateMatch({
+    matchId: 'match_stats_linked',
+    seed: 'match_stats_linked',
+    homeTeam,
+    awayTeam,
+  });
+
+  const homeTwoPointMade =
+    result.statistics.homeTeam.fieldGoalsMade - result.statistics.homeTeam.threePointsMade;
+  const awayTwoPointMade =
+    result.statistics.awayTeam.fieldGoalsMade - result.statistics.awayTeam.threePointsMade;
+  const reconstructedHomePoints =
+    homeTwoPointMade * 2 +
+    result.statistics.homeTeam.threePointsMade * 3 +
+    result.statistics.homeTeam.freeThrowsMade;
+  const reconstructedAwayPoints =
+    awayTwoPointMade * 2 +
+    result.statistics.awayTeam.threePointsMade * 3 +
+    result.statistics.awayTeam.freeThrowsMade;
+
+  assert.equal(reconstructedHomePoints, result.statistics.homeTeam.points);
+  assert.equal(reconstructedAwayPoints, result.statistics.awayTeam.points);
+  assert.equal(Math.abs(result.statistics.homeTeam.rebounds - result.statistics.awayTeam.rebounds) <= 20, true);
+  assert.equal(result.statistics.homeTeam.assists >= 10, true);
+  assert.equal(result.statistics.awayTeam.assists >= 10, true);
 });
 
 test('simulateMatch resolves ties through overtime instead of a direct +1 adjustment', () => {

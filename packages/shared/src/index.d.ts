@@ -55,9 +55,11 @@ export interface MatchSimulationScore {
 }
 
 export interface MatchSimulationTeamStatistics {
+  points: number;
   possessions: number;
   fieldGoalsMade: number;
   fieldGoalsAttempted: number;
+  fieldGoalPercentage: number;
   threePointsMade: number;
   threePointsAttempted: number;
   freeThrowsMade: number;

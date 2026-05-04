@@ -59,6 +59,10 @@ function centeredRandom(random, amplitude = 1) {
   return (random() * 2 - 1) * amplitude;
 }
 
+function roundTo(value, digits = 3) {
+  return Number(value.toFixed(digits));
+}
+
 function calculatePaceModifier(teamProfile, opponentProfile) {
   return clamp(
     (teamProfile.athleticism - 75) / 3.2 +
@@ -218,7 +222,7 @@ function resolveOvertime(homeScore, awayScore, context, random) {
   };
 }
 
-function buildTeamStatistics(score, possessions, teamProfile, opponentProfile, random) {
+function buildBaseTeamStatistics(score, possessions, teamProfile, opponentProfile, random) {
   const freeThrowPercentage = clamp(0.68 + teamProfile.shooting / 500, 0.68, 0.92);
   const threePointPercentage = clamp(
     0.28 + (teamProfile.shooting - opponentProfile.defense) / 400,
@@ -245,12 +249,12 @@ function buildTeamStatistics(score, possessions, teamProfile, opponentProfile, r
     10,
     38,
   );
-  const freeThrowsMade = clamp(
+  const estimatedFreeThrowsMade = clamp(
     Math.round(freeThrowsAttempted * freeThrowPercentage),
     8,
     freeThrowsAttempted,
   );
-  const nonFreeThrowPoints = Math.max(0, score - freeThrowsMade);
+  const estimatedNonFreeThrowPoints = Math.max(0, score - estimatedFreeThrowsMade);
   const threePointShare = clamp(
     0.24 +
       teamProfile.shooting / 520 +
@@ -261,13 +265,21 @@ function buildTeamStatistics(score, possessions, teamProfile, opponentProfile, r
     0.46,
   );
   const threePointsMade = clamp(
-    Math.round((nonFreeThrowPoints / 2.35) * threePointShare),
+    Math.round((estimatedNonFreeThrowPoints / 2.35) * threePointShare),
     4,
-    Math.max(4, Math.floor(nonFreeThrowPoints / 3)),
+    Math.max(4, Math.floor(estimatedNonFreeThrowPoints / 3)),
   );
-  const remainingTwoPointPoints = Math.max(0, nonFreeThrowPoints - threePointsMade * 3);
-  const twoPointFieldGoalsMade = Math.max(0, Math.round(remainingTwoPointPoints / 2));
-  const fieldGoalsMade = clamp(threePointsMade + twoPointFieldGoalsMade, 18, Math.max(24, score));
+  const maxTwoPointPoints = Math.max(0, score - threePointsMade * 3);
+  const twoPointFieldGoalsMade = Math.max(
+    0,
+    Math.floor((maxTwoPointPoints - estimatedFreeThrowsMade) / 2),
+  );
+  const freeThrowsMade = clamp(
+    score - (twoPointFieldGoalsMade * 2 + threePointsMade * 3),
+    0,
+    freeThrowsAttempted,
+  );
+  const fieldGoalsMade = threePointsMade + twoPointFieldGoalsMade;
 
   const threePointsAttempted = clamp(
     Math.round(threePointsMade / threePointPercentage),
@@ -284,26 +296,75 @@ function buildTeamStatistics(score, possessions, teamProfile, opponentProfile, r
     fieldGoalsMade,
     fieldGoalsMade + 38,
   );
+  const rawAssistsRate = clamp(
+    0.48 + teamProfile.passing / 240 - opponentProfile.defense / 900 + centeredRandom(random, 0.03),
+    0.42,
+    0.82,
+  );
+  const assists = clamp(Math.round(fieldGoalsMade * rawAssistsRate), 10, fieldGoalsMade);
+  const fieldGoalsMissed = Math.max(0, fieldGoalsAttempted - fieldGoalsMade);
+  const freeThrowsMissed = Math.max(0, freeThrowsAttempted - freeThrowsMade);
 
   return {
+    points: score,
     possessions,
     fieldGoalsMade,
     fieldGoalsAttempted,
+    fieldGoalPercentage: roundTo(fieldGoalsMade / Math.max(1, fieldGoalsAttempted)),
     threePointsMade,
     threePointsAttempted,
     freeThrowsMade,
     freeThrowsAttempted,
-    assists: clamp(
-      Math.round(fieldGoalsMade * (0.45 + teamProfile.passing / 230) + centeredRandom(random, 1.5)),
-      10,
-      fieldGoalsMade,
-    ),
-    rebounds: clamp(Math.round(28 + teamProfile.rebounding / 2.8 + random() * 8), 24, 62),
+    assists,
     turnovers,
     steals: clamp(Math.round(5 + teamProfile.defense / 20 + random() * 4), 3, 16),
     blocks: clamp(Math.round(2 + teamProfile.defense / 28 + random() * 3), 1, 11),
     fouls: clamp(Math.round(14 + opponentProfile.athleticism / 16 + random() * 6), 10, 30),
+    fieldGoalsMissed,
+    freeThrowsMissed,
   };
+}
+
+function attachTeamRebounds(homeStats, awayStats, homeProfile, awayProfile, random) {
+  const totalReboundPool = clamp(
+    Math.round(
+      24 +
+        (homeStats.fieldGoalsMissed + awayStats.fieldGoalsMissed) * 0.68 +
+        (homeStats.freeThrowsMissed + awayStats.freeThrowsMissed) * 0.35,
+    ),
+    28,
+    74,
+  );
+  const homeReboundShare = clamp(
+    0.5 +
+      (homeProfile.rebounding - awayProfile.rebounding) / 160 +
+      centeredRandom(random, 0.035),
+    0.38,
+    0.62,
+  );
+  const homeRebounds = clamp(Math.round(totalReboundPool * homeReboundShare), 20, 48);
+  const awayRebounds = clamp(totalReboundPool - homeRebounds, 20, 48);
+
+  return {
+    homeTeam: {
+      ...homeStats,
+      rebounds: homeRebounds,
+    },
+    awayTeam: {
+      ...awayStats,
+      rebounds: awayRebounds,
+    },
+  };
+}
+
+function finalizeTeamStatistics(teamStats) {
+  const {
+    fieldGoalsMissed: _fieldGoalsMissed,
+    freeThrowsMissed: _freeThrowsMissed,
+    ...statistics
+  } = teamStats;
+
+  return statistics;
 }
 
 export function simulateMatch(input) {
@@ -331,18 +392,25 @@ export function simulateMatch(input) {
   const winnerTeamId = homeScore > awayScore ? input.homeTeam.id : input.awayTeam.id;
   const loserTeamId = winnerTeamId === input.homeTeam.id ? input.awayTeam.id : input.homeTeam.id;
   const overtimePossessions = overtimeCount * clamp(Math.round(context.basePossessions / 8), 8, 16);
-  const homeStatistics = buildTeamStatistics(
+  const homeBaseStatistics = buildBaseTeamStatistics(
     homeScore,
     regulationScore.homePossessions + overtimePossessions,
     homeProfile,
     awayProfile,
     random,
   );
-  const awayStatistics = buildTeamStatistics(
+  const awayBaseStatistics = buildBaseTeamStatistics(
     awayScore,
     regulationScore.awayPossessions + overtimePossessions,
     awayProfile,
     homeProfile,
+    random,
+  );
+  const resolvedStatistics = attachTeamRebounds(
+    homeBaseStatistics,
+    awayBaseStatistics,
+    homeProfile,
+    awayProfile,
     random,
   );
 
@@ -359,8 +427,8 @@ export function simulateMatch(input) {
     winnerTeamId,
     loserTeamId,
     statistics: {
-      homeTeam: homeStatistics,
-      awayTeam: awayStatistics,
+      homeTeam: finalizeTeamStatistics(resolvedStatistics.homeTeam),
+      awayTeam: finalizeTeamStatistics(resolvedStatistics.awayTeam),
     },
   };
 }
