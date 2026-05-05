@@ -650,6 +650,10 @@
 
 ## Saves API
 
+Концепция того, что именно считается прогрессом карьеры, описана в:
+
+- [docs/career-save-concept-v1.md](/home/newuser/Documents/BM/docs/career-save-concept-v1.md:1)
+
 ### `GET /api/v1/saves`
 
 Возвращает список сохранений карьеры.

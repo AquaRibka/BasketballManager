@@ -32,6 +32,7 @@ model Season {
   currentRound Int          @default(1)
   startedAt    DateTime     @default(now())
   finishedAt   DateTime?
+  careerSaves  CareerSave[]
   matches      Match[]
   standings    Standing[]
   createdAt    DateTime     @default(now())
@@ -47,6 +48,7 @@ model Team {
   city             String            @db.VarChar(120)
   shortName        String            @unique @db.VarChar(10)
   rating           Int               @default(60)
+  careerSaves      CareerSave[]
   players          Player[]
   homeMatches      Match[]           @relation("HomeTeamMatches")
   awayMatches      Match[]           @relation("AwayTeamMatches")
@@ -145,4 +147,21 @@ model Standing {
   @@index([seasonId])
   @@index([seasonId, position])
   @@index([teamId])
+}
+
+model CareerSave {
+  id              String   @id @default(cuid())
+  saveName        String   @db.VarChar(120)
+  selectedTeamId  String
+  selectedTeam    Team     @relation(fields: [selectedTeamId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  currentSeasonId String
+  currentSeason   Season   @relation(fields: [currentSeasonId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  currentDate     DateTime @default(now())
+  currentRound    Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([selectedTeamId])
+  @@index([currentSeasonId])
+  @@index([updatedAt])
 }

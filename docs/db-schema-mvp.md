@@ -18,7 +18,14 @@
 
 - `Team`
 - `Player`
+- `Season`
+- `Match`
+- `Standing`
+- `MatchPlayerStat`
+- `CareerSave`
 - enum `PlayerPosition`
+- enum `MatchStatus`
+- enum `SeasonStatus`
 
 Это минимальная база для MVP `Data/API`, достаточная для:
 
@@ -26,6 +33,8 @@
 - хранения состава команды;
 - отображения карточки команды;
 - отображения игроков;
+- хранения сезонов и матчей;
+- хранения состояния карьеры пользователя;
 - дальнейшего расчёта `overall` и симуляции.
 
 ---
@@ -90,6 +99,67 @@
 - карточку игрока;
 - основу для API игроков;
 - входные данные для будущей симуляции.
+
+---
+
+## CareerSave
+
+Модель: [prisma/schema.prisma](/home/newuser/Documents/BM/prisma/schema.prisma:131)
+
+### Назначение
+
+`CareerSave` хранит долгоживущее состояние сохранённой карьеры пользователя.
+
+### Основные поля
+
+- `id` — строковый идентификатор, Prisma `cuid()`
+- `saveName` — название сохранения
+- `selectedTeamId` — ссылка на выбранную команду пользователя
+- `currentSeasonId` — ссылка на текущий сезон этой карьеры
+- `currentDate` — текущая календарная дата внутри сохранения
+- `currentRound` — текущий раунд/шаг сезона
+- `createdAt` — дата создания сохранения
+- `updatedAt` — дата последнего обновления сохранения
+
+### Relations
+
+- `CareerSave -> Team`
+  `selectedTeamId` -> `Team.id`
+- `CareerSave -> Season`
+  `currentSeasonId` -> `Season.id`
+
+### Поведение связей
+
+- удаление выбранной команды запрещено, пока на неё ссылается сохранение
+- удаление текущего сезона запрещено, пока на него ссылается сохранение
+- изменение `Team.id` и `Season.id` каскадно обновляет связи
+
+### Save state
+
+Модель уже позволяет:
+
+- создать сохранение с выбранной командой и стартовым сезоном;
+- загрузить сохранение вместе с его связями;
+- обновлять ход карьеры через `currentDate`, `currentRound`, `currentSeasonId` и `updatedAt`.
+
+### Что считается прогрессом
+
+Для MVP `CareerSave` хранит только верхнеуровневый курсор карьеры:
+
+- `saveName`
+- `selectedTeamId`
+- `currentSeasonId`
+- `currentDate`
+- `currentRound`
+
+А фактический прогресс сезона берётся из связанных сущностей:
+
+- результаты матчей — из `Match`
+- standings — из `Standing`
+
+Подробная концепция сохранения описана в:
+
+- [docs/career-save-concept-v1.md](/home/newuser/Documents/BM/docs/career-save-concept-v1.md:1)
 
 ---
 
