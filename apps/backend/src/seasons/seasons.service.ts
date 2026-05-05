@@ -7,6 +7,7 @@ import {
 import { MatchStatus, SeasonStatus, type Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSeasonDto } from './dto/create-season.dto';
+import { createRoundRobinSchedule } from './schedule-generator';
 
 const SCHEDULE_MATCH_SELECT = {
   id: true,
@@ -49,64 +50,6 @@ const STANDINGS_SELECT = {
     },
   },
 } satisfies Prisma.StandingSelect;
-
-type SchedulePairing = {
-  round: number;
-  homeTeamId: string;
-  awayTeamId: string;
-  date: Date;
-};
-
-function rotateTeams(teamIds: Array<string | null>) {
-  if (teamIds.length <= 2) {
-    return teamIds;
-  }
-
-  const [fixed, ...rest] = teamIds;
-  const last = rest.pop();
-
-  return [fixed, last ?? null, ...rest];
-}
-
-function createRoundRobinSchedule(teamIds: string[], seasonStartDate: Date) {
-  const normalizedTeamIds = teamIds.length % 2 === 0 ? [...teamIds] : [...teamIds, null];
-  const roundsPerCycle = normalizedTeamIds.length - 1;
-  const matchesPerRound = normalizedTeamIds.length / 2;
-  const cycles = 4;
-  const pairings: SchedulePairing[] = [];
-  let rotation = [...normalizedTeamIds];
-
-  for (let cycleIndex = 0; cycleIndex < cycles; cycleIndex += 1) {
-    for (let roundIndex = 0; roundIndex < roundsPerCycle; roundIndex += 1) {
-      const globalRound = cycleIndex * roundsPerCycle + roundIndex + 1;
-      const roundDate = new Date(seasonStartDate);
-      roundDate.setUTCDate(roundDate.getUTCDate() + (globalRound - 1) * 7);
-
-      for (let matchIndex = 0; matchIndex < matchesPerRound; matchIndex += 1) {
-        const leftTeamId = rotation[matchIndex];
-        const rightTeamId = rotation[rotation.length - 1 - matchIndex];
-
-        if (!leftTeamId || !rightTeamId) {
-          continue;
-        }
-
-        const scheduledDate = new Date(roundDate);
-        scheduledDate.setUTCHours(18 + matchIndex * 2, 0, 0, 0);
-
-        pairings.push({
-          round: globalRound,
-          homeTeamId: cycleIndex % 2 === 0 ? leftTeamId : rightTeamId,
-          awayTeamId: cycleIndex % 2 === 0 ? rightTeamId : leftTeamId,
-          date: scheduledDate,
-        });
-      }
-
-      rotation = rotateTeams(rotation);
-    }
-  }
-
-  return pairings;
-}
 
 @Injectable()
 export class SeasonsService {
@@ -181,14 +124,20 @@ export class SeasonsService {
       },
     });
 
-    if (teams.length < 2) {
-      throw new UnprocessableEntityException('At least two teams are required to generate schedule');
-    }
+    let pairings;
 
-    const pairings = createRoundRobinSchedule(
-      teams.map((team) => team.id),
-      season.startedAt,
-    );
+    try {
+      pairings = createRoundRobinSchedule(
+        teams.map((team) => team.id),
+        season.startedAt,
+      );
+    } catch (error) {
+      if (error instanceof RangeError || error instanceof TypeError) {
+        throw new UnprocessableEntityException(error.message);
+      }
+
+      throw error;
+    }
 
     await this.prisma.$transaction(async (tx) => {
       for (const pairing of pairings) {

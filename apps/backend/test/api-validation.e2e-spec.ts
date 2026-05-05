@@ -1059,6 +1059,38 @@ describe('Team and Player API', () => {
         status: 'SCHEDULED',
       }),
     );
+
+    const pairCounts = new Map<string, { total: number; homeByTeam: Record<string, number> }>();
+
+    for (const round of response.body.rounds) {
+      const teamsInRound = new Set<string>();
+
+      for (const match of round.matches) {
+        expect(match.homeTeam.id).not.toBe(match.awayTeam.id);
+        expect(teamsInRound.has(match.homeTeam.id)).toBe(false);
+        expect(teamsInRound.has(match.awayTeam.id)).toBe(false);
+
+        teamsInRound.add(match.homeTeam.id);
+        teamsInRound.add(match.awayTeam.id);
+
+        const pairKey = [match.homeTeam.id, match.awayTeam.id].sort().join(':');
+        const existing = pairCounts.get(pairKey) ?? {
+          total: 0,
+          homeByTeam: {},
+        };
+
+        existing.total += 1;
+        existing.homeByTeam[match.homeTeam.id] = (existing.homeByTeam[match.homeTeam.id] ?? 0) + 1;
+        pairCounts.set(pairKey, existing);
+      }
+    }
+
+    expect(pairCounts.size).toBe(3);
+
+    for (const pairStats of pairCounts.values()) {
+      expect(pairStats.total).toBe(4);
+      expect(Object.values(pairStats.homeByTeam).sort((left, right) => left - right)).toEqual([2, 2]);
+    }
   });
 
   it('returns an existing season schedule grouped by rounds', async () => {
