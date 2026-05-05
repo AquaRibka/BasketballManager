@@ -4,7 +4,7 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { MatchStatus, type Prisma } from '@prisma/client';
+import { MatchStatus, SeasonStatus, type Prisma } from '@prisma/client';
 import type {
   MatchSimulationInput,
   MatchSimulationPlayerSnapshot,
@@ -238,7 +238,7 @@ export class MatchesService {
   }
 
   async createMatch(createMatchDto: CreateMatchDto) {
-    await this.ensureSeasonExists(createMatchDto.seasonId);
+    await this.ensureSeasonCanAcceptMatches(createMatchDto.seasonId);
     await this.ensureTeamExists(createMatchDto.homeTeamId);
     await this.ensureTeamExists(createMatchDto.awayTeamId);
 
@@ -350,6 +350,24 @@ export class MatchesService {
 
     if (!season) {
       throw new NotFoundException('Season not found');
+    }
+  }
+
+  private async ensureSeasonCanAcceptMatches(id: string) {
+    const season = await this.prisma.season.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (!season) {
+      throw new NotFoundException('Season not found');
+    }
+
+    if (season.status === SeasonStatus.COMPLETED) {
+      throw new ConflictException('Season is already completed');
     }
   }
 

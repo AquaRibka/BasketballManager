@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { SeasonStatus } from '@prisma/client';
 
 export class SeasonStandingRowDto {
   @ApiProperty({ example: 1, minimum: 1 })
@@ -35,12 +36,32 @@ export class SeasonStandingRowDto {
   winPercentage!: number;
 }
 
+export class SeasonChampionDto {
+  @ApiProperty({ example: 'cmon3wd920000k7sbuepwfi6r' })
+  teamId!: string;
+
+  @ApiProperty({ example: 'CSKA Moscow' })
+  teamName!: string;
+
+  @ApiProperty({ example: 'CSKA' })
+  shortName!: string;
+}
+
 export class SeasonStandingsResponseDto {
   @ApiProperty({ example: 'season_2026' })
   seasonId!: string;
 
+  @ApiProperty({ enum: SeasonStatus, example: SeasonStatus.COMPLETED })
+  seasonStatus!: SeasonStatus;
+
+  @ApiProperty({ example: true })
+  isFinal!: boolean;
+
   @ApiProperty({ example: '2026-05-01T18:05:00.000Z', nullable: true })
   updatedAt!: string | null;
+
+  @ApiProperty({ type: SeasonChampionDto, nullable: true })
+  champion!: SeasonChampionDto | null;
 
   @ApiProperty({ type: [SeasonStandingRowDto] })
   items!: SeasonStandingRowDto[];

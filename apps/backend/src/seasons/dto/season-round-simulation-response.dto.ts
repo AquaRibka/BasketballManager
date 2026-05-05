@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { MatchStatus } from '@prisma/client';
+import { MatchStatus, SeasonStatus } from '@prisma/client';
 import { MatchResponseDto } from '../../matches/dto/match-response.dto';
 
 export class SeasonRoundSimulationResponseDto {
@@ -17,4 +17,13 @@ export class SeasonRoundSimulationResponseDto {
 
   @ApiProperty({ example: true })
   standingsUpdated!: boolean;
+
+  @ApiProperty({ example: 12, minimum: 1 })
+  currentRound!: number;
+
+  @ApiProperty({ enum: SeasonStatus, example: SeasonStatus.IN_PROGRESS })
+  seasonStatus!: SeasonStatus;
+
+  @ApiProperty({ example: null, nullable: true })
+  finishedAt!: string | null;
 }

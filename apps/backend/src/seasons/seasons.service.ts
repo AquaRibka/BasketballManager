@@ -318,7 +318,7 @@ export class SeasonsService {
   }
 
   async getStandings(id: string) {
-    await this.ensureSeasonExists(id);
+    const season = await this.getSeasonOrThrow(id);
 
     const standings = await this.prisma.standing.findMany({
       where: {
@@ -369,9 +369,21 @@ export class SeasonsService {
             Math.max(...standings.map((standing) => standing.updatedAt.getTime())),
           ).toISOString();
 
+    const champion =
+      season.status === SeasonStatus.COMPLETED && items.length > 0
+        ? {
+            teamId: items[0].teamId,
+            teamName: items[0].teamName,
+            shortName: items[0].shortName,
+          }
+        : null;
+
     return {
       seasonId: id,
+      seasonStatus: season.status,
+      isFinal: season.status === SeasonStatus.COMPLETED,
       updatedAt,
+      champion,
       items,
     };
   }
@@ -424,13 +436,7 @@ export class SeasonsService {
     });
 
     if (nextRoundMatches.length === 0) {
-      const completedSeason = await this.prisma.season.update({
-        where: { id },
-        data: {
-          status: SeasonStatus.COMPLETED,
-          finishedAt: new Date(),
-        },
-      });
+      const completedSeason = await this.completeSeason(id);
 
       return {
         seasonId: id,
@@ -457,24 +463,24 @@ export class SeasonsService {
   }
 
   async simulateCurrentRound(id: string) {
-    const season = await this.prisma.season.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        currentRound: true,
-        status: true,
-      },
-    });
-
-    if (!season) {
-      throw new NotFoundException('Season not found');
-    }
+    const season = await this.getSeasonOrThrow(id);
 
     if (season.status === SeasonStatus.COMPLETED) {
       throw new ConflictException('Season is already completed');
     }
 
-    return this.matchesService.simulateSeasonRound(season.id, season.currentRound);
+    const simulationResult = await this.matchesService.simulateSeasonRound(
+      season.id,
+      season.currentRound,
+    );
+    const finalizedSeason = await this.finalizeSeasonIfCompleted(season.id);
+
+    return {
+      ...simulationResult,
+      currentRound: finalizedSeason.currentRound,
+      seasonStatus: finalizedSeason.status,
+      finishedAt: finalizedSeason.finishedAt?.toISOString() ?? null,
+    };
   }
 
   async updateSeasonStatus(id: string, status: SeasonStatus) {
@@ -492,6 +498,22 @@ export class SeasonsService {
 
     if (season.status === SeasonStatus.COMPLETED && status === SeasonStatus.IN_PROGRESS) {
       throw new ConflictException('Season status transition is not allowed');
+    }
+
+    if (status === SeasonStatus.COMPLETED) {
+      const incompleteMatches = await this.prisma.match.findMany({
+        where: {
+          seasonId: id,
+          status: MatchStatus.SCHEDULED,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (incompleteMatches.length > 0) {
+        throw new ConflictException('Cannot complete season before all matches are completed');
+      }
     }
 
     const data: Prisma.SeasonUpdateInput = {
@@ -514,5 +536,57 @@ export class SeasonsService {
     if (!season) {
       throw new NotFoundException('Season not found');
     }
+  }
+
+  private async getSeasonOrThrow(id: string) {
+    const season = await this.prisma.season.findUnique({
+      where: { id },
+    });
+
+    if (!season) {
+      throw new NotFoundException('Season not found');
+    }
+
+    return season;
+  }
+
+  private async finalizeSeasonIfCompleted(id: string) {
+    const season = await this.getSeasonOrThrow(id);
+
+    if (season.status === SeasonStatus.COMPLETED) {
+      return season;
+    }
+
+    const matches = await this.prisma.match.findMany({
+      where: {
+        seasonId: id,
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (matches.length === 0) {
+      return season;
+    }
+
+    const hasPendingMatches = matches.some((match) => match.status !== MatchStatus.COMPLETED);
+
+    if (hasPendingMatches) {
+      return season;
+    }
+
+    return this.completeSeason(id);
+  }
+
+  private async completeSeason(id: string) {
+    return this.prisma.season.update({
+      where: { id },
+      data: {
+        status: SeasonStatus.COMPLETED,
+        finishedAt: new Date(),
+      },
+    });
   }
 }

@@ -1047,34 +1047,49 @@ describe('Team and Player API', () => {
     expect(response.body.message).toBe('Current season already exists');
   });
 
-  it('updates the season status to completed', async () => {
+  it('rejects completing a season before all matches are finished', async () => {
     const response = await request(app.getHttpServer())
       .patch(`/seasons/${TEST_SEASON_ID}/status`)
       .send({
         status: 'COMPLETED',
       });
 
-    expect(response.status).toBe(200);
-    expect(response.body.id).toBe(TEST_SEASON_ID);
-    expect(response.body.status).toBe('COMPLETED');
-    expect(response.body.finishedAt).not.toBeNull();
+    expect(response.status).toBe(409);
+    expect(response.body.message).toBe('Cannot complete season before all matches are completed');
   });
 
-  it('rejects reversing a completed season back to in-progress', async () => {
-    const response = await request(app.getHttpServer())
-      .patch(`/seasons/${TEST_SEASON_ID}/status`)
-      .send({
-        status: 'IN_PROGRESS',
-      });
+  it('keeps the season current after a rejected completion attempt', async () => {
+    const response = await request(app.getHttpServer()).get('/seasons/current');
 
-    expect(response.status).toBe(409);
-    expect(response.body.message).toBe('Season status transition is not allowed');
+    expect(response.status).toBe(200);
+    expect(response.body.id).toBe(TEST_SEASON_ID);
+    expect(response.body.status).toBe('IN_PROGRESS');
   });
 
   it('creates a season when there is no current season', async () => {
-    await request(app.getHttpServer()).patch(`/seasons/${TEST_SEASON_ID}/status`).send({
+    const scheduledMatchesResponse = await request(app.getHttpServer()).get('/matches').query({
+      seasonId: TEST_SEASON_ID,
+      status: 'SCHEDULED',
+    });
+
+    expect(scheduledMatchesResponse.status).toBe(200);
+
+    for (const match of scheduledMatchesResponse.body.items) {
+      const simulateMatchResponse = await request(app.getHttpServer()).post(
+        `/matches/${match.id}/simulate`,
+      );
+
+      expect(simulateMatchResponse.status).toBe(200);
+    }
+
+    const completeSeasonResponse = await request(app.getHttpServer())
+      .patch(`/seasons/${TEST_SEASON_ID}/status`)
+      .send({
       status: 'COMPLETED',
     });
+
+    expect(completeSeasonResponse.status).toBe(200);
+    expect(completeSeasonResponse.body.status).toBe('COMPLETED');
 
     const response = await request(app.getHttpServer()).post('/seasons').send({
       name: 'Fresh League 2027',
@@ -1088,6 +1103,17 @@ describe('Team and Player API', () => {
     expect(response.body.status).toBe('IN_PROGRESS');
     expect(response.body.currentRound).toBe(1);
     expect(response.body.finishedAt).toBeNull();
+  });
+
+  it('rejects reversing a completed season back to in-progress', async () => {
+    const response = await request(app.getHttpServer())
+      .patch(`/seasons/${TEST_SEASON_ID}/status`)
+      .send({
+        status: 'IN_PROGRESS',
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body.message).toBe('Season status transition is not allowed');
   });
 
   it('returns initial standings for all teams after season creation', async () => {
@@ -1199,6 +1225,8 @@ describe('Team and Player API', () => {
     expect(response.body.round).toBe(1);
     expect(response.body.status).toBe('COMPLETED');
     expect(response.body.standingsUpdated).toBe(true);
+    expect(response.body.seasonStatus).toBe('IN_PROGRESS');
+    expect(response.body.finishedAt).toBeNull();
     expect(response.body.matches.every((match: { status: string }) => match.status === 'COMPLETED')).toBe(true);
     expect(
       response.body.matches.every(
@@ -1230,14 +1258,14 @@ describe('Team and Player API', () => {
     expect(response.body.message).toBe('Current round has already been simulated');
   });
 
-  it('advances rounds only after completion and completes the season on the last round', async () => {
+  it('advances rounds only after completion and automatically completes the season after the last round', async () => {
     const scheduleResponse = await request(app.getHttpServer()).get(
       `/seasons/${createdSeasonId}/schedule`,
     );
 
     expect(scheduleResponse.status).toBe(200);
 
-    for (const round of scheduleResponse.body.rounds) {
+    for (const round of scheduleResponse.body.rounds.slice(0, -2)) {
       const nextRoundResponse = await request(app.getHttpServer()).post(
         `/seasons/${createdSeasonId}/next-round`,
       );
@@ -1245,23 +1273,80 @@ describe('Team and Player API', () => {
       expect(nextRoundResponse.status).toBe(200);
       expect(nextRoundResponse.body.seasonId).toBe(createdSeasonId);
       expect(nextRoundResponse.body.previousRound).toBe(round.round);
+      expect(nextRoundResponse.body.currentRound).toBe(round.round + 1);
+      expect(nextRoundResponse.body.seasonStatus).toBe('IN_PROGRESS');
 
-      if (round.round < scheduleResponse.body.totalRounds) {
-        expect(nextRoundResponse.body.currentRound).toBe(round.round + 1);
-        expect(nextRoundResponse.body.seasonStatus).toBe('IN_PROGRESS');
+      const simulateRoundResponse = await request(app.getHttpServer()).post(
+        `/seasons/${createdSeasonId}/current-round/simulate`,
+      );
 
-        const simulateRoundResponse = await request(app.getHttpServer()).post(
-          `/seasons/${createdSeasonId}/current-round/simulate`,
-        );
-
-        expect(simulateRoundResponse.status).toBe(200);
-        expect(simulateRoundResponse.body.round).toBe(round.round + 1);
-        expect(simulateRoundResponse.body.status).toBe('COMPLETED');
-      } else {
-        expect(nextRoundResponse.body.currentRound).toBe(round.round);
-        expect(nextRoundResponse.body.seasonStatus).toBe('COMPLETED');
-      }
+      expect(simulateRoundResponse.status).toBe(200);
+      expect(simulateRoundResponse.body.round).toBe(round.round + 1);
+      expect(simulateRoundResponse.body.status).toBe('COMPLETED');
     }
+
+    const finalAdvanceResponse = await request(app.getHttpServer()).post(
+      `/seasons/${createdSeasonId}/next-round`,
+    );
+
+    expect(finalAdvanceResponse.status).toBe(200);
+    expect(finalAdvanceResponse.body.currentRound).toBe(scheduleResponse.body.totalRounds);
+    expect(finalAdvanceResponse.body.seasonStatus).toBe('IN_PROGRESS');
+
+    const finalSimulateResponse = await request(app.getHttpServer()).post(
+      `/seasons/${createdSeasonId}/current-round/simulate`,
+    );
+
+    expect(finalSimulateResponse.status).toBe(200);
+    expect(finalSimulateResponse.body.round).toBe(scheduleResponse.body.totalRounds);
+    expect(finalSimulateResponse.body.status).toBe('COMPLETED');
+    expect(finalSimulateResponse.body.currentRound).toBe(scheduleResponse.body.totalRounds);
+    expect(finalSimulateResponse.body.seasonStatus).toBe('COMPLETED');
+    expect(typeof finalSimulateResponse.body.finishedAt).toBe('string');
+
+    const standingsResponse = await request(app.getHttpServer()).get(
+      `/seasons/${createdSeasonId}/standings`,
+    );
+
+    expect(standingsResponse.status).toBe(200);
+    expect(standingsResponse.body.seasonStatus).toBe('COMPLETED');
+    expect(standingsResponse.body.isFinal).toBe(true);
+    expect(standingsResponse.body.champion).toEqual(
+      expect.objectContaining({
+        teamId: standingsResponse.body.items[0].teamId,
+        teamName: standingsResponse.body.items[0].teamName,
+        shortName: standingsResponse.body.items[0].shortName,
+      }),
+    );
+
+    const nextRoundAfterCompletionResponse = await request(app.getHttpServer()).post(
+      `/seasons/${createdSeasonId}/next-round`,
+    );
+
+    expect(nextRoundAfterCompletionResponse.status).toBe(409);
+    expect(nextRoundAfterCompletionResponse.body.message).toBe('Season is already completed');
+
+    const resetCompletedSeasonResponse = await request(app.getHttpServer())
+      .patch(`/seasons/${createdSeasonId}/status`)
+      .send({
+        status: 'IN_PROGRESS',
+      });
+
+    expect(resetCompletedSeasonResponse.status).toBe(409);
+    expect(resetCompletedSeasonResponse.body.message).toBe('Season status transition is not allowed');
+  });
+
+  it('locks completed seasons from new match creation', async () => {
+    const response = await request(app.getHttpServer()).post('/matches').send({
+      seasonId: createdSeasonId,
+      round: 13,
+      homeTeamId: TEAM_ID,
+      awayTeamId: OTHER_TEAM_ID,
+      date: '2026-12-01T18:00:00.000Z',
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body.message).toBe('Season is already completed');
   });
 
   it('returns sorted standings for a season', async () => {
@@ -1269,26 +1354,32 @@ describe('Team and Player API', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.seasonId).toBe(TEST_SEASON_ID);
+    expect(response.body.seasonStatus).toBe('COMPLETED');
+    expect(response.body.isFinal).toBe(true);
+    expect(response.body.champion).toEqual(
+      expect.objectContaining({
+        teamId: response.body.items[0].teamId,
+        teamName: response.body.items[0].teamName,
+        shortName: response.body.items[0].shortName,
+      }),
+    );
     expect(response.body.items).toHaveLength(2);
     expect(response.body.items[0]).toEqual(
       expect.objectContaining({
         position: 1,
-        wins: 1,
-        losses: 0,
         pointDiff: expect.any(Number),
-        gamesPlayed: 1,
-        winPercentage: 1,
+        gamesPlayed: expect.any(Number),
+        winPercentage: expect.any(Number),
       }),
     );
     expect(response.body.items[1]).toEqual(
       expect.objectContaining({
         position: 2,
-        wins: 0,
-        losses: 1,
-        gamesPlayed: 1,
-        winPercentage: 0,
+        gamesPlayed: expect.any(Number),
+        winPercentage: expect.any(Number),
       }),
     );
+    expect(response.body.items[0].wins).toBeGreaterThanOrEqual(response.body.items[1].wins);
     expect(
       [TEAM_ID, OTHER_TEAM_ID].includes(response.body.items[0].teamId) &&
         [TEAM_ID, OTHER_TEAM_ID].includes(response.body.items[1].teamId),
@@ -1323,6 +1414,7 @@ describe('Team and Player API', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.items).toHaveLength(3);
+    expect(response.body.champion).toBeNull();
     expect(response.body.items.map((item: { teamName: string }) => item.teamName)).toEqual([
       'Basketball Manager Night',
       'Demo Wolves',
