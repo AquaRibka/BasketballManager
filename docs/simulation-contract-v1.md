@@ -20,6 +20,10 @@
 - `MatchSimulationTeamSnapshot`
 - `MatchSimulationPlayerSnapshot`
 
+Для описания формул `overall`, `teamStrength`, score generation и seed-логики см.:
+
+- [docs/simulation-rules-v1.md](/home/newuser/Documents/BM/docs/simulation-rules-v1.md:1)
+
 ---
 
 ## MatchSimulationInput
