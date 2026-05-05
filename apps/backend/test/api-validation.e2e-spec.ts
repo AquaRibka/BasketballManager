@@ -993,9 +993,28 @@ describe('Team and Player API', () => {
     expect(response.body.status).toBe('COMPLETED');
     expect(response.body.homeTeam.id).toBe(TEAM_ID);
     expect(response.body.awayTeam.id).toBe(OTHER_TEAM_ID);
+    expect(typeof response.body.homeScore).toBe('number');
+    expect(typeof response.body.awayScore).toBe('number');
     expect(response.body.homeScore).not.toBe(response.body.awayScore);
     expect([TEAM_ID, OTHER_TEAM_ID]).toContain(response.body.winnerTeamId);
     expect(response.body.standingsUpdateRequired).toBe(false);
+    expect(typeof response.body.playedAt).toBe('string');
+
+    const persistedMatchResponse = await request(app.getHttpServer()).get(`/matches/${MATCH_ID}`);
+
+    expect(persistedMatchResponse.status).toBe(200);
+    expect(persistedMatchResponse.body).toEqual(
+      expect.objectContaining({
+        id: MATCH_ID,
+        seasonId: response.body.seasonId,
+        round: response.body.round,
+        status: 'COMPLETED',
+        homeScore: response.body.homeScore,
+        awayScore: response.body.awayScore,
+        winnerTeamId: response.body.winnerTeamId,
+        playedAt: response.body.playedAt,
+      }),
+    );
 
     const homeStanding = standings.find(
       (standing) => standing.seasonId === TEST_SEASON_ID && standing.teamId === TEAM_ID,
@@ -1544,6 +1563,7 @@ describe('Team and Player API', () => {
     expect(response.body.code).toBe('NOT_FOUND');
     expect(response.body.message).toBe('Match not found');
     expect(response.body.details).toBeNull();
+    expect(response.body.path).toBe(`/matches/${MISSING_MATCH_ID}/simulate`);
   });
 
   it('prevents duplicate match simulation', async () => {
@@ -1553,6 +1573,7 @@ describe('Team and Player API', () => {
     expect(response.body.code).toBe('CONFLICT');
     expect(response.body.message).toBe('Match has already been simulated');
     expect(response.body.details).toBeNull();
+    expect(response.body.path).toBe(`/matches/${MATCH_ID}/simulate`);
   });
 
   it('rejects player attributes outside the allowed range', async () => {

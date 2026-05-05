@@ -95,6 +95,42 @@ test('calculateTeamStrengthV1 rewards better average overall and lineup balance'
   assert.ok(balancedStrength > weakerStrength);
 });
 
+test('calculateTeamStrengthV1 gives a stronger roster more teamStrength than a weaker roster with the same structure', () => {
+  const strongRoster = {
+    ...balancedTeam,
+    id: 'team_strong_roster',
+    rating: 84,
+    players: balancedTeam.players.map((player) => ({
+      ...player,
+      overall: player.overall + 5,
+      shooting: player.shooting + 4,
+      passing: player.passing + 4,
+      defense: player.defense + 4,
+      rebounding: player.rebounding + 4,
+      athleticism: player.athleticism + 4,
+    })),
+  };
+  const weakRoster = {
+    ...balancedTeam,
+    id: 'team_weak_roster',
+    rating: 84,
+    players: balancedTeam.players.map((player) => ({
+      ...player,
+      overall: player.overall - 5,
+      shooting: player.shooting - 4,
+      passing: player.passing - 4,
+      defense: player.defense - 4,
+      rebounding: player.rebounding - 4,
+      athleticism: player.athleticism - 4,
+    })),
+  };
+
+  const strongStrength = calculateTeamStrengthV1(strongRoster, { randomValue: 0.5 });
+  const weakStrength = calculateTeamStrengthV1(weakRoster, { randomValue: 0.5 });
+
+  assert.ok(strongStrength > weakStrength);
+});
+
 test('calculateTeamStrengthV1 uses stamina factor through athleticism', () => {
   const tiredTeam = {
     ...balancedTeam,
@@ -109,6 +145,22 @@ test('calculateTeamStrengthV1 uses stamina factor through athleticism', () => {
   const tiredStrength = calculateTeamStrengthV1(tiredTeam, { randomValue: 0.5 });
 
   assert.ok(freshStrength > tiredStrength);
+});
+
+test('calculateTeamStrengthV1 returns a stable fallback value for an empty roster', () => {
+  const emptyTeam = {
+    id: 'team_empty',
+    name: 'Empty Team',
+    shortName: 'EMP',
+    rating: 80,
+    players: [],
+  };
+
+  const first = calculateTeamStrengthV1(emptyTeam, { randomValue: 0.5 });
+  const second = calculateTeamStrengthV1(emptyTeam, { randomValue: 0.5 });
+
+  assert.equal(first, 63.48);
+  assert.equal(second, 63.48);
 });
 
 test('calculateTeamStrengthV1 applies a bounded random factor', () => {
