@@ -8,6 +8,11 @@ export type TeamSummary = {
   rating: number;
 };
 
+type TeamListResponse = {
+  items: TeamSummary[];
+  total: number;
+};
+
 async function request<T>(path: string): Promise<T> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     headers: {
@@ -23,5 +28,6 @@ async function request<T>(path: string): Promise<T> {
 }
 
 export async function fetchTeams() {
-  return request<TeamSummary[]>('/teams');
+  const response = await request<TeamListResponse>('/teams');
+  return response.items;
 }
