@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { randomUUID } = require('node:crypto');
 
 const REQUIRED_PLAYER_ATTRIBUTES = ['overall', 'shooting', 'passing', 'defense', 'rebounding'];
@@ -538,12 +539,9 @@ function attachTeamRebounds(homeStats, awayStats, homeProfile, awayProfile, rand
 }
 
 function finalizeTeamStatistics(teamStats) {
-  const {
-    fieldGoalsMissed: _fieldGoalsMissed,
-    freeThrowsMissed: _freeThrowsMissed,
-    ...statistics
-  } = teamStats;
-
+  const statistics = { ...teamStats };
+  delete statistics.fieldGoalsMissed;
+  delete statistics.freeThrowsMissed;
   return statistics;
 }
 

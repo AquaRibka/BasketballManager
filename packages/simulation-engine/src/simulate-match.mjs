@@ -425,12 +425,9 @@ function attachTeamRebounds(homeStats, awayStats, homeProfile, awayProfile, rand
 }
 
 function finalizeTeamStatistics(teamStats) {
-  const {
-    fieldGoalsMissed: _fieldGoalsMissed,
-    freeThrowsMissed: _freeThrowsMissed,
-    ...statistics
-  } = teamStats;
-
+  const statistics = { ...teamStats };
+  delete statistics.fieldGoalsMissed;
+  delete statistics.freeThrowsMissed;
   return statistics;
 }
 

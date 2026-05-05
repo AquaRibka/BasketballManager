@@ -15,7 +15,6 @@ const MATCH_ID = 'cmolpef3i0004f3sbsx7ulstu';
 const MISSING_MATCH_ID = 'cmolpef3i0005f3sbsx7ulstv';
 const TEST_SEASON_ID = 'season_test_2026';
 
-type TeamRecord = ReturnType<typeof createTeamRecord>;
 type PlayerRecord = ReturnType<typeof createPlayerRecord>;
 
 function createTeamRecord(overrides = {}) {
@@ -262,14 +261,12 @@ describe('Team and Player API', () => {
       };
     };
 
-    let prismaMock: any;
-
-    prismaMock = {
+    const prismaMock: any = {
       $queryRaw: jest.fn(),
       $transaction: jest.fn(async (callback: (tx: any) => unknown) => callback(prismaMock)),
       team: {
         findMany: jest.fn(({ orderBy, select } = {}) => {
-          let result = [...teams];
+          const result = [...teams];
 
           if (orderBy?.[0]?.name === 'asc') {
             result.sort((left, right) => left.name.localeCompare(right.name));
