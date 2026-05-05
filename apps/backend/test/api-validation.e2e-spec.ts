@@ -213,6 +213,55 @@ describe('Team and Player API', () => {
       };
     };
 
+    const serializeMatchWithInclude = (match: (typeof matches)[number], include?: any) => {
+      const homeTeam = teams.find((team) => team.id === match.homeTeamId);
+      const awayTeam = teams.find((team) => team.id === match.awayTeamId);
+
+      if (!homeTeam || !awayTeam) {
+        throw new Error('Match references a missing team in test fixtures');
+      }
+
+      return {
+        ...match,
+        homeTeam: include?.homeTeam?.include?.players
+          ? {
+              ...homeTeam,
+              players: players
+                .filter((player) => player.teamId === homeTeam.id)
+                .map((player) => ({
+                  id: player.id,
+                  name: player.name,
+                  position: player.position,
+                  overall: player.overall,
+                  shooting: player.shooting,
+                  passing: player.passing,
+                  defense: player.defense,
+                  rebounding: player.rebounding,
+                  athleticism: player.athleticism,
+                })),
+            }
+          : homeTeam,
+        awayTeam: include?.awayTeam?.include?.players
+          ? {
+              ...awayTeam,
+              players: players
+                .filter((player) => player.teamId === awayTeam.id)
+                .map((player) => ({
+                  id: player.id,
+                  name: player.name,
+                  position: player.position,
+                  overall: player.overall,
+                  shooting: player.shooting,
+                  passing: player.passing,
+                  defense: player.defense,
+                  rebounding: player.rebounding,
+                  athleticism: player.athleticism,
+                })),
+            }
+          : awayTeam,
+      };
+    };
+
     let prismaMock: any;
 
     prismaMock = {
@@ -496,6 +545,17 @@ describe('Team and Player API', () => {
           standings[index] = updatedStanding;
           return updatedStanding;
         }),
+        create: jest.fn(({ data }) => {
+          const createdStanding = {
+            id: `cstandingcreate${String(standings.length + 1).padStart(10, '0')}`,
+            ...data,
+            createdAt: new Date('2026-05-03T08:10:00.000Z'),
+            updatedAt: new Date('2026-05-03T08:10:00.000Z'),
+          };
+
+          standings = [...standings, createdStanding];
+          return createdStanding;
+        }),
       },
       season: {
         findFirst: jest.fn(({ where, orderBy } = {}) => {
@@ -551,7 +611,7 @@ describe('Team and Player API', () => {
         }),
       },
       match: {
-        findMany: jest.fn(({ where, select, orderBy } = {}) => {
+        findMany: jest.fn(({ where, select, include, orderBy } = {}) => {
           let result = [...matches];
 
           if (where?.seasonId) {
@@ -593,6 +653,10 @@ describe('Team and Player API', () => {
 
               return left.createdAt.getTime() - right.createdAt.getTime();
             });
+          }
+
+          if (include?.homeTeam || include?.awayTeam) {
+            return result.map((match) => serializeMatchWithInclude(match, include));
           }
 
           return select ? result.map((match) => serializeMatch(match, select)) : result;
@@ -1026,21 +1090,22 @@ describe('Team and Player API', () => {
     expect(response.body.finishedAt).toBeNull();
   });
 
-  it('returns an empty standings table for a season without rows', async () => {
+  it('returns initial standings for all teams after season creation', async () => {
     const response = await request(app.getHttpServer()).get(`/seasons/${createdSeasonId}/standings`);
 
     expect(response.status).toBe(200);
     expect(response.body.seasonId).toBe(createdSeasonId);
-    expect(response.body.updatedAt).toBeNull();
-    expect(response.body.items).toEqual([]);
+    expect(response.body.updatedAt).not.toBeNull();
+    expect(response.body.items).toHaveLength(3);
+    expect(response.body.items.every((item: { wins: number; losses: number; pointDiff: number }) => {
+      return item.wins === 0 && item.losses === 0 && item.pointDiff === 0;
+    })).toBe(true);
   });
 
-  it('generates a season schedule grouped by rounds', async () => {
-    const response = await request(app.getHttpServer()).post(
-      `/seasons/${createdSeasonId}/schedule`,
-    );
+  it('returns a generated season schedule grouped by rounds right after season creation', async () => {
+    const response = await request(app.getHttpServer()).get(`/seasons/${createdSeasonId}/schedule`);
 
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(200);
     expect(response.body.seasonId).toBe(createdSeasonId);
     expect(response.body.totalRounds).toBe(12);
     expect(response.body.totalMatches).toBe(12);
@@ -1115,6 +1180,90 @@ describe('Team and Player API', () => {
     expect(response.body.message).toBe('Schedule already exists for this season');
   });
 
+  it('does not allow moving to the next round before current round matches are completed', async () => {
+    const response = await request(app.getHttpServer()).post(
+      `/seasons/${createdSeasonId}/next-round`,
+    );
+
+    expect(response.status).toBe(409);
+    expect(response.body.message).toBe('Current round is not completed');
+  });
+
+  it('simulates all unfinished matches in the current round and updates standings', async () => {
+    const response = await request(app.getHttpServer()).post(
+      `/seasons/${createdSeasonId}/current-round/simulate`,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.seasonId).toBe(createdSeasonId);
+    expect(response.body.round).toBe(1);
+    expect(response.body.status).toBe('COMPLETED');
+    expect(response.body.standingsUpdated).toBe(true);
+    expect(response.body.matches.every((match: { status: string }) => match.status === 'COMPLETED')).toBe(true);
+    expect(
+      response.body.matches.every(
+        (match: { homeScore: number | null; awayScore: number | null; playedAt: string | null }) =>
+          typeof match.homeScore === 'number' &&
+          typeof match.awayScore === 'number' &&
+          typeof match.playedAt === 'string',
+      ),
+    ).toBe(true);
+
+    const standingsResponse = await request(app.getHttpServer()).get(
+      `/seasons/${createdSeasonId}/standings`,
+    );
+
+    expect(standingsResponse.status).toBe(200);
+    expect(
+      standingsResponse.body.items.some(
+        (item: { wins: number; losses: number; gamesPlayed: number }) => item.gamesPlayed > 0,
+      ),
+    ).toBe(true);
+  });
+
+  it('rejects simulating the current round when all its matches are already completed', async () => {
+    const response = await request(app.getHttpServer()).post(
+      `/seasons/${createdSeasonId}/current-round/simulate`,
+    );
+
+    expect(response.status).toBe(409);
+    expect(response.body.message).toBe('Current round has already been simulated');
+  });
+
+  it('advances rounds only after completion and completes the season on the last round', async () => {
+    const scheduleResponse = await request(app.getHttpServer()).get(
+      `/seasons/${createdSeasonId}/schedule`,
+    );
+
+    expect(scheduleResponse.status).toBe(200);
+
+    for (const round of scheduleResponse.body.rounds) {
+      const nextRoundResponse = await request(app.getHttpServer()).post(
+        `/seasons/${createdSeasonId}/next-round`,
+      );
+
+      expect(nextRoundResponse.status).toBe(200);
+      expect(nextRoundResponse.body.seasonId).toBe(createdSeasonId);
+      expect(nextRoundResponse.body.previousRound).toBe(round.round);
+
+      if (round.round < scheduleResponse.body.totalRounds) {
+        expect(nextRoundResponse.body.currentRound).toBe(round.round + 1);
+        expect(nextRoundResponse.body.seasonStatus).toBe('IN_PROGRESS');
+
+        const simulateRoundResponse = await request(app.getHttpServer()).post(
+          `/seasons/${createdSeasonId}/current-round/simulate`,
+        );
+
+        expect(simulateRoundResponse.status).toBe(200);
+        expect(simulateRoundResponse.body.round).toBe(round.round + 1);
+        expect(simulateRoundResponse.body.status).toBe('COMPLETED');
+      } else {
+        expect(nextRoundResponse.body.currentRound).toBe(round.round);
+        expect(nextRoundResponse.body.seasonStatus).toBe('COMPLETED');
+      }
+    }
+  });
+
   it('returns sorted standings for a season', async () => {
     const response = await request(app.getHttpServer()).get(`/seasons/${TEST_SEASON_ID}/standings`);
 
@@ -1144,6 +1293,42 @@ describe('Team and Player API', () => {
       [TEAM_ID, OTHER_TEAM_ID].includes(response.body.items[0].teamId) &&
         [TEAM_ID, OTHER_TEAM_ID].includes(response.body.items[1].teamId),
     ).toBe(true);
+  });
+
+  it('uses wins, point diff, points for, and team name as stable standings tie-breakers', async () => {
+    const createSeasonResponse = await request(app.getHttpServer()).post('/seasons').send({
+      name: 'Tie Break League 2028',
+      year: 2028,
+    });
+
+    expect(createSeasonResponse.status).toBe(201);
+
+    const tieBreakSeasonId = createSeasonResponse.body.id;
+
+    standings = standings.map((standing) =>
+      standing.seasonId !== tieBreakSeasonId
+        ? standing
+        : {
+            ...standing,
+            wins: 3,
+            losses: 2,
+            pointsFor: 250,
+            pointsAgainst: 240,
+            pointDiff: 10,
+            updatedAt: new Date('2026-05-03T10:00:00.000Z'),
+          },
+    );
+
+    const response = await request(app.getHttpServer()).get(`/seasons/${tieBreakSeasonId}/standings`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.items).toHaveLength(3);
+    expect(response.body.items.map((item: { teamName: string }) => item.teamName)).toEqual([
+      'Basketball Manager Night',
+      'Demo Wolves',
+      'QA Lions',
+    ]);
+    expect(response.body.items.map((item: { position: number }) => item.position)).toEqual([1, 2, 3]);
   });
 
   it('returns updated standings data after match simulation', async () => {

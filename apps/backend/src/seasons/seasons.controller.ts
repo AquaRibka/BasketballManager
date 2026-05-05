@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBody,
@@ -12,7 +12,9 @@ import {
 } from '@nestjs/swagger';
 import { CreateSeasonDto } from './dto/create-season.dto';
 import { SeasonParamDto } from './dto/season-param.dto';
+import { SeasonRoundSimulationResponseDto } from './dto/season-round-simulation-response.dto';
 import { SeasonResponseDto } from './dto/season-response.dto';
+import { SeasonNextRoundResponseDto } from './dto/season-next-round-response.dto';
 import { SeasonScheduleResponseDto } from './dto/season-schedule-response.dto';
 import { SeasonStandingsResponseDto } from './dto/season-standings-response.dto';
 import { UpdateSeasonStatusDto } from './dto/update-season-status.dto';
@@ -70,6 +72,30 @@ export class SeasonsController {
   @ApiNotFoundResponse({ description: 'Season not found' })
   getStandings(@Param() params: SeasonParamDto) {
     return this.seasonsService.getStandings(params.id);
+  }
+
+  @Post(':id/current-round/simulate')
+  @ApiOperation({ summary: 'Simulate all unfinished matches in the current season round' })
+  @ApiParam({ name: 'id', description: 'Season id', example: 'season_2026' })
+  @ApiOkResponse({ type: SeasonRoundSimulationResponseDto })
+  @ApiBadRequestResponse({ description: 'The provided season id is invalid' })
+  @ApiNotFoundResponse({ description: 'Season or round matches not found' })
+  @ApiConflictResponse({ description: 'Current round has already been simulated or season is completed' })
+  @HttpCode(HttpStatus.OK)
+  simulateCurrentRound(@Param() params: SeasonParamDto) {
+    return this.seasonsService.simulateCurrentRound(params.id);
+  }
+
+  @Post(':id/next-round')
+  @ApiOperation({ summary: 'Advance the season to the next round when the current round is completed' })
+  @ApiParam({ name: 'id', description: 'Season id', example: 'season_2026' })
+  @ApiOkResponse({ type: SeasonNextRoundResponseDto })
+  @ApiBadRequestResponse({ description: 'The provided season id is invalid' })
+  @ApiNotFoundResponse({ description: 'Season not found' })
+  @ApiConflictResponse({ description: 'Current round is not completed or season is already completed' })
+  @HttpCode(HttpStatus.OK)
+  advanceToNextRound(@Param() params: SeasonParamDto) {
+    return this.seasonsService.advanceToNextRound(params.id);
   }
 
   @Patch(':id/status')

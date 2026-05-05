@@ -93,6 +93,10 @@ const MATCH_BASE_SELECT = {
   },
 } satisfies Prisma.MatchSelect;
 
+type MatchWithRosters = Prisma.MatchGetPayload<{
+  include: typeof MATCH_WITH_ROSTERS_INCLUDE;
+}>;
+
 function toMatchSimulationPlayerSnapshot(player: {
   id: string;
   name: string;
@@ -283,59 +287,58 @@ export class MatchesService {
         throw new NotFoundException('Match not found');
       }
 
-      if (match.status === MatchStatus.COMPLETED) {
-        throw new ConflictException('Match has already been simulated');
-      }
-
-      const simulationInput: MatchSimulationInput = {
-        matchId: match.id,
-        seed: match.id,
-        homeTeam: toMatchSimulationTeamSnapshot(match.homeTeam),
-        awayTeam: toMatchSimulationTeamSnapshot(match.awayTeam),
-      };
-      const result = simulateMatch(simulationInput);
-      const playedAt = new Date();
-
-      if (match.seasonId) {
-        await updateStandingForTeam(tx, {
-          seasonId: match.seasonId,
-          teamId: match.homeTeamId,
-          isWinner: result.winnerTeamId === match.homeTeamId,
-          pointsFor: result.homeScore,
-          pointsAgainst: result.awayScore,
-        });
-        await updateStandingForTeam(tx, {
-          seasonId: match.seasonId,
-          teamId: match.awayTeamId,
-          isWinner: result.winnerTeamId === match.awayTeamId,
-          pointsFor: result.awayScore,
-          pointsAgainst: result.homeScore,
-        });
-      }
-
-      const updateResult = await tx.match.updateMany({
-        where: {
-          id,
-          status: MatchStatus.SCHEDULED,
-        },
-        data: {
-          status: MatchStatus.COMPLETED,
-          homeScore: result.homeScore,
-          awayScore: result.awayScore,
-          winnerTeamId: result.winnerTeamId,
-          standingsUpdateRequired: false,
-          playedAt,
-        },
-      });
-
-      if (updateResult.count === 0) {
-        throw new ConflictException('Match has already been simulated');
-      }
+      await this.simulateScheduledMatchInTransaction(tx, match);
 
       return tx.match.findUniqueOrThrow({
         where: { id },
         select: MATCH_RESULT_SELECT,
       });
+    });
+  }
+
+  async simulateSeasonRound(seasonId: string, round: number) {
+    await this.ensureSeasonExists(seasonId);
+
+    return this.prisma.$transaction(async (tx) => {
+      const roundMatches = await tx.match.findMany({
+        where: {
+          seasonId,
+          round,
+        },
+        include: MATCH_WITH_ROSTERS_INCLUDE,
+        orderBy: [{ date: 'asc' }, { createdAt: 'asc' }],
+      });
+
+      if (roundMatches.length === 0) {
+        throw new NotFoundException('Round matches not found');
+      }
+
+      const scheduledMatches = roundMatches.filter((match) => match.status === MatchStatus.SCHEDULED);
+
+      if (scheduledMatches.length === 0) {
+        throw new ConflictException('Current round has already been simulated');
+      }
+
+      for (const match of scheduledMatches) {
+        await this.simulateScheduledMatchInTransaction(tx, match);
+      }
+
+      const simulatedMatches = await tx.match.findMany({
+        where: {
+          seasonId,
+          round,
+        },
+        select: MATCH_BASE_SELECT,
+        orderBy: [{ date: 'asc' }, { createdAt: 'asc' }],
+      });
+
+      return {
+        seasonId,
+        round,
+        status: MatchStatus.COMPLETED,
+        matches: simulatedMatches,
+        standingsUpdated: true,
+      };
     });
   }
 
@@ -363,5 +366,56 @@ export class MatchesService {
 
   private handlePersistenceError(_error: unknown): never {
     throw new UnprocessableEntityException('Match data is invalid');
+  }
+
+  private async simulateScheduledMatchInTransaction(tx: any, match: MatchWithRosters) {
+    if (match.status === MatchStatus.COMPLETED) {
+      throw new ConflictException('Match has already been simulated');
+    }
+
+    const simulationInput: MatchSimulationInput = {
+      matchId: match.id,
+      seed: match.id,
+      homeTeam: toMatchSimulationTeamSnapshot(match.homeTeam),
+      awayTeam: toMatchSimulationTeamSnapshot(match.awayTeam),
+    };
+    const result = simulateMatch(simulationInput);
+    const playedAt = new Date();
+
+    if (match.seasonId) {
+      await updateStandingForTeam(tx, {
+        seasonId: match.seasonId,
+        teamId: match.homeTeamId,
+        isWinner: result.winnerTeamId === match.homeTeamId,
+        pointsFor: result.homeScore,
+        pointsAgainst: result.awayScore,
+      });
+      await updateStandingForTeam(tx, {
+        seasonId: match.seasonId,
+        teamId: match.awayTeamId,
+        isWinner: result.winnerTeamId === match.awayTeamId,
+        pointsFor: result.awayScore,
+        pointsAgainst: result.homeScore,
+      });
+    }
+
+    const updateResult = await tx.match.updateMany({
+      where: {
+        id: match.id,
+        status: MatchStatus.SCHEDULED,
+      },
+      data: {
+        status: MatchStatus.COMPLETED,
+        homeScore: result.homeScore,
+        awayScore: result.awayScore,
+        winnerTeamId: result.winnerTeamId,
+        standingsUpdateRequired: false,
+        playedAt,
+      },
+    });
+
+    if (updateResult.count === 0) {
+      throw new ConflictException('Match has already been simulated');
+    }
   }
 }

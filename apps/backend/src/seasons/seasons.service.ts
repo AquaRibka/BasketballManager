@@ -5,6 +5,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { MatchStatus, SeasonStatus, type Prisma } from '@prisma/client';
+import { MatchesService } from '../matches/matches.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSeasonDto } from './dto/create-season.dto';
 import { createRoundRobinSchedule } from './schedule-generator';
@@ -51,9 +52,25 @@ const STANDINGS_SELECT = {
   },
 } satisfies Prisma.StandingSelect;
 
+function buildInitialStandingRows(seasonId: string, teamIds: string[]) {
+  return [...teamIds].sort((left, right) => left.localeCompare(right)).map((teamId, index) => ({
+    seasonId,
+    teamId,
+    position: index + 1,
+    wins: 0,
+    losses: 0,
+    pointsFor: 0,
+    pointsAgainst: 0,
+    pointDiff: 0,
+  }));
+}
+
 @Injectable()
 export class SeasonsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly matchesService: MatchesService,
+  ) {}
 
   async createSeason(createSeasonDto: CreateSeasonDto) {
     const existingCurrentSeason = await this.prisma.season.findFirst({
@@ -67,13 +84,72 @@ export class SeasonsService {
       throw new ConflictException('Current season already exists');
     }
 
-    return this.prisma.season.create({
-      data: {
-        name: createSeasonDto.name.trim(),
-        year: createSeasonDto.year,
-        status: SeasonStatus.IN_PROGRESS,
+    const teams = await this.prisma.team.findMany({
+      orderBy: [{ name: 'asc' }],
+      select: {
+        id: true,
       },
     });
+
+    let createdSeason;
+
+    try {
+      createdSeason = await this.prisma.$transaction(async (tx) => {
+        const season = await tx.season.create({
+          data: {
+            name: createSeasonDto.name.trim(),
+            year: createSeasonDto.year,
+            status: SeasonStatus.IN_PROGRESS,
+          },
+        });
+
+        const teamIds = teams.map((team) => team.id);
+        const pairings = createRoundRobinSchedule(teamIds, season.startedAt);
+        const standingRows = buildInitialStandingRows(season.id, teamIds);
+
+        for (const pairing of pairings) {
+          await tx.match.create({
+            data: {
+              season: {
+                connect: {
+                  id: season.id,
+                },
+              },
+              round: pairing.round,
+              date: pairing.date,
+              homeTeam: {
+                connect: {
+                  id: pairing.homeTeamId,
+                },
+              },
+              awayTeam: {
+                connect: {
+                  id: pairing.awayTeamId,
+                },
+              },
+              status: MatchStatus.SCHEDULED,
+              standingsUpdateRequired: false,
+            },
+          });
+        }
+
+        for (const standingRow of standingRows) {
+          await tx.standing.create({
+            data: standingRow,
+          });
+        }
+
+        return season;
+      });
+    } catch (error) {
+      if (error instanceof RangeError || error instanceof TypeError) {
+        throw new UnprocessableEntityException(error.message);
+      }
+
+      throw error;
+    }
+
+    return createdSeason;
   }
 
   async getCurrentSeason() {
@@ -105,6 +181,14 @@ export class SeasonsService {
     }
 
     const existingMatches = await this.prisma.match.findMany({
+      where: {
+        seasonId: id,
+      },
+      select: {
+        id: true,
+      },
+    });
+    const existingStandings = await this.prisma.standing.findMany({
       where: {
         seasonId: id,
       },
@@ -164,6 +248,17 @@ export class SeasonsService {
             standingsUpdateRequired: false,
           },
         });
+      }
+
+      if (existingStandings.length === 0) {
+        for (const standingRow of buildInitialStandingRows(
+          id,
+          teams.map((team) => team.id),
+        )) {
+          await tx.standing.create({
+            data: standingRow,
+          });
+        }
       }
     });
 
@@ -237,10 +332,6 @@ export class SeasonsService {
         return right.wins - left.wins;
       }
 
-      if (left.losses !== right.losses) {
-        return left.losses - right.losses;
-      }
-
       if (right.pointDiff !== left.pointDiff) {
         return right.pointDiff - left.pointDiff;
       }
@@ -249,7 +340,7 @@ export class SeasonsService {
         return right.pointsFor - left.pointsFor;
       }
 
-      return left.team.shortName.localeCompare(right.team.shortName);
+      return left.team.name.localeCompare(right.team.name);
     });
 
     const items = sortedItems.map((standing, index) => {
@@ -283,6 +374,107 @@ export class SeasonsService {
       updatedAt,
       items,
     };
+  }
+
+  async advanceToNextRound(id: string) {
+    const season = await this.prisma.season.findUnique({
+      where: { id },
+    });
+
+    if (!season) {
+      throw new NotFoundException('Season not found');
+    }
+
+    if (season.status === SeasonStatus.COMPLETED) {
+      throw new ConflictException('Season is already completed');
+    }
+
+    const currentRoundMatches = await this.prisma.match.findMany({
+      where: {
+        seasonId: id,
+        round: season.currentRound,
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (currentRoundMatches.length === 0) {
+      throw new ConflictException('Current round schedule not found');
+    }
+
+    const hasPendingMatches = currentRoundMatches.some(
+      (match) => match.status !== MatchStatus.COMPLETED,
+    );
+
+    if (hasPendingMatches) {
+      throw new ConflictException('Current round is not completed');
+    }
+
+    const nextRound = season.currentRound + 1;
+    const nextRoundMatches = await this.prisma.match.findMany({
+      where: {
+        seasonId: id,
+        round: nextRound,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (nextRoundMatches.length === 0) {
+      const completedSeason = await this.prisma.season.update({
+        where: { id },
+        data: {
+          status: SeasonStatus.COMPLETED,
+          finishedAt: new Date(),
+        },
+      });
+
+      return {
+        seasonId: id,
+        previousRound: season.currentRound,
+        currentRound: completedSeason.currentRound,
+        seasonStatus: completedSeason.status,
+      };
+    }
+
+    const updatedSeason = await this.prisma.season.update({
+      where: { id },
+      data: {
+        currentRound: nextRound,
+        status: SeasonStatus.IN_PROGRESS,
+      },
+    });
+
+    return {
+      seasonId: id,
+      previousRound: season.currentRound,
+      currentRound: updatedSeason.currentRound,
+      seasonStatus: updatedSeason.status,
+    };
+  }
+
+  async simulateCurrentRound(id: string) {
+    const season = await this.prisma.season.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        currentRound: true,
+        status: true,
+      },
+    });
+
+    if (!season) {
+      throw new NotFoundException('Season not found');
+    }
+
+    if (season.status === SeasonStatus.COMPLETED) {
+      throw new ConflictException('Season is already completed');
+    }
+
+    return this.matchesService.simulateSeasonRound(season.id, season.currentRound);
   }
 
   async updateSeasonStatus(id: string, status: SeasonStatus) {

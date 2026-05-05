@@ -7,5 +7,6 @@ import { MatchesService } from './matches.service';
   imports: [PrismaModule],
   controllers: [MatchesController],
   providers: [MatchesService],
+  exports: [MatchesService],
 })
 export class MatchesModule {}
