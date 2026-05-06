@@ -39,6 +39,15 @@ export type TeamSummary = {
   updatedAt: string;
 };
 
+export type CreateTeamPayload = {
+  name: string;
+  city: string;
+  shortName: string;
+  rating: number;
+};
+
+export type PlayerPosition = 'PG' | 'SG' | 'SF' | 'PF' | 'C';
+
 export type TeamPlayer = {
   id: string;
   name: string;
@@ -54,6 +63,24 @@ export type TeamPlayer = {
   teamId: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type CreatePlayerPayload = {
+  name: string;
+  age: number;
+  position: PlayerPosition;
+  shooting: number;
+  passing: number;
+  defense: number;
+  rebounding: number;
+  athleticism: number;
+  potential: number;
+  overall: number;
+  teamId?: string;
+};
+
+export type PlayerSummary = TeamPlayer & {
+  team?: Pick<TeamSummary, 'id' | 'name' | 'shortName'> | null;
 };
 
 export type TeamDetails = TeamSummary & {

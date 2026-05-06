@@ -4,6 +4,9 @@ import { ApiClientError, ApiNetworkError, isApiErrorResponse } from './errors';
 import type {
   ApiErrorResponse,
   ApiListResponse,
+  CreatePlayerPayload,
+  CreateTeamPayload,
+  PlayerSummary,
   SeasonRoundSimulationResponse,
   SeasonScheduleResponse,
   SeasonStandingsResponse,
@@ -113,11 +116,20 @@ export const teamsApi = {
     });
     return response.items;
   },
+  create(payload: CreateTeamPayload, signal?: AbortSignal) {
+    return apiClient.post<TeamSummary>(apiEndpoints.teams.create, payload, { signal });
+  },
   getById(teamId: string, signal?: AbortSignal) {
     return apiClient.get<TeamDetails>(apiEndpoints.teams.details(teamId), { signal });
   },
   getRoster(teamId: string, signal?: AbortSignal) {
     return apiClient.get<TeamRosterResponse>(apiEndpoints.teams.roster(teamId), { signal });
+  },
+};
+
+export const playersApi = {
+  create(payload: CreatePlayerPayload, signal?: AbortSignal) {
+    return apiClient.post<PlayerSummary>(apiEndpoints.players.create, payload, { signal });
   },
 };
 
@@ -162,8 +174,12 @@ export const seasonsApi = {
 export type {
   ApiErrorResponse,
   ApiListResponse,
+  CreatePlayerPayload,
+  CreateTeamPayload,
   MatchSummary,
   MatchTeam,
+  PlayerPosition,
+  PlayerSummary,
   SeasonChampion,
   SeasonRoundSimulationResponse,
   SeasonScheduleResponse,
