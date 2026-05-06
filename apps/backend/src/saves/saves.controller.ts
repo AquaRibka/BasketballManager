@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
 import {
   ApiBody,
   ApiCreatedResponse,
@@ -47,5 +47,15 @@ export class SavesController {
   @ApiNotFoundResponse({ description: 'Save not found' })
   startNextSeason(@Param() params: CuidParamDto) {
     return this.savesService.startNextSeason(params.id);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a career save and clean up its season when it is no longer referenced' })
+  @ApiParam({ name: 'id', description: 'Career save cuid', example: 'csave000000000000000000001' })
+  @ApiBadRequestResponse({ description: 'The provided save id is invalid' })
+  @ApiNotFoundResponse({ description: 'Save not found' })
+  removeSave(@Param() params: CuidParamDto) {
+    return this.savesService.deleteSave(params.id);
   }
 }

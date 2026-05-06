@@ -13,6 +13,7 @@ import {
 } from '../../shared/api/client';
 
 const ACTIVE_SAVE_STORAGE_KEY = 'bm-active-save-id';
+const isDevAdminMode = import.meta.env.DEV;
 
 type PageState =
   | { status: 'loading' }
@@ -123,6 +124,7 @@ export function SeasonPage() {
   const [isSimulating, setIsSimulating] = useState(false);
   const [isSimulatingSeason, setIsSimulatingSeason] = useState(false);
   const [isStartingNextSeason, setIsStartingNextSeason] = useState(false);
+  const [isDeletingSave, setIsDeletingSave] = useState(false);
   const [simulationMessage, setSimulationMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -334,6 +336,40 @@ export function SeasonPage() {
     }
   }
 
+  async function handleDeleteSave() {
+    if (
+      state.status !== 'success' ||
+      isDeletingSave ||
+      isSimulating ||
+      isSimulatingSeason ||
+      isStartingNextSeason
+    ) {
+      return;
+    }
+
+    const isConfirmed = window.confirm(
+      'Удалить текущее сохранение? Связанный сезон, календарь и таблица тоже будут очищены, если это сохранение единственное для сезона.',
+    );
+
+    if (!isConfirmed) {
+      return;
+    }
+
+    setIsDeletingSave(true);
+    setSimulationMessage(null);
+
+    try {
+      await savesApi.remove(state.saveState.save.id);
+      clearActiveSaveId();
+      setCreateSaveForm(INITIAL_FORM_STATE);
+      setRequestKey((current) => current + 1);
+    } catch (error) {
+      setSimulationMessage(getErrorMessage(error));
+    } finally {
+      setIsDeletingSave(false);
+    }
+  }
+
   const dashboardData = useMemo(() => {
     if (state.status !== 'success') {
       return null;
@@ -514,6 +550,20 @@ export function SeasonPage() {
                 }}
               >
                 {isStartingNextSeason ? 'Создаём новый сезон...' : 'Перейти к следующему сезону'}
+              </button>
+            ) : null}
+            {isDevAdminMode ? (
+              <button
+                className="ghost-button schedule-action-button"
+                type="button"
+                disabled={
+                  isDeletingSave || isSimulating || isSimulatingSeason || isStartingNextSeason
+                }
+                onClick={() => {
+                  void handleDeleteSave();
+                }}
+              >
+                {isDeletingSave ? 'Удаляем сохранение...' : 'Удалить сохранение'}
               </button>
             ) : null}
             <div className="team-badge standings-badge">

@@ -376,6 +376,57 @@ export class SavesService {
     return this.getSave(id);
   }
 
+  async deleteSave(id: string) {
+    const careerSave = await this.prisma.careerSave.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        currentSeasonId: true,
+      },
+    });
+
+    if (!careerSave) {
+      throw new NotFoundException('Save not found');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const seasonLinkedSaves = await tx.careerSave.findMany({
+        where: {
+          currentSeasonId: careerSave.currentSeasonId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      await tx.careerSave.delete({
+        where: { id: careerSave.id },
+      });
+
+      if (seasonLinkedSaves.length !== 1) {
+        return;
+      }
+
+      await tx.match.deleteMany({
+        where: {
+          seasonId: careerSave.currentSeasonId,
+        },
+      });
+
+      await tx.standing.deleteMany({
+        where: {
+          seasonId: careerSave.currentSeasonId,
+        },
+      });
+
+      await tx.season.delete({
+        where: {
+          id: careerSave.currentSeasonId,
+        },
+      });
+    });
+  }
+
   async getSave(id: string) {
     const careerSave = await this.prisma.careerSave.findUnique({
       where: { id },

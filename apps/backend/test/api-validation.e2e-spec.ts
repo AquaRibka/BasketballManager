@@ -572,6 +572,11 @@ describe('Team and Player API', () => {
           standings = [...standings, createdStanding];
           return createdStanding;
         }),
+        deleteMany: jest.fn(({ where }) => {
+          const deletedCount = standings.filter((standing) => standing.seasonId === where.seasonId).length;
+          standings = standings.filter((standing) => standing.seasonId !== where.seasonId);
+          return { count: deletedCount };
+        }),
       },
       season: {
         findFirst: jest.fn(({ where, orderBy } = {}) => {
@@ -625,8 +630,35 @@ describe('Team and Player API', () => {
           seasons[index] = updatedSeason;
           return updatedSeason;
         }),
+        delete: jest.fn(({ where }) => {
+          const index = seasons.findIndex((season) => season.id === where.id);
+
+          if (index === -1) {
+            throw new NotFoundException('Season not found');
+          }
+
+          const [deletedSeason] = seasons.splice(index, 1);
+          return deletedSeason;
+        }),
       },
       careerSave: {
+        findMany: jest.fn(({ where, select } = {}) => {
+          let result = [...careerSaves];
+
+          if (where?.currentSeasonId) {
+            result = result.filter((save) => save.currentSeasonId === where.currentSeasonId);
+          }
+
+          if (!select) {
+            return result;
+          }
+
+          return result.map((save) =>
+            Object.fromEntries(
+              Object.keys(select).map((key) => [key, save[key as keyof typeof save]]),
+            ),
+          );
+        }),
         findUnique: jest.fn(({ where, include }) => {
           const save = careerSaves.find((candidate) => candidate.id === where.id);
 
@@ -661,6 +693,16 @@ describe('Team and Player API', () => {
 
           careerSaves = [...careerSaves, createdSave];
           return createdSave;
+        }),
+        delete: jest.fn(({ where }) => {
+          const index = careerSaves.findIndex((save) => save.id === where.id);
+
+          if (index === -1) {
+            throw new NotFoundException('Save not found');
+          }
+
+          const [deletedSave] = careerSaves.splice(index, 1);
+          return deletedSave;
         }),
       },
       match: {
@@ -858,6 +900,11 @@ describe('Team and Player API', () => {
           };
 
           return { count: 1 };
+        }),
+        deleteMany: jest.fn(({ where }) => {
+          const deletedCount = matches.filter((match) => match.seasonId === where.seasonId).length;
+          matches = matches.filter((match) => match.seasonId !== where.seasonId);
+          return { count: deletedCount };
         }),
         findUniqueOrThrow: jest.fn(({ where, select }) => {
           const match = matches.find((candidate) => candidate.id === where.id);
@@ -1677,6 +1724,30 @@ describe('Team and Player API', () => {
     );
     expect(response.body.schedule.totalMatches).toBeGreaterThan(0);
     expect(response.body.standings.items).toHaveLength(response.body.season.teamCount);
+  });
+
+  it('deletes a career save and cleans up the linked season data', async () => {
+    const createResponse = await request(app.getHttpServer()).post('/saves').send({
+      name: 'Disposable Career',
+      teamId: TEAM_ID,
+    });
+
+    expect(createResponse.status).toBe(201);
+
+    const saveId = createResponse.body.save.id;
+    const seasonId = createResponse.body.season.id;
+
+    const deleteResponse = await request(app.getHttpServer()).delete(`/saves/${saveId}`);
+
+    expect(deleteResponse.status).toBe(204);
+
+    const getSaveResponse = await request(app.getHttpServer()).get(`/saves/${saveId}`);
+    const getSeasonStandingsResponse = await request(app.getHttpServer()).get(
+      `/seasons/${seasonId}/standings`,
+    );
+
+    expect(getSaveResponse.status).toBe(404);
+    expect(getSeasonStandingsResponse.status).toBe(404);
   });
 
   it('returns not found when creating a career save for a missing team', async () => {

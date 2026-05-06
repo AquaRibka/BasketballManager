@@ -20,7 +20,7 @@ import type {
   TeamSummary,
 } from './types';
 
-type RequestMethod = 'GET' | 'POST' | 'PATCH';
+type RequestMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 
 type RequestOptions = {
   body?: unknown;
@@ -111,6 +111,9 @@ export const apiClient = {
   ) {
     return request<TResponse>(endpoint, { ...options, method: 'PATCH', body });
   },
+  delete<TResponse>(endpoint: string, options: Omit<RequestOptions, 'method' | 'body'> = {}) {
+    return request<TResponse>(endpoint, { ...options, method: 'DELETE' });
+  },
 };
 
 export const teamsApi = {
@@ -148,6 +151,9 @@ export const savesApi = {
     return apiClient.post<CareerSaveState>(apiEndpoints.saves.nextSeason(saveId), undefined, {
       signal,
     });
+  },
+  remove(saveId: string, signal?: AbortSignal) {
+    return apiClient.delete<void>(apiEndpoints.saves.details(saveId), { signal });
   },
 };
 
