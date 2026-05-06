@@ -456,18 +456,48 @@ select {
   background: rgba(255, 176, 103, 0.12);
 }
 
+.player-inline {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.player-inline-copy strong,
+.player-identity strong {
+  display: block;
+  font-size: 1.02rem;
+}
+
+.player-inline-copy span,
+.player-inline-overall {
+  color: rgba(247, 245, 239, 0.68);
+}
+
+.player-inline-overall {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 176, 103, 0.24);
+  background: rgba(255, 176, 103, 0.1);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
 .player-detail-grid {
   display: grid;
   gap: 20px;
 }
 
+.player-display-card,
 .player-detail-main {
   display: grid;
   gap: 14px;
 }
 
-.player-identity strong {
-  display: block;
+.player-display-card .player-identity strong {
   font-size: 1.3rem;
 }
 
@@ -531,5 +561,9 @@ select {
 
   .roster-table {
     min-width: 760px;
+  }
+
+  .player-inline {
+    min-width: 220px;
   }
 }

@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { PlayerDisplay } from '../../components/player/PlayerDisplay';
 import {
   getErrorMessage,
   teamsApi,
@@ -289,7 +290,9 @@ export function TeamDetailPage({ teamId, onNavigate }: TeamDetailPageProps) {
                             setSelectedPlayerId(player.id);
                           }}
                         >
-                          <td>{player.name}</td>
+                          <td>
+                            <PlayerDisplay player={player} variant="inline" />
+                          </td>
                           <td>{player.position}</td>
                           <td>{player.age}</td>
                           <td>{player.overall}</td>
@@ -314,42 +317,7 @@ export function TeamDetailPage({ teamId, onNavigate }: TeamDetailPageProps) {
 
             {selectedPlayer ? (
               <div className="player-detail-grid">
-                <div className="player-detail-main">
-                  <div className="player-identity">
-                    <strong>{selectedPlayer.name}</strong>
-                    <span>
-                      {selectedPlayer.position} · {selectedPlayer.age} года
-                    </span>
-                  </div>
-                  <div className="player-pill-row">
-                    <span className="player-pill">Overall {selectedPlayer.overall}</span>
-                    <span className="player-pill">Potential {selectedPlayer.potential}</span>
-                    <span className="player-pill">Team {state.team.shortName}</span>
-                  </div>
-                </div>
-
-                <div className="attributes-grid">
-                  <article className="attribute-card">
-                    <span>Shooting</span>
-                    <strong>{selectedPlayer.shooting}</strong>
-                  </article>
-                  <article className="attribute-card">
-                    <span>Passing</span>
-                    <strong>{selectedPlayer.passing}</strong>
-                  </article>
-                  <article className="attribute-card">
-                    <span>Defense</span>
-                    <strong>{selectedPlayer.defense}</strong>
-                  </article>
-                  <article className="attribute-card">
-                    <span>Rebounding</span>
-                    <strong>{selectedPlayer.rebounding}</strong>
-                  </article>
-                  <article className="attribute-card">
-                    <span>Athleticism</span>
-                    <strong>{selectedPlayer.athleticism}</strong>
-                  </article>
-                </div>
+                <PlayerDisplay player={selectedPlayer} teamShortName={state.team.shortName} />
               </div>
             ) : (
               <p>Выбери игрока в таблице, чтобы посмотреть его профиль.</p>
