@@ -1,0 +1,37 @@
+export type AppRoutePath = '/teams' | '/calendar' | '/standings' | '/season';
+
+export type NavigationItem = {
+  description: string;
+  label: string;
+  path: AppRoutePath;
+};
+
+export const DEFAULT_ROUTE: AppRoutePath = '/teams';
+
+export const NAV_ITEMS: NavigationItem[] = [
+  {
+    path: '/teams',
+    label: 'Команды',
+    description: 'Составы, рейтинг и быстрый обзор клубов.',
+  },
+  {
+    path: '/calendar',
+    label: 'Календарь',
+    description: 'Ближайшие матчи и игровая сетка сезона.',
+  },
+  {
+    path: '/standings',
+    label: 'Таблица',
+    description: 'Позиции конференций и борьба за плей-офф.',
+  },
+  {
+    path: '/season',
+    label: 'Сезон',
+    description: 'Статус симуляции и ключевые этапы карьеры.',
+  },
+];
+
+export function resolveAppRoute(pathname: string): AppRoutePath {
+  const matchedItem = NAV_ITEMS.find((item) => item.path === pathname);
+  return matchedItem?.path ?? DEFAULT_ROUTE;
+}
