@@ -341,6 +341,7 @@ select {
 }
 
 .schedule-hero,
+.standings-hero,
 .schedule-hero-header,
 .round-list,
 .round-group,
@@ -574,6 +575,57 @@ select {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
+}
+
+.standings-badge {
+  min-width: 132px;
+}
+
+.standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+.standings-table th,
+.standings-table td {
+  padding: 16px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.standings-table th {
+  color: rgba(247, 245, 239, 0.64);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.standings-table tbody tr.is-leading {
+  background: rgba(255, 176, 103, 0.08);
+}
+
+.standings-position {
+  font-weight: 700;
+  color: #ffb067;
+}
+
+.standings-team {
+  display: grid;
+  gap: 4px;
+}
+
+.standings-team span {
+  color: rgba(247, 245, 239, 0.68);
+}
+
+.stat-positive {
+  color: #8ce0a8;
+}
+
+.stat-negative {
+  color: #ff9a9a;
 }
 
 .team-detail-header {
