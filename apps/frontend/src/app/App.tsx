@@ -4,6 +4,7 @@ import { useEffectEvent } from 'react';
 import { AppShell } from '../components/layout/AppShell';
 import {
   DEFAULT_ROUTE,
+  getTeamIdFromPath,
   NAV_ITEMS,
   type AppRoutePath,
   resolveAppRoute,
@@ -12,9 +13,11 @@ import { SeasonPage } from '../pages/season/SeasonPage';
 import { StandingsPage } from '../pages/standings/StandingsPage';
 import { CalendarPage } from '../pages/calendar/CalendarPage';
 import { TeamsPage } from '../pages/teams/TeamsPage';
+import { TeamDetailPage } from '../pages/teams/TeamDetailPage';
 
-const routeComponents: Record<AppRoutePath, ComponentType> = {
-  '/teams': TeamsPage,
+type StaticRoutePath = Exclude<AppRoutePath, '/teams'>;
+
+const routeComponents: Record<StaticRoutePath, ComponentType> = {
   '/calendar': CalendarPage,
   '/standings': StandingsPage,
   '/season': SeasonPage,
@@ -23,7 +26,9 @@ const routeComponents: Record<AppRoutePath, ComponentType> = {
 export function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
   const currentRoute = resolveAppRoute(pathname);
-  const CurrentPage = routeComponents[currentRoute];
+  const teamId = getTeamIdFromPath(pathname);
+  const CurrentSectionPage =
+    currentRoute === '/teams' ? null : routeComponents[currentRoute as StaticRoutePath];
 
   useEffect(() => {
     function syncPathname() {
@@ -38,20 +43,28 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (pathname !== currentRoute) {
+    const isKnownTeamsDetailRoute = teamId !== null;
+
+    if (pathname !== currentRoute && !isKnownTeamsDetailRoute) {
       window.history.replaceState({}, '', currentRoute);
       setPathname(currentRoute);
     }
-  }, [currentRoute, pathname]);
+  }, [currentRoute, pathname, teamId]);
 
-  const navigateTo = useEffectEvent((route: AppRoutePath) => {
-    if (route === pathname) {
+  const navigateTo = useEffectEvent((nextPath: string) => {
+    if (nextPath === pathname) {
       return;
     }
 
-    window.history.pushState({}, '', route);
-    setPathname(route);
+    window.history.pushState({}, '', nextPath);
+    setPathname(nextPath);
   });
+
+  const teamsPage = teamId ? (
+    <TeamDetailPage teamId={teamId} onNavigate={navigateTo} />
+  ) : (
+    <TeamsPage onNavigate={navigateTo} />
+  );
 
   return (
     <AppShell
@@ -60,7 +73,7 @@ export function App() {
       navigationItems={NAV_ITEMS}
       onNavigate={navigateTo}
     >
-      <CurrentPage />
+      {currentRoute === '/teams' ? teamsPage : CurrentSectionPage ? <CurrentSectionPage /> : null}
     </AppShell>
   );
 }

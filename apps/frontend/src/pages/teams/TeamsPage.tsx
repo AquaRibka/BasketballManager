@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
 import { getErrorMessage, teamsApi, type TeamSummary } from '../../shared/api/client';
 
+type TeamsPageProps = {
+  onNavigate: (path: string) => void;
+};
+
 type LoadState =
   | { status: 'loading' }
   | { status: 'success'; teams: TeamSummary[] }
   | { status: 'error'; message: string };
 
-export function TeamsPage() {
+export function TeamsPage({ onNavigate }: TeamsPageProps) {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
 
   useEffect(() => {
@@ -78,12 +82,21 @@ export function TeamsPage() {
             <div className="team-grid">
               {state.teams.map((team) => (
                 <article className="team-card" key={team.id}>
-                  <div className="team-card-top">
-                    <span className="team-short-name">{team.shortName}</span>
-                    <span className="team-rating">RTG {team.rating}</span>
-                  </div>
-                  <h3>{team.name}</h3>
-                  <p>{team.city}</p>
+                  <a
+                    className="team-card-link"
+                    href={`/teams/${team.id}`}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      onNavigate(`/teams/${team.id}`);
+                    }}
+                  >
+                    <div className="team-card-top">
+                      <span className="team-short-name">{team.shortName}</span>
+                      <span className="team-rating">RTG {team.rating}</span>
+                    </div>
+                    <h3>{team.name}</h3>
+                    <p>{team.city}</p>
+                  </a>
                 </article>
               ))}
             </div>

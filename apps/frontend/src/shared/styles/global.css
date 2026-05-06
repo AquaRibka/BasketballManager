@@ -269,12 +269,29 @@ select {
 }
 
 .team-card {
-  padding: 18px;
   border-radius: 20px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
     rgba(18, 21, 31, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.team-card-link {
+  display: block;
+  height: 100%;
+  padding: 18px;
+  border-radius: 20px;
+  text-decoration: none;
+  transition:
+    transform 140ms ease,
+    background 140ms ease,
+    border-color 140ms ease;
+}
+
+.team-card-link:hover,
+.team-card-link:focus-visible {
+  outline: none;
+  transform: translateY(-2px);
 }
 
 .team-card-top {
@@ -305,6 +322,177 @@ select {
   color: rgba(247, 245, 239, 0.7);
 }
 
+.ghost-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #f7f5ef;
+  cursor: pointer;
+}
+
+.team-detail-hero {
+  display: grid;
+  gap: 22px;
+}
+
+.team-detail-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.team-badge {
+  min-width: 118px;
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(255, 176, 103, 0.2), rgba(255, 176, 103, 0.06));
+  border: 1px solid rgba(255, 176, 103, 0.34);
+  text-align: center;
+}
+
+.team-badge span,
+.summary-card span,
+.field span,
+.attribute-card span,
+.player-identity span {
+  display: block;
+  color: rgba(247, 245, 239, 0.68);
+}
+
+.team-badge strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 2rem;
+}
+
+.team-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.summary-card,
+.attribute-card {
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.summary-card strong,
+.attribute-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.2rem;
+}
+
+.roster-toolbar {
+  display: grid;
+  gap: 18px;
+}
+
+.roster-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field input,
+.field select {
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(8, 10, 16, 0.8);
+  color: #f7f5ef;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.roster-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 860px;
+}
+
+.roster-table th,
+.roster-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.roster-table th {
+  color: rgba(247, 245, 239, 0.64);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.roster-table tbody tr {
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.roster-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.roster-table tbody tr.is-selected {
+  background: rgba(255, 176, 103, 0.12);
+}
+
+.player-detail-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.player-detail-main {
+  display: grid;
+  gap: 14px;
+}
+
+.player-identity strong {
+  display: block;
+  font-size: 1.3rem;
+}
+
+.player-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.player-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 176, 103, 0.14);
+  border: 1px solid rgba(255, 176, 103, 0.24);
+}
+
+.attributes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
 @media (max-width: 900px) {
   .layout-grid {
     grid-template-columns: 1fr;
@@ -312,6 +500,10 @@ select {
 
   .sidebar {
     position: static;
+  }
+
+  .team-detail-header {
+    flex-direction: column;
   }
 }
 
@@ -335,5 +527,9 @@ select {
   .hero-home-link {
     width: 100%;
     justify-content: center;
+  }
+
+  .roster-table {
+    min-width: 760px;
   }
 }

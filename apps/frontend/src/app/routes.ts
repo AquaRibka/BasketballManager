@@ -32,6 +32,19 @@ export const NAV_ITEMS: NavigationItem[] = [
 ];
 
 export function resolveAppRoute(pathname: string): AppRoutePath {
+  if (pathname === DEFAULT_ROUTE || pathname.startsWith(`${DEFAULT_ROUTE}/`)) {
+    return DEFAULT_ROUTE;
+  }
+
   const matchedItem = NAV_ITEMS.find((item) => item.path === pathname);
   return matchedItem?.path ?? DEFAULT_ROUTE;
+}
+
+export function getTeamIdFromPath(pathname: string): string | null {
+  if (!pathname.startsWith('/teams/')) {
+    return null;
+  }
+
+  const teamId = pathname.slice('/teams/'.length).trim();
+  return teamId.length > 0 ? teamId : null;
 }
