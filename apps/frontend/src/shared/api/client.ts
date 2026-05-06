@@ -4,7 +4,9 @@ import { ApiClientError, ApiNetworkError, isApiErrorResponse } from './errors';
 import type {
   ApiErrorResponse,
   ApiListResponse,
+  CareerSaveState,
   CreatePlayerPayload,
+  CreateSavePayload,
   CreateTeamPayload,
   PlayerSummary,
   SeasonRoundSimulationResponse,
@@ -133,6 +135,15 @@ export const playersApi = {
   },
 };
 
+export const savesApi = {
+  create(payload: CreateSavePayload, signal?: AbortSignal) {
+    return apiClient.post<CareerSaveState>(apiEndpoints.saves.create, payload, { signal });
+  },
+  getById(saveId: string, signal?: AbortSignal) {
+    return apiClient.get<CareerSaveState>(apiEndpoints.saves.details(saveId), { signal });
+  },
+};
+
 export const seasonsApi = {
   create(payload: { name: string; year: number }, signal?: AbortSignal) {
     return apiClient.post<SeasonSummary>(apiEndpoints.seasons.create, payload, {
@@ -174,7 +185,11 @@ export const seasonsApi = {
 export type {
   ApiErrorResponse,
   ApiListResponse,
+  CareerSaveSeason,
+  CareerSaveState,
+  CareerSaveSummary,
   CreatePlayerPayload,
+  CreateSavePayload,
   CreateTeamPayload,
   MatchSummary,
   MatchTeam,

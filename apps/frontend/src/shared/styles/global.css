@@ -927,6 +927,111 @@ select {
   gap: 12px;
 }
 
+.season-dashboard-hero,
+.dashboard-create-header,
+.dashboard-card,
+.dashboard-metric-list,
+.progress-stack,
+.progress-block {
+  display: grid;
+  gap: 18px;
+}
+
+.dashboard-hero-header,
+.dashboard-create-header,
+.next-match-banner,
+.progress-copy {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.dashboard-grid,
+.dashboard-summary-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.dashboard-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dashboard-summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.summary-card.summary-card-accent,
+.dashboard-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)),
+    rgba(18, 21, 31, 0.88);
+}
+
+.summary-card p,
+.next-match-banner span,
+.dashboard-metric span,
+.progress-copy span {
+  margin: 0;
+  color: rgba(247, 245, 239, 0.68);
+}
+
+.dashboard-metric-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dashboard-metric-list.compact {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.dashboard-metric {
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dashboard-metric strong,
+.progress-copy strong,
+.next-match-banner strong {
+  display: block;
+  margin-top: 8px;
+}
+
+.next-match-banner {
+  padding: 18px 20px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 176, 103, 0.28);
+  background: linear-gradient(145deg, rgba(255, 176, 103, 0.16), rgba(255, 176, 103, 0.05));
+}
+
+.progress-track {
+  overflow: hidden;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.progress-track.is-secondary {
+  background: rgba(87, 119, 255, 0.14);
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffb067 0%, #ff7b4d 100%);
+}
+
+.progress-fill.is-secondary {
+  background: linear-gradient(90deg, #8ab0ff 0%, #5877ff 100%);
+}
+
+.career-save-form {
+  display: grid;
+  gap: 16px;
+  max-width: 480px;
+}
+
 @media (max-width: 900px) {
   .layout-grid {
     grid-template-columns: 1fr;
@@ -937,12 +1042,23 @@ select {
   }
 
   .schedule-hero-header,
-  .team-detail-header {
+  .team-detail-header,
+  .dashboard-hero-header,
+  .dashboard-create-header,
+  .next-match-banner,
+  .progress-copy {
     flex-direction: column;
+    align-items: flex-start;
   }
 
   .form-inline-grid,
   .dev-admin-header {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-grid,
+  .dashboard-metric-list,
+  .dashboard-metric-list.compact {
     grid-template-columns: 1fr;
   }
 

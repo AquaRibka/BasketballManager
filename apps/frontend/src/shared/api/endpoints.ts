@@ -8,6 +8,10 @@ export const apiEndpoints = {
   players: {
     create: '/players',
   },
+  saves: {
+    create: '/saves',
+    details: (saveId: string) => `/saves/${saveId}`,
+  },
   seasons: {
     create: '/seasons',
     current: '/seasons/current',

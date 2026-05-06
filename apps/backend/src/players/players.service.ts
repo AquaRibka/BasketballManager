@@ -5,7 +5,6 @@ import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
 
 const DEFAULT_TEAM_RATING = 60;
-const TEAM_RATING_DEPTH = 8;
 
 @Injectable()
 export class PlayersService {
@@ -156,10 +155,9 @@ export class PlayersService {
       return DEFAULT_TEAM_RATING;
     }
 
-    const coreRotation = players.slice(0, TEAM_RATING_DEPTH);
-    const totalOverall = coreRotation.reduce((sum, player) => sum + player.overall, 0);
+    const totalOverall = players.reduce((sum, player) => sum + player.overall, 0);
 
-    return Math.round(totalOverall / coreRotation.length);
+    return Math.round(totalOverall / players.length);
   }
 
   private toCreateData(createPlayerDto: CreatePlayerDto): Prisma.PlayerCreateInput {

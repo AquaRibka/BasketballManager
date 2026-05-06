@@ -178,3 +178,41 @@ export type SeasonStandingsResponse = {
   champion: SeasonChampion | null;
   items: SeasonStandingRow[];
 };
+
+export type CareerSaveSummary = {
+  id: string;
+  name: string;
+  teamId: string;
+  teamName: string;
+  seasonId: string;
+  currentRound: number;
+  status: 'ACTIVE';
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CareerSaveSeason = {
+  id: string;
+  name: string;
+  year: number;
+  status: string;
+  currentRound: number;
+  totalRounds: number;
+  teamCount: number;
+  startedAt: string;
+  finishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CareerSaveState = {
+  save: CareerSaveSummary;
+  season: CareerSaveSeason;
+  schedule: SeasonScheduleResponse;
+  standings: SeasonStandingsResponse;
+};
+
+export type CreateSavePayload = {
+  name: string;
+  teamId: string;
+};

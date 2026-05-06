@@ -952,6 +952,29 @@ describe('Team and Player API', () => {
     expect(teamResponse.body.rating).toBe(81);
   });
 
+  it('lowers team rating when weak bench players are added', async () => {
+    const response = await request(app.getHttpServer()).post('/players').send({
+      name: 'QA Prospect',
+      age: 18,
+      position: 'SG',
+      shooting: 48,
+      passing: 46,
+      defense: 45,
+      rebounding: 41,
+      athleticism: 50,
+      potential: 72,
+      overall: 44,
+      teamId: TEAM_ID,
+    });
+
+    expect(response.status).toBe(201);
+
+    const teamResponse = await request(app.getHttpServer()).get(`/teams/${TEAM_ID}`);
+
+    expect(teamResponse.status).toBe(200);
+    expect(teamResponse.body.rating).toBe(68);
+  });
+
   it('returns a player by id', async () => {
     const response = await request(app.getHttpServer()).get(`/players/${PLAYER_ID}`);
 
@@ -979,7 +1002,7 @@ describe('Team and Player API', () => {
     const nextTeamResponse = await request(app.getHttpServer()).get(`/teams/${OTHER_TEAM_ID}`);
 
     expect(previousTeamResponse.status).toBe(200);
-    expect(previousTeamResponse.body.rating).toBe(82);
+    expect(previousTeamResponse.body.rating).toBe(63);
     expect(nextTeamResponse.status).toBe(200);
     expect(nextTeamResponse.body.rating).toBe(80);
   });
