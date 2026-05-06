@@ -153,6 +153,7 @@ select {
 .content-grid {
   display: grid;
   gap: 20px;
+  min-width: 0;
 }
 
 .panel {
@@ -177,6 +178,7 @@ select {
 .sidebar {
   position: sticky;
   top: 24px;
+  min-width: 0;
 }
 
 .sidebar-copy p:last-child {
@@ -824,6 +826,9 @@ select {
 
 .table-scroll {
   overflow-x: auto;
+  max-width: 100%;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .roster-table {
@@ -1069,7 +1074,10 @@ select {
 
   .dashboard-grid,
   .dashboard-metric-list,
-  .dashboard-metric-list.compact {
+  .dashboard-metric-list.compact,
+  .team-summary-grid,
+  .roster-controls,
+  .match-basic-stats {
     grid-template-columns: 1fr;
   }
 
@@ -1106,10 +1114,54 @@ select {
     border-radius: 22px;
   }
 
+  .hero h1 {
+    font-size: clamp(2.1rem, 10vw, 3rem);
+  }
+
+  .hero-copy {
+    font-size: 0.96rem;
+  }
+
+  .top-navigation {
+    gap: 10px;
+  }
+
   .top-navigation-link,
   .hero-home-link {
     width: 100%;
     justify-content: center;
+  }
+
+  .sidebar-link,
+  .match-card-button {
+    padding: 16px;
+  }
+
+  .match-card-grid,
+  .dashboard-summary-grid,
+  .team-grid,
+  .attributes-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .match-teams,
+  .selected-match-score {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+
+  .match-score,
+  .selected-match-score strong,
+  .selected-match-divider {
+    font-size: 1.2rem;
+  }
+
+  .selected-match-divider-large {
+    justify-self: start;
+  }
+
+  .standings-table {
+    min-width: 680px;
   }
 
   .roster-table {
