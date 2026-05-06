@@ -1,5 +1,6 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { PlayerDisplay } from '../../components/player/PlayerDisplay';
+import { StateNotice } from '../../components/state/StateNotice';
 import {
   getErrorMessage,
   teamsApi,
@@ -54,6 +55,7 @@ function formatAverage(value: number) {
 
 export function TeamDetailPage({ teamId, onNavigate }: TeamDetailPageProps) {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
+  const [requestKey, setRequestKey] = useState(0);
   const [sortField, setSortField] = useState<SortField>('overall');
   const [positionFilter, setPositionFilter] =
     useState<(typeof positionOptions)[number]>('ALL');
@@ -87,7 +89,11 @@ export function TeamDetailPage({ teamId, onNavigate }: TeamDetailPageProps) {
     return () => {
       abortController.abort();
     };
-  }, [teamId]);
+  }, [requestKey, teamId]);
+
+  function retryLoadTeam() {
+    setRequestKey((current) => current + 1);
+  }
 
   const players = state.status === 'success' ? state.team.players : [];
   const normalizedQuery = deferredSearchQuery.trim().toLowerCase();
@@ -158,13 +164,21 @@ export function TeamDetailPage({ teamId, onNavigate }: TeamDetailPageProps) {
           Назад к списку команд
         </button>
 
-        {state.status === 'loading' ? <p>Загружаем состав команды...</p> : null}
+        {state.status === 'loading' ? (
+          <StateNotice
+            title="Загружаем состав команды"
+            description="Подтягиваем карточку клуба и ростер игроков из backend API."
+          />
+        ) : null}
 
         {state.status === 'error' ? (
-          <div className="message error">
-            <strong>Команду загрузить не удалось.</strong>
-            <p>{state.message}</p>
-          </div>
+          <StateNotice
+            tone="error"
+            title="Команду загрузить не удалось"
+            description={state.message}
+            actionLabel="Повторить загрузку"
+            onAction={retryLoadTeam}
+          />
         ) : null}
 
         {state.status === 'success' ? (
@@ -257,10 +271,10 @@ export function TeamDetailPage({ teamId, onNavigate }: TeamDetailPageProps) {
             </div>
 
             {filteredPlayers.length === 0 ? (
-              <div className="message error">
-                <strong>Игроки не найдены.</strong>
-                <p>Попробуй изменить фильтр или поисковый запрос.</p>
-              </div>
+              <StateNotice
+                title="Игроки не найдены"
+                description="Измени фильтр или поисковый запрос, чтобы снова увидеть состав."
+              />
             ) : (
               <div className="table-scroll">
                 <table className="roster-table">
@@ -320,7 +334,10 @@ export function TeamDetailPage({ teamId, onNavigate }: TeamDetailPageProps) {
                 <PlayerDisplay player={selectedPlayer} teamShortName={state.team.shortName} />
               </div>
             ) : (
-              <p>Выбери игрока в таблице, чтобы посмотреть его профиль.</p>
+              <StateNotice
+                title="Нет выбранного игрока"
+                description="Выбери игрока в таблице, чтобы посмотреть его профиль и атрибуты."
+              />
             )}
           </section>
         </>

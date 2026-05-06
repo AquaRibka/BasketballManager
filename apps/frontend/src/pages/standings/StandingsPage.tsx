@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { StatePanel } from '../../components/state/StatePanel';
+import { StateNotice } from '../../components/state/StateNotice';
 import {
   ApiClientError,
   getErrorMessage,
@@ -36,6 +38,7 @@ function formatPointDiff(value: number) {
 
 export function StandingsPage() {
   const [state, setState] = useState<PageState>({ status: 'loading' });
+  const [requestKey, setRequestKey] = useState(0);
   const [isRecovering, setIsRecovering] = useState(false);
 
   async function loadStandings(signal?: AbortSignal) {
@@ -76,7 +79,11 @@ export function StandingsPage() {
     return () => {
       abortController.abort();
     };
-  }, []);
+  }, [requestKey]);
+
+  function retryLoadStandings() {
+    setRequestKey((current) => current + 1);
+  }
 
   async function handleCreateSeason() {
     if (isRecovering) {
@@ -109,53 +116,38 @@ export function StandingsPage() {
 
   if (state.status === 'loading') {
     return (
-      <section className="panel">
-        <p className="section-kicker">Таблица</p>
-        <h2>Загружаем standings сезона</h2>
-        <p className="section-copy">
-          Подтягиваем текущий сезон и турнирную таблицу из backend API.
-        </p>
-      </section>
+      <StatePanel
+        eyebrow="Loading"
+        title="Загружаем standings сезона"
+        description="Подтягиваем текущий сезон и турнирную таблицу из backend API."
+      />
     );
   }
 
   if (state.status === 'no-season') {
     return (
-      <section className="panel empty-state-panel">
-        <div className="empty-state-card">
-          <p className="empty-state-kicker">Standings</p>
-          <h3>Текущий сезон ещё не создан</h3>
-          <p>
-            Чтобы увидеть таблицу, сначала нужен активный сезон. После создания появятся команды,
-            позиции и базовые показатели без дополнительных действий.
-          </p>
-        </div>
-        <div className="action-row">
-          <button
-            className="hero-home-link schedule-action-button"
-            type="button"
-            disabled={isRecovering}
-            onClick={() => {
-              void handleCreateSeason();
-            }}
-          >
-            {isRecovering ? 'Создаём сезон...' : 'Создать текущий сезон'}
-          </button>
-        </div>
-      </section>
+      <StatePanel
+        eyebrow="Empty"
+        title="Текущий сезон ещё не создан"
+        description="Чтобы увидеть таблицу, сначала нужен активный сезон. После создания появятся команды, позиции и базовые показатели."
+        actionLabel={isRecovering ? 'Создаём сезон...' : 'Создать текущий сезон'}
+        actionDisabled={isRecovering}
+        onAction={() => {
+          void handleCreateSeason();
+        }}
+      />
     );
   }
 
   if (state.status === 'error') {
     return (
-      <section className="panel">
-        <p className="section-kicker">Таблица</p>
-        <h2>Standings загрузить не удалось</h2>
-        <div className="message error">
-          <strong>Backend не вернул турнирную таблицу сезона.</strong>
-          <p>{state.message}</p>
-        </div>
-      </section>
+      <StatePanel
+        eyebrow="Error"
+        title="Standings загрузить не удалось"
+        description={state.message}
+        actionLabel="Повторить загрузку"
+        onAction={retryLoadStandings}
+      />
     );
   }
 
@@ -210,10 +202,12 @@ export function StandingsPage() {
         </div>
 
         {state.standings.items.length === 0 ? (
-          <div className="message error">
-            <strong>Таблица пока пуста.</strong>
-            <p>Сыграй матчи сезона или проверь, что standings были инициализированы на backend.</p>
-          </div>
+          <StateNotice
+            title="Таблица пока пуста"
+            description="Сыграй матчи сезона или проверь, что standings были инициализированы на backend."
+            actionLabel="Обновить таблицу"
+            onAction={retryLoadStandings}
+          />
         ) : (
           <div className="table-scroll">
             <table className="standings-table">

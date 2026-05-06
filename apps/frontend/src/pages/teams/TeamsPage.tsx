@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { StateNotice } from '../../components/state/StateNotice';
 import { getErrorMessage, teamsApi, type TeamSummary } from '../../shared/api/client';
 
 type TeamsPageProps = {
@@ -12,6 +13,7 @@ type LoadState =
 
 export function TeamsPage({ onNavigate }: TeamsPageProps) {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
+  const [requestKey, setRequestKey] = useState(0);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -37,7 +39,11 @@ export function TeamsPage({ onNavigate }: TeamsPageProps) {
     return () => {
       abortController.abort();
     };
-  }, []);
+  }, [requestKey]);
+
+  function retryLoadTeams() {
+    setRequestKey((current) => current + 1);
+  }
 
   return (
     <>
@@ -61,24 +67,37 @@ export function TeamsPage({ onNavigate }: TeamsPageProps) {
 
       <section className="panel">
         <h2>Список команд</h2>
-        {state.status === 'loading' ? <p>Загружаем команды из backend...</p> : null}
+        {state.status === 'loading' ? (
+          <StateNotice
+            title="Загружаем команды"
+            description="Подтягиваем список клубов из backend API и готовим переходы к деталям команды."
+          />
+        ) : null}
 
         {state.status === 'error' ? (
-          <div className="message error">
-            <strong>Подключение не удалось.</strong>
-            <p>{state.message}</p>
-            <p>
-              Проверь, что backend запущен на `FRONTEND_API_URL` и Vite proxy может до него
-              достучаться.
-            </p>
-          </div>
+          <StateNotice
+            tone="error"
+            title="Команды загрузить не удалось"
+            description={`${state.message} Проверь backend и повтори запрос.`}
+            actionLabel="Повторить загрузку"
+            onAction={retryLoadTeams}
+          />
         ) : null}
 
         {state.status === 'success' ? (
           <>
-            <p className="message success">
-              Backend доступен. Команды загружены через frontend API-клиент.
-            </p>
+            {state.teams.length === 0 ? (
+              <StateNotice
+                title="Команды пока отсутствуют"
+                description="Backend ответил успешно, но список команд пуст. Можно повторить запрос после наполнения базы."
+                actionLabel="Обновить список"
+                onAction={retryLoadTeams}
+              />
+            ) : (
+              <p className="message success">
+                Backend доступен. Команды загружены через frontend API-клиент.
+              </p>
+            )}
             <div className="team-grid">
               {state.teams.map((team) => (
                 <article className="team-card" key={team.id}>

@@ -1,4 +1,6 @@
 import { startTransition, useEffect, useMemo, useState } from 'react';
+import { StateNotice } from '../../components/state/StateNotice';
+import { StatePanel } from '../../components/state/StatePanel';
 import {
   ApiClientError,
   getErrorMessage,
@@ -71,6 +73,7 @@ function getMatchScore(match: MatchSummary) {
 
 export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
   const [state, setState] = useState<PageState>({ status: 'loading' });
+  const [requestKey, setRequestKey] = useState(0);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [isRecovering, setIsRecovering] = useState(false);
@@ -136,7 +139,11 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
     return () => {
       abortController.abort();
     };
-  }, []);
+  }, [requestKey]);
+
+  function retryLoadCalendar() {
+    setRequestKey((current) => current + 1);
+  }
 
   const currentRoundGroup =
     state.status === 'success'
@@ -307,38 +314,26 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
 
   if (state.status === 'loading') {
     return (
-      <section className="panel">
-        <p className="section-kicker">Календарь</p>
-        <h2>Загружаем сезон и расписание</h2>
-        <p className="section-copy">Подтягиваем текущий сезон и матчи по раундам из backend API.</p>
-      </section>
+      <StatePanel
+        eyebrow="Loading"
+        title="Загружаем сезон и расписание"
+        description="Подтягиваем текущий сезон, матчи по раундам и готовим действия симуляции."
+      />
     );
   }
 
   if (state.status === 'no-season') {
     return (
-      <section className="panel empty-state-panel">
-        <div className="empty-state-card">
-          <p className="empty-state-kicker">Schedule</p>
-          <h3>Текущий сезон ещё не создан</h3>
-          <p>
-            В обычном demo seed есть команды и игроки, но может не быть активного сезона. Создай
-            его отсюда, и календарь сразу сможет загрузить матчи по раундам.
-          </p>
-        </div>
-        <div className="action-row">
-          <button
-            className="hero-home-link schedule-action-button"
-            type="button"
-            disabled={isRecovering}
-            onClick={() => {
-              void handleCreateSeason();
-            }}
-          >
-            {isRecovering ? 'Создаём сезон...' : 'Создать текущий сезон'}
-          </button>
-        </div>
-      </section>
+      <StatePanel
+        eyebrow="Empty"
+        title="Текущий сезон ещё не создан"
+        description="В demo seed могут быть команды и игроки, но без активного сезона календарь ещё пуст. Создай сезон, и расписание можно будет подготовить отсюда же."
+        actionLabel={isRecovering ? 'Создаём сезон...' : 'Создать текущий сезон'}
+        actionDisabled={isRecovering}
+        onAction={() => {
+          void handleCreateSeason();
+        }}
+      />
     );
   }
 
@@ -366,31 +361,24 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
             </button>
           </div>
         </section>
-        <section className="panel empty-state-panel">
-          <div className="empty-state-card">
-            <p className="empty-state-kicker">Round Groups</p>
-            <h3>Расписание пока отсутствует</h3>
-            <p>
-              После генерации появятся раунды, карточки матчей, статусы и действие симуляции для
-              текущего тура.
-            </p>
-          </div>
-        </section>
+        <StatePanel
+          eyebrow="Empty"
+          title="Расписание пока отсутствует"
+          description="После генерации появятся раунды, карточки матчей, статусы и действие симуляции для текущего тура."
+        />
       </>
     );
   }
 
   if (state.status === 'error') {
     return (
-      <section className="panel">
-        <p className="section-kicker">Календарь</p>
-        <h2>Календарь загрузить не удалось</h2>
-        <div className="message error">
-          <strong>Backend не вернул расписание сезона.</strong>
-          <p>{state.message}</p>
-          <p>Если это dev-база без сезона, попробуй создать сезон на странице календаря.</p>
-        </div>
-      </section>
+      <StatePanel
+        eyebrow="Error"
+        title="Календарь загрузить не удалось"
+        description={`${state.message} Если это dev-база без сезона, сначала создай сезон и повтори загрузку.`}
+        actionLabel="Повторить загрузку"
+        onAction={retryLoadCalendar}
+      />
     );
   }
 
@@ -595,7 +583,10 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
             </div>
           </div>
         ) : (
-          <p>Матчи пока недоступны для просмотра.</p>
+          <StateNotice
+            title="Матчи пока недоступны"
+            description="Когда в расписании появятся встречи, здесь можно будет открыть подробности выбранного матча."
+          />
         )}
       </section>
     </>
