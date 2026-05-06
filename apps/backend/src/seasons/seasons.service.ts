@@ -483,6 +483,71 @@ export class SeasonsService {
     };
   }
 
+  async simulateRemainingSeason(id: string) {
+    let season = await this.getSeasonOrThrow(id);
+
+    if (season.status === SeasonStatus.COMPLETED) {
+      throw new ConflictException('Season is already completed');
+    }
+
+    const startedFromRound = season.currentRound;
+    const simulatedRounds: Array<{ round: number; matchesSimulated: number }> = [];
+
+    while (season.status !== SeasonStatus.COMPLETED) {
+      const currentRoundMatches = await this.prisma.match.findMany({
+        where: {
+          seasonId: id,
+          round: season.currentRound,
+        },
+        select: {
+          id: true,
+          status: true,
+        },
+      });
+
+      if (currentRoundMatches.length === 0) {
+        throw new NotFoundException('Current round schedule not found');
+      }
+
+      const scheduledMatches = currentRoundMatches.filter(
+        (match) => match.status === MatchStatus.SCHEDULED,
+      );
+
+      if (scheduledMatches.length > 0) {
+        await this.matchesService.simulateSeasonRound(id, season.currentRound);
+        simulatedRounds.push({
+          round: season.currentRound,
+          matchesSimulated: scheduledMatches.length,
+        });
+        season = await this.finalizeSeasonIfCompleted(id);
+
+        if (season.status === SeasonStatus.COMPLETED) {
+          break;
+        }
+      }
+
+      await this.advanceToNextRound(id);
+      season = await this.getSeasonOrThrow(id);
+    }
+
+    const standings = await this.getStandings(id);
+
+    return {
+      seasonId: id,
+      startedFromRound,
+      completedAtRound: season.currentRound,
+      simulatedMatches: simulatedRounds.reduce(
+        (total, roundResult) => total + roundResult.matchesSimulated,
+        0,
+      ),
+      simulatedRoundCount: simulatedRounds.length,
+      simulatedRounds,
+      seasonStatus: season.status,
+      finishedAt: season.finishedAt?.toISOString() ?? null,
+      champion: standings.champion,
+    };
+  }
+
   async updateSeasonStatus(id: string, status: SeasonStatus) {
     const season = await this.prisma.season.findUnique({
       where: { id },

@@ -1421,6 +1421,64 @@ describe('Team and Player API', () => {
     expect(response.body.message).toBe('Season is already completed');
   });
 
+  it('quick-simulates all remaining season matches and returns the champion', async () => {
+    const createSeasonResponse = await request(app.getHttpServer()).post('/seasons').send({
+      name: 'Fast Finish League 2029',
+      year: 2029,
+    });
+
+    expect(createSeasonResponse.status).toBe(201);
+
+    const quickSimSeasonId = createSeasonResponse.body.id;
+    const response = await request(app.getHttpServer()).post(`/seasons/${quickSimSeasonId}/simulate`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.seasonId).toBe(quickSimSeasonId);
+    expect(response.body.startedFromRound).toBe(1);
+    expect(response.body.completedAtRound).toBe(12);
+    expect(response.body.simulatedMatches).toBe(12);
+    expect(response.body.simulatedRoundCount).toBe(12);
+    expect(response.body.simulatedRounds).toHaveLength(12);
+    expect(response.body.simulatedRounds[0]).toEqual({
+      round: 1,
+      matchesSimulated: 1,
+    });
+    expect(response.body.simulatedRounds[response.body.simulatedRounds.length - 1]).toEqual({
+      round: 12,
+      matchesSimulated: 1,
+    });
+    expect(response.body.seasonStatus).toBe('COMPLETED');
+    expect(typeof response.body.finishedAt).toBe('string');
+    expect(response.body.champion).toEqual(
+      expect.objectContaining({
+        teamId: expect.any(String),
+        teamName: expect.any(String),
+        shortName: expect.any(String),
+      }),
+    );
+
+    const standingsResponse = await request(app.getHttpServer()).get(
+      `/seasons/${quickSimSeasonId}/standings`,
+    );
+
+    expect(standingsResponse.status).toBe(200);
+    expect(standingsResponse.body.seasonStatus).toBe('COMPLETED');
+    expect(standingsResponse.body.isFinal).toBe(true);
+    expect(standingsResponse.body.champion).toEqual(response.body.champion);
+    expect(
+      standingsResponse.body.items.every(
+        (item: { gamesPlayed: number }) => item.gamesPlayed === 8,
+      ),
+    ).toBe(true);
+
+    const repeatResponse = await request(app.getHttpServer()).post(
+      `/seasons/${quickSimSeasonId}/simulate`,
+    );
+
+    expect(repeatResponse.status).toBe(409);
+    expect(repeatResponse.body.message).toBe('Season is already completed');
+  });
+
   it('returns sorted standings for a season', async () => {
     const response = await request(app.getHttpServer()).get(`/seasons/${TEST_SEASON_ID}/standings`);
 

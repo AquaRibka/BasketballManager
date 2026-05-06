@@ -11,6 +11,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CreateSeasonDto } from './dto/create-season.dto';
+import { SeasonFullSimulationResponseDto } from './dto/season-full-simulation-response.dto';
 import { SeasonParamDto } from './dto/season-param.dto';
 import { SeasonRoundSimulationResponseDto } from './dto/season-round-simulation-response.dto';
 import { SeasonResponseDto } from './dto/season-response.dto';
@@ -84,6 +85,18 @@ export class SeasonsController {
   @HttpCode(HttpStatus.OK)
   simulateCurrentRound(@Param() params: SeasonParamDto) {
     return this.seasonsService.simulateCurrentRound(params.id);
+  }
+
+  @Post(':id/simulate')
+  @ApiOperation({ summary: 'Quick-simulate all remaining season rounds until the season is completed' })
+  @ApiParam({ name: 'id', description: 'Season id', example: 'season_2026' })
+  @ApiOkResponse({ type: SeasonFullSimulationResponseDto })
+  @ApiBadRequestResponse({ description: 'The provided season id is invalid' })
+  @ApiNotFoundResponse({ description: 'Season or current round schedule not found' })
+  @ApiConflictResponse({ description: 'Season is already completed' })
+  @HttpCode(HttpStatus.OK)
+  simulateRemainingSeason(@Param() params: SeasonParamDto) {
+    return this.seasonsService.simulateRemainingSeason(params.id);
   }
 
   @Post(':id/next-round')
