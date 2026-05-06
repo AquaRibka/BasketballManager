@@ -85,6 +85,20 @@ function createSeasonRecord(overrides = {}) {
   };
 }
 
+function createCareerSaveRecord(overrides = {}) {
+  return {
+    id: 'csave000000000000000000001',
+    saveName: 'My Career',
+    selectedTeamId: TEAM_ID,
+    currentSeasonId: TEST_SEASON_ID,
+    currentDate: new Date('2026-05-02T12:00:00.000Z'),
+    currentRound: 1,
+    createdAt: new Date('2026-05-02T12:00:00.000Z'),
+    updatedAt: new Date('2026-05-02T12:00:00.000Z'),
+    ...overrides,
+  };
+}
+
 describe('Team and Player API', () => {
   let app: INestApplication;
   let createdSeasonId: string | null = null;
@@ -113,6 +127,7 @@ describe('Team and Player API', () => {
     ];
     let players = [createPlayerRecord(), createOtherTeamPlayerRecord()];
     let seasons = [createSeasonRecord()];
+    let careerSaves: Array<ReturnType<typeof createCareerSaveRecord>> = [];
     standings = [
       {
         id: 'cstanding000000000000000001',
@@ -293,8 +308,10 @@ describe('Team and Player API', () => {
             return null;
           }
 
-          if (select?.id) {
-            return { id: team.id };
+          if (select) {
+            return Object.fromEntries(
+              Object.keys(select).map((key) => [key, team[key as keyof typeof team]]),
+            );
           }
 
           if (include?.players) {
@@ -605,6 +622,23 @@ describe('Team and Player API', () => {
 
           seasons[index] = updatedSeason;
           return updatedSeason;
+        }),
+      },
+      careerSave: {
+        create: jest.fn(({ data }) => {
+          const createdSave = createCareerSaveRecord({
+            id: `csavecreate${String(careerSaves.length + 1).padStart(14, '0')}`,
+            saveName: data.saveName,
+            selectedTeamId: data.selectedTeam.connect.id,
+            currentSeasonId: data.currentSeason.connect.id,
+            currentDate: data.currentDate,
+            currentRound: data.currentRound,
+            createdAt: new Date('2026-05-03T10:00:00.000Z'),
+            updatedAt: new Date('2026-05-03T10:00:00.000Z'),
+          });
+
+          careerSaves = [...careerSaves, createdSave];
+          return createdSave;
         }),
       },
       match: {
@@ -1447,6 +1481,55 @@ describe('Team and Player API', () => {
     expect(response.body.items.every((item: { pointsFor: number; pointsAgainst: number }) => {
       return Number.isInteger(item.pointsFor) && Number.isInteger(item.pointsAgainst);
     })).toBe(true);
+  });
+
+  it('creates a new career save with season, schedule and standings', async () => {
+    const response = await request(app.getHttpServer()).post('/saves').send({
+      name: 'Dynasty Run',
+      teamId: TEAM_ID,
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body.save).toEqual(
+      expect.objectContaining({
+        name: 'Dynasty Run',
+        teamId: TEAM_ID,
+        teamName: 'Basketball Manager Night',
+        currentRound: 1,
+        status: 'ACTIVE',
+      }),
+    );
+    expect(response.body.season).toEqual(
+      expect.objectContaining({
+        currentRound: 1,
+        status: SeasonStatus.IN_PROGRESS,
+        teamCount: 3,
+      }),
+    );
+    expect(response.body.schedule.totalMatches).toBeGreaterThan(0);
+    expect(response.body.schedule.rounds.length).toBeGreaterThan(0);
+    expect(response.body.standings.items).toHaveLength(3);
+    expect(response.body.standings.items[0]).toEqual(
+      expect.objectContaining({
+        position: 1,
+        wins: 0,
+        losses: 0,
+        pointsFor: 0,
+        pointsAgainst: 0,
+        pointDiff: 0,
+      }),
+    );
+  });
+
+  it('returns not found when creating a career save for a missing team', async () => {
+    const response = await request(app.getHttpServer()).post('/saves').send({
+      name: 'Ghost Career',
+      teamId: 'cmolpef3i0001f3sbsx7ulsth',
+    });
+
+    expect(response.status).toBe(404);
+    expect(response.body.code).toBe('NOT_FOUND');
+    expect(response.body.message).toBe('Team not found');
   });
 
   it('rejects blank team names', async () => {

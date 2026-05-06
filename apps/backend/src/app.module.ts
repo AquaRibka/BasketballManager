@@ -5,6 +5,7 @@ import { HealthModule } from './health/health.module';
 import { MatchesModule } from './matches/matches.module';
 import { PlayersModule } from './players/players.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SavesModule } from './saves/saves.module';
 import { SeasonsModule } from './seasons/seasons.module';
 import { TeamsModule } from './teams/teams.module';
 
@@ -18,6 +19,7 @@ import { TeamsModule } from './teams/teams.module';
     HealthModule,
     MatchesModule,
     PlayersModule,
+    SavesModule,
     SeasonsModule,
     TeamsModule,
   ],
