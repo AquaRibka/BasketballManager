@@ -5,6 +5,7 @@ export const apiEndpoints = {
     roster: (teamId: string) => `/teams/${teamId}/players`,
   },
   seasons: {
+    create: '/seasons',
     current: '/seasons/current',
     details: (seasonId: string) => `/seasons/${seasonId}`,
     schedule: (seasonId: string) => `/seasons/${seasonId}/schedule`,

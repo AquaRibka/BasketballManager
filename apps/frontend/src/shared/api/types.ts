@@ -112,6 +112,17 @@ export type SeasonScheduleResponse = {
   totalMatches: number;
 };
 
+export type SeasonRoundSimulationResponse = {
+  seasonId: string;
+  round: number;
+  status: string;
+  matches: MatchSummary[];
+  standingsUpdated: boolean;
+  currentRound: number;
+  seasonStatus: string;
+  finishedAt: string | null;
+};
+
 export type SeasonStandingRow = {
   position: number;
   teamId: string;

@@ -4,6 +4,7 @@ import { ApiClientError, ApiNetworkError, isApiErrorResponse } from './errors';
 import type {
   ApiErrorResponse,
   ApiListResponse,
+  SeasonRoundSimulationResponse,
   SeasonScheduleResponse,
   SeasonStandingsResponse,
   SeasonSummary,
@@ -121,8 +122,18 @@ export const teamsApi = {
 };
 
 export const seasonsApi = {
+  create(payload: { name: string; year: number }, signal?: AbortSignal) {
+    return apiClient.post<SeasonSummary>(apiEndpoints.seasons.create, payload, {
+      signal,
+    });
+  },
   getCurrent(signal?: AbortSignal) {
     return apiClient.get<SeasonSummary>(apiEndpoints.seasons.current, { signal });
+  },
+  generateSchedule(seasonId: string, signal?: AbortSignal) {
+    return apiClient.post<SeasonScheduleResponse>(apiEndpoints.seasons.schedule(seasonId), undefined, {
+      signal,
+    });
   },
   getSchedule(seasonId: string, signal?: AbortSignal) {
     return apiClient.get<SeasonScheduleResponse>(apiEndpoints.seasons.schedule(seasonId), {
@@ -135,9 +146,13 @@ export const seasonsApi = {
     });
   },
   simulateCurrentRound(seasonId: string, signal?: AbortSignal) {
-    return apiClient.post(apiEndpoints.seasons.simulateCurrentRound(seasonId), undefined, {
-      signal,
-    });
+    return apiClient.post<SeasonRoundSimulationResponse>(
+      apiEndpoints.seasons.simulateCurrentRound(seasonId),
+      undefined,
+      {
+        signal,
+      },
+    );
   },
   advanceToNextRound(seasonId: string, signal?: AbortSignal) {
     return apiClient.post(apiEndpoints.seasons.nextRound(seasonId), undefined, { signal });
@@ -150,6 +165,7 @@ export type {
   MatchSummary,
   MatchTeam,
   SeasonChampion,
+  SeasonRoundSimulationResponse,
   SeasonScheduleResponse,
   SeasonStandingRow,
   SeasonStandingsResponse,

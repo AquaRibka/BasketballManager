@@ -340,6 +340,187 @@ select {
   gap: 22px;
 }
 
+.schedule-hero,
+.schedule-hero-header,
+.round-list,
+.round-group,
+.selected-match-card {
+  display: grid;
+  gap: 18px;
+}
+
+.schedule-hero-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.schedule-action-button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.round-group {
+  padding: 22px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.round-group.is-current {
+  border-color: rgba(255, 176, 103, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(255, 176, 103, 0.08);
+}
+
+.round-header,
+.match-card-top,
+.match-card-footer,
+.selected-match-header,
+.selected-match-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.round-header h3,
+.selected-match-header strong {
+  margin: 0;
+}
+
+.round-header p,
+.selected-match-header p,
+.selected-match-meta span {
+  margin: 6px 0 0;
+  color: rgba(247, 245, 239, 0.68);
+}
+
+.round-status-badge,
+.match-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.status-scheduled {
+  background: rgba(87, 119, 255, 0.12);
+  border-color: rgba(87, 119, 255, 0.28);
+  color: #c7d4ff;
+}
+
+.status-completed {
+  background: rgba(48, 147, 93, 0.14);
+  border-color: rgba(88, 212, 140, 0.28);
+  color: #c6f5d8;
+}
+
+.status-live {
+  background: rgba(255, 176, 103, 0.14);
+  border-color: rgba(255, 176, 103, 0.28);
+  color: #ffe0c0;
+}
+
+.match-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.match-card {
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
+    rgba(18, 21, 31, 0.9);
+}
+
+.match-card.is-selected {
+  border-color: rgba(255, 176, 103, 0.34);
+  box-shadow: 0 0 0 1px rgba(255, 176, 103, 0.1);
+}
+
+.match-card-button {
+  width: 100%;
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.match-date,
+.match-card-footer span,
+.match-team-row span,
+.selected-match-score span {
+  color: rgba(247, 245, 239, 0.68);
+}
+
+.match-teams {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.match-team-row {
+  display: grid;
+  gap: 6px;
+}
+
+.match-team-row strong {
+  font-size: 1.05rem;
+}
+
+.match-score,
+.selected-match-score strong,
+.selected-match-divider {
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
+.match-score {
+  color: #ffb067;
+}
+
+.match-link {
+  color: #ffb067;
+}
+
+.selected-match-card {
+  padding: 22px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.selected-match-score {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  text-align: center;
+}
+
+.selected-match-score div {
+  display: grid;
+  gap: 8px;
+}
+
 .team-detail-header {
   display: flex;
   justify-content: space-between;
@@ -532,7 +713,15 @@ select {
     position: static;
   }
 
+  .schedule-hero-header,
   .team-detail-header {
+    flex-direction: column;
+  }
+
+  .round-header,
+  .selected-match-header,
+  .selected-match-meta {
+    align-items: flex-start;
     flex-direction: column;
   }
 }
