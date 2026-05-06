@@ -150,6 +150,27 @@ export type SeasonRoundSimulationResponse = {
   finishedAt: string | null;
 };
 
+export type SeasonNextRoundResponse = {
+  seasonId: string;
+  previousRound: number;
+  currentRound: number;
+  seasonStatus: string;
+};
+
+export type SeasonFullSimulationResponse = {
+  seasonId: string;
+  startedFromRound: number;
+  completedAtRound: number;
+  simulatedMatches: number;
+  simulatedRoundCount: number;
+  seasonStatus: string;
+  simulatedRounds: Array<{
+    round: number;
+    matchesSimulated: number;
+  }>;
+  finishedAt: string | null;
+};
+
 export type SeasonStandingRow = {
   position: number;
   teamId: string;

@@ -11,6 +11,7 @@ export const apiEndpoints = {
   saves: {
     create: '/saves',
     details: (saveId: string) => `/saves/${saveId}`,
+    nextSeason: (saveId: string) => `/saves/${saveId}/next-season`,
   },
   seasons: {
     create: '/seasons',
@@ -19,6 +20,7 @@ export const apiEndpoints = {
     schedule: (seasonId: string) => `/seasons/${seasonId}/schedule`,
     standings: (seasonId: string) => `/seasons/${seasonId}/standings`,
     simulateCurrentRound: (seasonId: string) => `/seasons/${seasonId}/current-round/simulate`,
+    simulateRemaining: (seasonId: string) => `/seasons/${seasonId}/simulate`,
     nextRound: (seasonId: string) => `/seasons/${seasonId}/next-round`,
     status: (seasonId: string) => `/seasons/${seasonId}/status`,
   },

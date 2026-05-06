@@ -5,6 +5,7 @@ import {
   ApiClientError,
   getErrorMessage,
   savesApi,
+  seasonsApi,
   teamsApi,
   type CareerSaveState,
   type MatchSummary,
@@ -119,6 +120,10 @@ export function SeasonPage() {
   const [requestKey, setRequestKey] = useState(0);
   const [createSaveForm, setCreateSaveForm] = useState<CreateSaveFormState>(INITIAL_FORM_STATE);
   const [isCreatingSave, setIsCreatingSave] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [isSimulatingSeason, setIsSimulatingSeason] = useState(false);
+  const [isStartingNextSeason, setIsStartingNextSeason] = useState(false);
+  const [simulationMessage, setSimulationMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -197,6 +202,16 @@ export function SeasonPage() {
     }));
   }
 
+  async function refreshActiveSave(saveId: string, signal?: AbortSignal) {
+    const saveState = await savesApi.getById(saveId, signal);
+    setState({
+      status: 'success',
+      saveState,
+    });
+
+    return saveState;
+  }
+
   async function handleCreateSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -227,6 +242,95 @@ export function SeasonPage() {
       );
     } finally {
       setIsCreatingSave(false);
+    }
+  }
+
+  async function handleSimulateCurrentRound() {
+    if (
+      state.status !== 'success' ||
+      isSimulating ||
+      isSimulatingSeason ||
+      state.saveState.season.status === 'COMPLETED'
+    ) {
+      return;
+    }
+
+    setIsSimulating(true);
+    setSimulationMessage(null);
+
+    try {
+      const simulation = await seasonsApi.simulateCurrentRound(state.saveState.season.id);
+
+      if (simulation.seasonStatus !== 'COMPLETED') {
+        await seasonsApi.advanceToNextRound(state.saveState.season.id);
+      }
+
+      const refreshedSave = await refreshActiveSave(state.saveState.save.id);
+      setSimulationMessage(
+        refreshedSave.season.status === 'COMPLETED'
+          ? `Сезон завершён. Симулирован последний раунд ${simulation.round}.`
+          : `Раунд ${simulation.round} симулирован. Переход выполнен к раунду ${refreshedSave.season.currentRound}.`,
+      );
+    } catch (error) {
+      setSimulationMessage(getErrorMessage(error));
+    } finally {
+      setIsSimulating(false);
+    }
+  }
+
+  async function handleSimulateWholeSeason() {
+    if (
+      state.status !== 'success' ||
+      isSimulatingSeason ||
+      isSimulating ||
+      state.saveState.season.status === 'COMPLETED'
+    ) {
+      return;
+    }
+
+    setIsSimulatingSeason(true);
+    setSimulationMessage(null);
+
+    try {
+      const simulation = await seasonsApi.simulateRemainingSeason(state.saveState.season.id);
+      await refreshActiveSave(state.saveState.save.id);
+      setSimulationMessage(
+        `Быстрая симуляция завершена. Раундов: ${simulation.simulatedRoundCount}, матчей: ${simulation.simulatedMatches}.`,
+      );
+    } catch (error) {
+      setSimulationMessage(getErrorMessage(error));
+    } finally {
+      setIsSimulatingSeason(false);
+    }
+  }
+
+  async function handleStartNextSeason() {
+    if (
+      state.status !== 'success' ||
+      isStartingNextSeason ||
+      isSimulating ||
+      isSimulatingSeason ||
+      state.saveState.season.status !== 'COMPLETED'
+    ) {
+      return;
+    }
+
+    setIsStartingNextSeason(true);
+    setSimulationMessage(null);
+
+    try {
+      const nextSeasonSave = await savesApi.startNextSeason(state.saveState.save.id);
+      setState({
+        status: 'success',
+        saveState: nextSeasonSave,
+      });
+      setSimulationMessage(
+        `Новый сезон ${nextSeasonSave.season.year} создан. Карьера переведена к раунду ${nextSeasonSave.season.currentRound}.`,
+      );
+    } catch (error) {
+      setSimulationMessage(getErrorMessage(error));
+    } finally {
+      setIsStartingNextSeason(false);
     }
   }
 
@@ -364,6 +468,8 @@ export function SeasonPage() {
   const { nextMatch, standing, completedMatches, completedRounds, roundProgress, matchProgress } =
     dashboardData ?? {};
   const nextMatchDetails = nextMatch ? getTeamOpponent(nextMatch, saveState.save.teamId) : null;
+  const canSimulateSeason = saveState.season.status !== 'COMPLETED' && nextMatch !== null;
+  const canStartNextSeason = saveState.season.status === 'COMPLETED';
 
   return (
     <>
@@ -377,11 +483,51 @@ export function SeasonPage() {
               {formatSaveDate(saveState.save.updatedAt)}
             </p>
           </div>
-          <div className="team-badge standings-badge">
-            <span>Current Round</span>
-            <strong>R{saveState.season.currentRound}</strong>
+          <div className="dashboard-hero-actions">
+            <button
+              className="hero-home-link schedule-action-button"
+              type="button"
+              disabled={!canSimulateSeason || isSimulating || isSimulatingSeason}
+              onClick={() => {
+                void handleSimulateCurrentRound();
+              }}
+            >
+              {isSimulating ? 'Симулируем раунд...' : 'Симулировать текущий раунд'}
+            </button>
+            <button
+              className="ghost-button schedule-action-button"
+              type="button"
+              disabled={!canSimulateSeason || isSimulatingSeason || isSimulating}
+              onClick={() => {
+                void handleSimulateWholeSeason();
+              }}
+            >
+              {isSimulatingSeason ? 'Симулируем сезон...' : 'Быстрая симуляция сезона'}
+            </button>
+            {canStartNextSeason ? (
+              <button
+                className="hero-home-link schedule-action-button"
+                type="button"
+                disabled={isStartingNextSeason || isSimulating || isSimulatingSeason}
+                onClick={() => {
+                  void handleStartNextSeason();
+                }}
+              >
+                {isStartingNextSeason ? 'Создаём новый сезон...' : 'Перейти к следующему сезону'}
+              </button>
+            ) : null}
+            <div className="team-badge standings-badge">
+              <span>Current Round</span>
+              <strong>R{saveState.season.currentRound}</strong>
+            </div>
           </div>
         </div>
+
+        {simulationMessage ? (
+          <div className={`message ${simulationMessage.includes('симулирован') ? 'success' : 'error'}`}>
+            <p>{simulationMessage}</p>
+          </div>
+        ) : null}
 
         <div className="dashboard-summary-grid">
           <article className="summary-card summary-card-accent">

@@ -9,6 +9,8 @@ import type {
   CreateSavePayload,
   CreateTeamPayload,
   PlayerSummary,
+  SeasonFullSimulationResponse,
+  SeasonNextRoundResponse,
   SeasonRoundSimulationResponse,
   SeasonScheduleResponse,
   SeasonStandingsResponse,
@@ -142,6 +144,11 @@ export const savesApi = {
   getById(saveId: string, signal?: AbortSignal) {
     return apiClient.get<CareerSaveState>(apiEndpoints.saves.details(saveId), { signal });
   },
+  startNextSeason(saveId: string, signal?: AbortSignal) {
+    return apiClient.post<CareerSaveState>(apiEndpoints.saves.nextSeason(saveId), undefined, {
+      signal,
+    });
+  },
 };
 
 export const seasonsApi = {
@@ -177,8 +184,19 @@ export const seasonsApi = {
       },
     );
   },
+  simulateRemainingSeason(seasonId: string, signal?: AbortSignal) {
+    return apiClient.post<SeasonFullSimulationResponse>(
+      apiEndpoints.seasons.simulateRemaining(seasonId),
+      undefined,
+      {
+        signal,
+      },
+    );
+  },
   advanceToNextRound(seasonId: string, signal?: AbortSignal) {
-    return apiClient.post(apiEndpoints.seasons.nextRound(seasonId), undefined, { signal });
+    return apiClient.post<SeasonNextRoundResponse>(apiEndpoints.seasons.nextRound(seasonId), undefined, {
+      signal,
+    });
   },
 };
 
@@ -196,6 +214,8 @@ export type {
   PlayerPosition,
   PlayerSummary,
   SeasonChampion,
+  SeasonFullSimulationResponse,
+  SeasonNextRoundResponse,
   SeasonRoundSimulationResponse,
   SeasonScheduleResponse,
   SeasonStandingRow,

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { MatchStatus, SeasonStatus, type Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { createRoundRobinSchedule } from '../seasons/schedule-generator';
@@ -130,9 +130,104 @@ function mapScheduleMatchesToRounds(
   }, []);
 }
 
+function createSeasonName(year: number) {
+  return `VTB League MVP ${year}`;
+}
+
 @Injectable()
 export class SavesService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private async createSeasonBundle(
+    tx: Prisma.TransactionClient,
+    leagueTeams: Array<{ id: string; name: string; shortName: string }>,
+    year: number,
+  ) {
+    const season = await tx.season.create({
+      data: {
+        name: createSeasonName(year),
+        year,
+        status: SeasonStatus.IN_PROGRESS,
+        currentRound: 1,
+      },
+    });
+
+    const pairings = createRoundRobinSchedule(
+      leagueTeams.map((team) => team.id),
+      season.startedAt,
+    );
+    const createdMatches: Array<{
+      id: string;
+      seasonId: string | null;
+      round: number | null;
+      status: MatchStatus;
+      date: Date | null;
+      homeScore: number | null;
+      awayScore: number | null;
+      winnerTeamId: string | null;
+      playedAt: Date | null;
+      homeTeam: { id: string; name: string; shortName: string };
+      awayTeam: { id: string; name: string; shortName: string };
+    }> = [];
+
+    for (const pairing of pairings) {
+      const match = await tx.match.create({
+        data: {
+          season: {
+            connect: {
+              id: season.id,
+            },
+          },
+          round: pairing.round,
+          date: pairing.date,
+          homeTeam: {
+            connect: {
+              id: pairing.homeTeamId,
+            },
+          },
+          awayTeam: {
+            connect: {
+              id: pairing.awayTeamId,
+            },
+          },
+          status: MatchStatus.SCHEDULED,
+          standingsUpdateRequired: false,
+        },
+        include: {
+          homeTeam: {
+            select: {
+              id: true,
+              name: true,
+              shortName: true,
+            },
+          },
+          awayTeam: {
+            select: {
+              id: true,
+              name: true,
+              shortName: true,
+            },
+          },
+        },
+      });
+
+      createdMatches.push(match);
+    }
+
+    const standingRows = buildInitialStandingRows(season.id, leagueTeams);
+
+    for (const standingRow of standingRows) {
+      await tx.standing.create({
+        data: standingRow,
+      });
+    }
+
+    return {
+      season,
+      pairings,
+      rounds: mapScheduleMatchesToRounds(createdMatches),
+    };
+  }
 
   async createSave(createSaveDto: CreateSaveDto) {
     const selectedTeam = await this.prisma.team.findUnique({
@@ -153,84 +248,7 @@ export class SavesService {
     const year = createdAt.getUTCFullYear();
 
     return this.prisma.$transaction(async (tx) => {
-      const season = await tx.season.create({
-        data: {
-          name: `VTB League MVP ${year}`,
-          year,
-          status: SeasonStatus.IN_PROGRESS,
-          currentRound: 1,
-        },
-      });
-
-      const pairings = createRoundRobinSchedule(
-        leagueTeams.map((team) => team.id),
-        season.startedAt,
-      );
-      const createdMatches: Array<{
-        id: string;
-        seasonId: string | null;
-        round: number | null;
-        status: MatchStatus;
-        date: Date | null;
-        homeScore: number | null;
-        awayScore: number | null;
-        winnerTeamId: string | null;
-        playedAt: Date | null;
-        homeTeam: { id: string; name: string; shortName: string };
-        awayTeam: { id: string; name: string; shortName: string };
-      }> = [];
-
-      for (const pairing of pairings) {
-        const match = await tx.match.create({
-          data: {
-            season: {
-              connect: {
-                id: season.id,
-              },
-            },
-            round: pairing.round,
-            date: pairing.date,
-            homeTeam: {
-              connect: {
-                id: pairing.homeTeamId,
-              },
-            },
-            awayTeam: {
-              connect: {
-                id: pairing.awayTeamId,
-              },
-            },
-            status: MatchStatus.SCHEDULED,
-            standingsUpdateRequired: false,
-          },
-          include: {
-            homeTeam: {
-              select: {
-                id: true,
-                name: true,
-                shortName: true,
-              },
-            },
-            awayTeam: {
-              select: {
-                id: true,
-                name: true,
-                shortName: true,
-              },
-            },
-          },
-        });
-
-        createdMatches.push(match);
-      }
-
-      const standingRows = buildInitialStandingRows(season.id, leagueTeams);
-
-      for (const standingRow of standingRows) {
-        await tx.standing.create({
-          data: standingRow,
-        });
-      }
+      const { season, pairings, rounds } = await this.createSeasonBundle(tx, leagueTeams, year);
 
       const careerSave = await tx.careerSave.create({
         data: {
@@ -249,8 +267,6 @@ export class SavesService {
           currentRound: 1,
         },
       });
-
-      const rounds = mapScheduleMatchesToRounds(createdMatches);
 
       const standingsItems = leagueTeams.map((team, index) => ({
         position: index + 1,
@@ -307,6 +323,57 @@ export class SavesService {
         },
       };
     });
+  }
+
+  async startNextSeason(id: string) {
+    const careerSave = await this.prisma.careerSave.findUnique({
+      where: { id },
+      include: {
+        selectedTeam: {
+          select: SAVE_TEAM_SELECT,
+        },
+        currentSeason: {
+          select: {
+            id: true,
+            year: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!careerSave) {
+      throw new NotFoundException('Save not found');
+    }
+
+    if (careerSave.currentSeason.status !== SeasonStatus.COMPLETED) {
+      throw new ConflictException('Current season is not completed');
+    }
+
+    const leagueTeams = await this.prisma.team.findMany({
+      orderBy: [{ name: 'asc' }],
+      select: SAVE_TEAM_SELECT,
+    });
+
+    await this.prisma.$transaction(async (tx) => {
+      const nextYear = careerSave.currentSeason.year + 1;
+      const { season } = await this.createSeasonBundle(tx, leagueTeams, nextYear);
+
+      await tx.careerSave.update({
+        where: { id },
+        data: {
+          currentSeason: {
+            connect: {
+              id: season.id,
+            },
+          },
+          currentDate: season.startedAt,
+          currentRound: 1,
+        },
+      });
+    });
+
+    return this.getSave(id);
   }
 
   async getSave(id: string) {

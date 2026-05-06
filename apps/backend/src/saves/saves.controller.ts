@@ -38,4 +38,14 @@ export class SavesController {
   getSave(@Param() params: CuidParamDto) {
     return this.savesService.getSave(params.id);
   }
+
+  @Post(':id/next-season')
+  @ApiOperation({ summary: 'Start the next season for an existing career save' })
+  @ApiParam({ name: 'id', description: 'Career save cuid', example: 'csave000000000000000000001' })
+  @ApiOkResponse({ type: CareerSaveStateResponseDto })
+  @ApiBadRequestResponse({ description: 'The provided save id is invalid' })
+  @ApiNotFoundResponse({ description: 'Save not found' })
+  startNextSeason(@Param() params: CuidParamDto) {
+    return this.savesService.startNextSeason(params.id);
+  }
 }
