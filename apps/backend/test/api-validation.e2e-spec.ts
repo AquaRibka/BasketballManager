@@ -14,6 +14,8 @@ const OTHER_TEAM_ID = 'cmon47b2400008csbqzi34a1a';
 const MATCH_ID = 'cmolpef3i0004f3sbsx7ulstu';
 const MISSING_MATCH_ID = 'cmolpef3i0005f3sbsx7ulstv';
 const TEST_SEASON_ID = 'season_test_2026';
+const SAVE_ID = 'csave000000000000000000001';
+const MISSING_SAVE_ID = 'cmolpef3i0009f3sbsx7ulstz';
 
 type PlayerRecord = ReturnType<typeof createPlayerRecord>;
 
@@ -87,7 +89,7 @@ function createSeasonRecord(overrides = {}) {
 
 function createCareerSaveRecord(overrides = {}) {
   return {
-    id: 'csave000000000000000000001',
+    id: SAVE_ID,
     saveName: 'My Career',
     selectedTeamId: TEAM_ID,
     currentSeasonId: TEST_SEASON_ID,
@@ -625,6 +627,26 @@ describe('Team and Player API', () => {
         }),
       },
       careerSave: {
+        findUnique: jest.fn(({ where, include }) => {
+          const save = careerSaves.find((candidate) => candidate.id === where.id);
+
+          if (!save) {
+            return null;
+          }
+
+          if (include?.selectedTeam || include?.currentSeason) {
+            const selectedTeam = teams.find((team) => team.id === save.selectedTeamId);
+            const currentSeason = seasons.find((season) => season.id === save.currentSeasonId);
+
+            return {
+              ...save,
+              selectedTeam: selectedTeam ?? null,
+              currentSeason: currentSeason ?? null,
+            };
+          }
+
+          return save;
+        }),
         create: jest.fn(({ data }) => {
           const createdSave = createCareerSaveRecord({
             id: `csavecreate${String(careerSaves.length + 1).padStart(14, '0')}`,
@@ -1521,6 +1543,38 @@ describe('Team and Player API', () => {
     );
   });
 
+  it('returns a career save with current season, schedule and standings', async () => {
+    const createResponse = await request(app.getHttpServer()).post('/saves').send({
+      name: 'Loadable Career',
+      teamId: TEAM_ID,
+    });
+
+    expect(createResponse.status).toBe(201);
+
+    const saveId = createResponse.body.save.id;
+    const response = await request(app.getHttpServer()).get(`/saves/${saveId}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.save).toEqual(
+      expect.objectContaining({
+        id: saveId,
+        name: 'Loadable Career',
+        teamId: TEAM_ID,
+        teamName: 'Basketball Manager Night',
+        status: 'ACTIVE',
+      }),
+    );
+    expect(response.body.season).toEqual(
+      expect.objectContaining({
+        id: createResponse.body.season.id,
+        currentRound: 1,
+        totalRounds: createResponse.body.schedule.totalRounds,
+      }),
+    );
+    expect(response.body.schedule.totalMatches).toBeGreaterThan(0);
+    expect(response.body.standings.items).toHaveLength(response.body.season.teamCount);
+  });
+
   it('returns not found when creating a career save for a missing team', async () => {
     const response = await request(app.getHttpServer()).post('/saves').send({
       name: 'Ghost Career',
@@ -1530,6 +1584,15 @@ describe('Team and Player API', () => {
     expect(response.status).toBe(404);
     expect(response.body.code).toBe('NOT_FOUND');
     expect(response.body.message).toBe('Team not found');
+  });
+
+  it('returns not found when requesting a missing career save', async () => {
+    const response = await request(app.getHttpServer()).get(`/saves/${MISSING_SAVE_ID}`);
+
+    expect(response.status).toBe(404);
+    expect(response.body.code).toBe('NOT_FOUND');
+    expect(response.body.message).toBe('Save not found');
+    expect(response.body.path).toBe(`/saves/${MISSING_SAVE_ID}`);
   });
 
   it('rejects blank team names', async () => {

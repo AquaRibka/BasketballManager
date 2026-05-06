@@ -10,6 +10,48 @@ const SAVE_TEAM_SELECT = {
   shortName: true,
 } satisfies Prisma.TeamSelect;
 
+const SAVE_MATCH_SELECT = {
+  id: true,
+  seasonId: true,
+  round: true,
+  status: true,
+  date: true,
+  homeScore: true,
+  awayScore: true,
+  winnerTeamId: true,
+  playedAt: true,
+  homeTeam: {
+    select: {
+      id: true,
+      name: true,
+      shortName: true,
+    },
+  },
+  awayTeam: {
+    select: {
+      id: true,
+      name: true,
+      shortName: true,
+    },
+  },
+} satisfies Prisma.MatchSelect;
+
+const SAVE_STANDINGS_SELECT = {
+  teamId: true,
+  wins: true,
+  losses: true,
+  pointsFor: true,
+  pointsAgainst: true,
+  pointDiff: true,
+  updatedAt: true,
+  team: {
+    select: {
+      name: true,
+      shortName: true,
+    },
+  },
+} satisfies Prisma.StandingSelect;
+
 function buildInitialStandingRows(
   seasonId: string,
   teams: Array<{ id: string }>,
@@ -24,6 +66,68 @@ function buildInitialStandingRows(
     pointsAgainst: 0,
     pointDiff: 0,
   }));
+}
+
+function mapScheduleMatchesToRounds(
+  matches: Array<{
+    id: string;
+    seasonId: string | null;
+    round: number | null;
+    status: MatchStatus;
+    date: Date | null;
+    homeScore: number | null;
+    awayScore: number | null;
+    winnerTeamId: string | null;
+    playedAt: Date | null;
+    homeTeam: { id: string; name: string; shortName: string };
+    awayTeam: { id: string; name: string; shortName: string };
+  }>,
+) {
+  return matches.reduce<
+    Array<{
+      round: number;
+      status: MatchStatus;
+      matches: Array<{
+        id: string;
+        seasonId: string | null;
+        round: number | null;
+        status: MatchStatus;
+        date: string | null;
+        homeScore: number | null;
+        awayScore: number | null;
+        winnerTeamId: string | null;
+        playedAt: string | null;
+        homeTeam: { id: string; name: string; shortName: string };
+        awayTeam: { id: string; name: string; shortName: string };
+      }>;
+    }>
+  >((accumulator, match) => {
+    const existingRound = accumulator.find((roundEntry) => roundEntry.round === match.round);
+    const serializedMatch = {
+      ...match,
+      date: match.date?.toISOString() ?? null,
+      playedAt: match.playedAt?.toISOString() ?? null,
+    };
+
+    if (existingRound) {
+      existingRound.matches.push(serializedMatch);
+      existingRound.status = existingRound.matches.every(
+        (roundMatch) => roundMatch.status === MatchStatus.COMPLETED,
+      )
+        ? MatchStatus.COMPLETED
+        : MatchStatus.SCHEDULED;
+
+      return accumulator;
+    }
+
+    accumulator.push({
+      round: match.round ?? 0,
+      status: match.status === MatchStatus.COMPLETED ? MatchStatus.COMPLETED : MatchStatus.SCHEDULED,
+      matches: [serializedMatch],
+    });
+
+    return accumulator;
+  }, []);
 }
 
 @Injectable()
@@ -62,23 +166,19 @@ export class SavesService {
         leagueTeams.map((team) => team.id),
         season.startedAt,
       );
-
-      const roundsMap = new Map<
-        number,
-        Array<{
-          id: string;
-          seasonId: string | null;
-          round: number | null;
-          status: MatchStatus;
-          date: Date | null;
-          homeScore: number | null;
-          awayScore: number | null;
-          winnerTeamId: string | null;
-          playedAt: Date | null;
-          homeTeam: { id: string; name: string; shortName: string };
-          awayTeam: { id: string; name: string; shortName: string };
-        }>
-      >();
+      const createdMatches: Array<{
+        id: string;
+        seasonId: string | null;
+        round: number | null;
+        status: MatchStatus;
+        date: Date | null;
+        homeScore: number | null;
+        awayScore: number | null;
+        winnerTeamId: string | null;
+        playedAt: Date | null;
+        homeTeam: { id: string; name: string; shortName: string };
+        awayTeam: { id: string; name: string; shortName: string };
+      }> = [];
 
       for (const pairing of pairings) {
         const match = await tx.match.create({
@@ -121,9 +221,7 @@ export class SavesService {
           },
         });
 
-        const roundMatches = roundsMap.get(pairing.round) ?? [];
-        roundMatches.push(match);
-        roundsMap.set(pairing.round, roundMatches);
+        createdMatches.push(match);
       }
 
       const standingRows = buildInitialStandingRows(season.id, leagueTeams);
@@ -152,17 +250,7 @@ export class SavesService {
         },
       });
 
-      const rounds = [...roundsMap.entries()]
-        .sort(([left], [right]) => left - right)
-        .map(([round, matches]) => ({
-          round,
-          status: MatchStatus.SCHEDULED,
-          matches: matches.map((match) => ({
-            ...match,
-            date: match.date?.toISOString() ?? null,
-            playedAt: match.playedAt?.toISOString() ?? null,
-          })),
-        }));
+      const rounds = mapScheduleMatchesToRounds(createdMatches);
 
       const standingsItems = leagueTeams.map((team, index) => ({
         position: index + 1,
@@ -219,5 +307,132 @@ export class SavesService {
         },
       };
     });
+  }
+
+  async getSave(id: string) {
+    const careerSave = await this.prisma.careerSave.findUnique({
+      where: { id },
+      include: {
+        selectedTeam: {
+          select: {
+            id: true,
+            name: true,
+            shortName: true,
+          },
+        },
+        currentSeason: true,
+      },
+    });
+
+    if (!careerSave) {
+      throw new NotFoundException('Save not found');
+    }
+
+    const matches = await this.prisma.match.findMany({
+      where: {
+        seasonId: careerSave.currentSeasonId,
+      },
+      select: SAVE_MATCH_SELECT,
+      orderBy: [{ round: 'asc' }, { date: 'asc' }, { createdAt: 'asc' }],
+    });
+
+    const standings = await this.prisma.standing.findMany({
+      where: {
+        seasonId: careerSave.currentSeasonId,
+      },
+      select: SAVE_STANDINGS_SELECT,
+    });
+
+    const rounds = mapScheduleMatchesToRounds(matches);
+    const sortedStandings = [...standings].sort((left, right) => {
+      if (right.wins !== left.wins) {
+        return right.wins - left.wins;
+      }
+
+      if (right.pointDiff !== left.pointDiff) {
+        return right.pointDiff - left.pointDiff;
+      }
+
+      if (right.pointsFor !== left.pointsFor) {
+        return right.pointsFor - left.pointsFor;
+      }
+
+      return left.team.name.localeCompare(right.team.name);
+    });
+
+    const standingsItems = sortedStandings.map((standing, index) => {
+      const gamesPlayed = standing.wins + standing.losses;
+
+      return {
+        position: index + 1,
+        teamId: standing.teamId,
+        teamName: standing.team.name,
+        shortName: standing.team.shortName,
+        gamesPlayed,
+        wins: standing.wins,
+        losses: standing.losses,
+        pointsFor: standing.pointsFor,
+        pointsAgainst: standing.pointsAgainst,
+        pointDiff: standing.pointDiff,
+        winPercentage: gamesPlayed === 0 ? 0 : Number((standing.wins / gamesPlayed).toFixed(3)),
+      };
+    });
+
+    const updatedAt =
+      standings.length === 0
+        ? null
+        : new Date(
+            Math.max(...standings.map((standing) => standing.updatedAt.getTime())),
+          ).toISOString();
+
+    const champion =
+      careerSave.currentSeason.status === SeasonStatus.COMPLETED && standingsItems.length > 0
+        ? {
+            teamId: standingsItems[0].teamId,
+            teamName: standingsItems[0].teamName,
+            shortName: standingsItems[0].shortName,
+          }
+        : null;
+
+    return {
+      save: {
+        id: careerSave.id,
+        name: careerSave.saveName,
+        teamId: careerSave.selectedTeam.id,
+        teamName: careerSave.selectedTeam.name,
+        seasonId: careerSave.currentSeasonId,
+        currentRound: careerSave.currentRound,
+        status: 'ACTIVE' as const,
+        createdAt: careerSave.createdAt.toISOString(),
+        updatedAt: careerSave.updatedAt.toISOString(),
+      },
+      season: {
+        id: careerSave.currentSeason.id,
+        name: careerSave.currentSeason.name,
+        year: careerSave.currentSeason.year,
+        status: careerSave.currentSeason.status,
+        currentRound: careerSave.currentSeason.currentRound,
+        totalRounds: rounds.length,
+        teamCount: standingsItems.length,
+        startedAt: careerSave.currentSeason.startedAt.toISOString(),
+        finishedAt: careerSave.currentSeason.finishedAt?.toISOString() ?? null,
+        createdAt: careerSave.currentSeason.createdAt.toISOString(),
+        updatedAt: careerSave.currentSeason.updatedAt.toISOString(),
+      },
+      schedule: {
+        seasonId: careerSave.currentSeasonId,
+        rounds,
+        totalRounds: rounds.length,
+        totalMatches: matches.length,
+      },
+      standings: {
+        seasonId: careerSave.currentSeasonId,
+        seasonStatus: careerSave.currentSeason.status,
+        isFinal: careerSave.currentSeason.status === SeasonStatus.COMPLETED,
+        updatedAt,
+        champion,
+        items: standingsItems,
+      },
+    };
   }
 }

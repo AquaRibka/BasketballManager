@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { SeasonStatus } from '@prisma/client';
+import { MatchStatus, SeasonStatus } from '@prisma/client';
 import { SeasonScheduleResponseDto } from '../../seasons/dto/season-schedule-response.dto';
 import { SeasonStandingsResponseDto } from '../../seasons/dto/season-standings-response.dto';
 
@@ -67,16 +67,80 @@ export class CareerSaveSeasonDto {
   updatedAt!: string;
 }
 
-export class CreateCareerSaveResponseDto {
+export class CareerSaveMatchTeamDto {
+  @ApiProperty({ example: 'cmon3wd920000k7sbuepwfi6r' })
+  id!: string;
+
+  @ApiProperty({ example: 'CSKA Moscow' })
+  name!: string;
+
+  @ApiProperty({ example: 'CSKA' })
+  shortName!: string;
+}
+
+export class CareerSaveMatchDto {
+  @ApiProperty({ example: 'cmatch000000000000000001' })
+  id!: string;
+
+  @ApiProperty({ example: 'season_2026', nullable: true })
+  seasonId!: string | null;
+
+  @ApiProperty({ example: 1, nullable: true })
+  round!: number | null;
+
+  @ApiProperty({ enum: MatchStatus, example: MatchStatus.SCHEDULED })
+  status!: MatchStatus;
+
+  @ApiProperty({ example: '2026-10-01T18:00:00.000Z', nullable: true })
+  date!: string | null;
+
+  @ApiProperty({ example: null, nullable: true })
+  homeScore!: number | null;
+
+  @ApiProperty({ example: null, nullable: true })
+  awayScore!: number | null;
+
+  @ApiProperty({ example: null, nullable: true })
+  winnerTeamId!: string | null;
+
+  @ApiProperty({ example: null, nullable: true })
+  playedAt!: string | null;
+
+  @ApiProperty({ type: CareerSaveMatchTeamDto })
+  homeTeam!: CareerSaveMatchTeamDto;
+
+  @ApiProperty({ type: CareerSaveMatchTeamDto })
+  awayTeam!: CareerSaveMatchTeamDto;
+}
+
+export class CareerSaveScheduleRoundDto {
+  @ApiProperty({ example: 1 })
+  round!: number;
+
+  @ApiProperty({ enum: MatchStatus, example: MatchStatus.SCHEDULED })
+  status!: MatchStatus;
+
+  @ApiProperty({ type: [CareerSaveMatchDto] })
+  matches!: CareerSaveMatchDto[];
+}
+
+export class CareerSaveScheduleDto extends SeasonScheduleResponseDto {
+  @ApiProperty({ type: [CareerSaveScheduleRoundDto] })
+  override rounds!: CareerSaveScheduleRoundDto[];
+}
+
+export class CareerSaveStateResponseDto {
   @ApiProperty({ type: CareerSaveResponseDto })
   save!: CareerSaveResponseDto;
 
   @ApiProperty({ type: CareerSaveSeasonDto })
   season!: CareerSaveSeasonDto;
 
-  @ApiProperty({ type: SeasonScheduleResponseDto })
-  schedule!: SeasonScheduleResponseDto;
+  @ApiProperty({ type: CareerSaveScheduleDto })
+  schedule!: CareerSaveScheduleDto;
 
   @ApiProperty({ type: SeasonStandingsResponseDto })
   standings!: SeasonStandingsResponseDto;
 }
+
+export class CreateCareerSaveResponseDto extends CareerSaveStateResponseDto {}
