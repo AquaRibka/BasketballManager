@@ -26,6 +26,17 @@ type CreateSaveFormState = {
   teamId: string;
 };
 
+type AutosaveState = {
+  status: 'saved' | 'saving' | 'error';
+  timestamp: string | null;
+  message?: string;
+};
+
+type DashboardMessage = {
+  tone: 'success' | 'error';
+  text: string;
+};
+
 const INITIAL_FORM_STATE: CreateSaveFormState = {
   name: 'My Career',
   teamId: '',
@@ -62,6 +73,40 @@ function formatSaveDate(value: string) {
     month: 'long',
     year: 'numeric',
   }).format(new Date(value));
+}
+
+function formatAutosaveTime(value: string | null) {
+  if (!value) {
+    return 'время уточняется';
+  }
+
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
+function getAutosaveCopy(autosave: AutosaveState) {
+  switch (autosave.status) {
+    case 'saving':
+      return {
+        label: 'Сохраняется',
+        detail: 'записываем прогресс',
+      };
+    case 'error':
+      return {
+        label: 'Ошибка сохранения',
+        detail: autosave.message ?? 'попробуй ещё раз',
+      };
+    case 'saved':
+    default:
+      return {
+        label: 'Сохранено',
+        detail: formatAutosaveTime(autosave.timestamp),
+      };
+  }
 }
 
 function getSeasonStatusLabel(status: string) {
@@ -125,7 +170,11 @@ export function SeasonPage() {
   const [isSimulatingSeason, setIsSimulatingSeason] = useState(false);
   const [isStartingNextSeason, setIsStartingNextSeason] = useState(false);
   const [isDeletingSave, setIsDeletingSave] = useState(false);
-  const [simulationMessage, setSimulationMessage] = useState<string | null>(null);
+  const [simulationMessage, setSimulationMessage] = useState<DashboardMessage | null>(null);
+  const [autosave, setAutosave] = useState<AutosaveState>({
+    status: 'saved',
+    timestamp: null,
+  });
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -143,6 +192,10 @@ export function SeasonPage() {
         setState({
           status: 'success',
           saveState,
+        });
+        setAutosave({
+          status: 'saved',
+          timestamp: saveState.save.updatedAt,
         });
       } catch (error) {
         if (abortController.signal.aborted) {
@@ -210,6 +263,10 @@ export function SeasonPage() {
       status: 'success',
       saveState,
     });
+    setAutosave({
+      status: 'saved',
+      timestamp: new Date().toISOString(),
+    });
 
     return saveState;
   }
@@ -222,6 +279,10 @@ export function SeasonPage() {
     }
 
     setIsCreatingSave(true);
+    setAutosave({
+      status: 'saving',
+      timestamp: autosave.timestamp,
+    });
 
     try {
       const saveState = await savesApi.create({
@@ -233,7 +294,16 @@ export function SeasonPage() {
         status: 'success',
         saveState,
       });
+      setAutosave({
+        status: 'saved',
+        timestamp: saveState.save.updatedAt,
+      });
     } catch (error) {
+      setAutosave({
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        message: getErrorMessage(error),
+      });
       setState((current) =>
         current.status === 'create-save'
           ? {
@@ -259,6 +329,10 @@ export function SeasonPage() {
 
     setIsSimulating(true);
     setSimulationMessage(null);
+    setAutosave({
+      status: 'saving',
+      timestamp: autosave.timestamp,
+    });
 
     try {
       const simulation = await seasonsApi.simulateCurrentRound(state.saveState.season.id);
@@ -270,11 +344,26 @@ export function SeasonPage() {
       const refreshedSave = await refreshActiveSave(state.saveState.save.id);
       setSimulationMessage(
         refreshedSave.season.status === 'COMPLETED'
-          ? `Сезон завершён. Симулирован последний раунд ${simulation.round}.`
-          : `Раунд ${simulation.round} симулирован. Переход выполнен к раунду ${refreshedSave.season.currentRound}.`,
+          ? {
+              tone: 'success',
+              text: `Сезон завершён. Симулирован последний раунд ${simulation.round}.`,
+            }
+          : {
+              tone: 'success',
+              text: `Раунд ${simulation.round} симулирован. Переход выполнен к раунду ${refreshedSave.season.currentRound}.`,
+            },
       );
     } catch (error) {
-      setSimulationMessage(getErrorMessage(error));
+      const message = getErrorMessage(error);
+      setAutosave({
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        message,
+      });
+      setSimulationMessage({
+        tone: 'error',
+        text: message,
+      });
     } finally {
       setIsSimulating(false);
     }
@@ -292,15 +381,29 @@ export function SeasonPage() {
 
     setIsSimulatingSeason(true);
     setSimulationMessage(null);
+    setAutosave({
+      status: 'saving',
+      timestamp: autosave.timestamp,
+    });
 
     try {
       const simulation = await seasonsApi.simulateRemainingSeason(state.saveState.season.id);
       await refreshActiveSave(state.saveState.save.id);
-      setSimulationMessage(
-        `Быстрая симуляция завершена. Раундов: ${simulation.simulatedRoundCount}, матчей: ${simulation.simulatedMatches}.`,
-      );
+      setSimulationMessage({
+        tone: 'success',
+        text: `Быстрая симуляция завершена. Раундов: ${simulation.simulatedRoundCount}, матчей: ${simulation.simulatedMatches}.`,
+      });
     } catch (error) {
-      setSimulationMessage(getErrorMessage(error));
+      const message = getErrorMessage(error);
+      setAutosave({
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        message,
+      });
+      setSimulationMessage({
+        tone: 'error',
+        text: message,
+      });
     } finally {
       setIsSimulatingSeason(false);
     }
@@ -319,6 +422,10 @@ export function SeasonPage() {
 
     setIsStartingNextSeason(true);
     setSimulationMessage(null);
+    setAutosave({
+      status: 'saving',
+      timestamp: autosave.timestamp,
+    });
 
     try {
       const nextSeasonSave = await savesApi.startNextSeason(state.saveState.save.id);
@@ -326,11 +433,25 @@ export function SeasonPage() {
         status: 'success',
         saveState: nextSeasonSave,
       });
-      setSimulationMessage(
-        `Новый сезон ${nextSeasonSave.season.year} создан. Карьера переведена к раунду ${nextSeasonSave.season.currentRound}.`,
-      );
+      setAutosave({
+        status: 'saved',
+        timestamp: nextSeasonSave.save.updatedAt,
+      });
+      setSimulationMessage({
+        tone: 'success',
+        text: `Новый сезон ${nextSeasonSave.season.year} создан. Карьера переведена к раунду ${nextSeasonSave.season.currentRound}.`,
+      });
     } catch (error) {
-      setSimulationMessage(getErrorMessage(error));
+      const message = getErrorMessage(error);
+      setAutosave({
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        message,
+      });
+      setSimulationMessage({
+        tone: 'error',
+        text: message,
+      });
     } finally {
       setIsStartingNextSeason(false);
     }
@@ -357,6 +478,10 @@ export function SeasonPage() {
 
     setIsDeletingSave(true);
     setSimulationMessage(null);
+    setAutosave({
+      status: 'saving',
+      timestamp: autosave.timestamp,
+    });
 
     try {
       await savesApi.remove(state.saveState.save.id);
@@ -364,7 +489,16 @@ export function SeasonPage() {
       setCreateSaveForm(INITIAL_FORM_STATE);
       setRequestKey((current) => current + 1);
     } catch (error) {
-      setSimulationMessage(getErrorMessage(error));
+      const message = getErrorMessage(error);
+      setAutosave({
+        status: 'error',
+        timestamp: new Date().toISOString(),
+        message,
+      });
+      setSimulationMessage({
+        tone: 'error',
+        text: message,
+      });
     } finally {
       setIsDeletingSave(false);
     }
@@ -506,6 +640,7 @@ export function SeasonPage() {
   const nextMatchDetails = nextMatch ? getTeamOpponent(nextMatch, saveState.save.teamId) : null;
   const canSimulateSeason = saveState.season.status !== 'COMPLETED' && nextMatch !== null;
   const canStartNextSeason = saveState.season.status === 'COMPLETED';
+  const autosaveCopy = getAutosaveCopy(autosave);
 
   return (
     <>
@@ -518,6 +653,13 @@ export function SeasonPage() {
               {saveState.season.name} · {getSeasonStatusLabel(saveState.season.status)} · сохранение от{' '}
               {formatSaveDate(saveState.save.updatedAt)}
             </p>
+            <div className={`autosave-indicator is-${autosave.status}`} role="status">
+              <span className="autosave-dot" aria-hidden="true" />
+              <div>
+                <strong>{autosaveCopy.label}</strong>
+                <span>{autosaveCopy.detail}</span>
+              </div>
+            </div>
           </div>
           <div className="dashboard-hero-actions">
             <button
@@ -574,8 +716,8 @@ export function SeasonPage() {
         </div>
 
         {simulationMessage ? (
-          <div className={`message ${simulationMessage.includes('симулирован') ? 'success' : 'error'}`}>
-            <p>{simulationMessage}</p>
+          <div className={`message ${simulationMessage.tone}`}>
+            <p>{simulationMessage.text}</p>
           </div>
         ) : null}
 
