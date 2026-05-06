@@ -4,6 +4,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
 
+const DEFAULT_TEAM_RATING = 60;
+const TEAM_RATING_DEPTH = 8;
+
 @Injectable()
 export class PlayersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -54,17 +57,25 @@ export class PlayersService {
     await this.ensureTeamExists(createPlayerDto.teamId);
 
     try {
-      return await this.prisma.player.create({
-        data: this.toCreateData(createPlayerDto),
-        include: {
-          team: {
-            select: {
-              id: true,
-              name: true,
-              shortName: true,
+      return await this.prisma.$transaction(async (tx) => {
+        const createdPlayer = await tx.player.create({
+          data: this.toCreateData(createPlayerDto),
+          include: {
+            team: {
+              select: {
+                id: true,
+                name: true,
+                shortName: true,
+              },
             },
           },
-        },
+        });
+
+        if (createdPlayer.teamId) {
+          await this.refreshTeamRating(createdPlayer.teamId, tx);
+        }
+
+        return createdPlayer;
       });
     } catch (error) {
       this.handlePersistenceError(error);
@@ -87,22 +98,68 @@ export class PlayersService {
     await this.ensureTeamExists(updatePlayerDto.teamId);
 
     try {
-      return await this.prisma.player.update({
-        where: { id },
-        data: this.toUpdateData(updatePlayerDto),
-        include: {
-          team: {
-            select: {
-              id: true,
-              name: true,
-              shortName: true,
+      return await this.prisma.$transaction(async (tx) => {
+        const updatedPlayer = await tx.player.update({
+          where: { id },
+          data: this.toUpdateData(updatePlayerDto),
+          include: {
+            team: {
+              select: {
+                id: true,
+                name: true,
+                shortName: true,
+              },
             },
           },
-        },
+        });
+
+        const affectedTeamIds = new Set<string>();
+
+        if (existingPlayer.teamId) {
+          affectedTeamIds.add(existingPlayer.teamId);
+        }
+
+        if (updatedPlayer.teamId) {
+          affectedTeamIds.add(updatedPlayer.teamId);
+        }
+
+        for (const teamId of affectedTeamIds) {
+          await this.refreshTeamRating(teamId, tx);
+        }
+
+        return updatedPlayer;
       });
     } catch (error) {
       this.handlePersistenceError(error);
     }
+  }
+
+  private async refreshTeamRating(teamId: string, tx: Prisma.TransactionClient) {
+    const players = await tx.player.findMany({
+      where: { teamId },
+      select: {
+        overall: true,
+      },
+      orderBy: [{ overall: 'desc' }, { name: 'asc' }],
+    });
+
+    const rating = this.calculateDerivedTeamRating(players);
+
+    await tx.team.update({
+      where: { id: teamId },
+      data: { rating },
+    });
+  }
+
+  private calculateDerivedTeamRating(players: Array<{ overall: number }>) {
+    if (players.length === 0) {
+      return DEFAULT_TEAM_RATING;
+    }
+
+    const coreRotation = players.slice(0, TEAM_RATING_DEPTH);
+    const totalOverall = coreRotation.reduce((sum, player) => sum + player.overall, 0);
+
+    return Math.round(totalOverall / coreRotation.length);
   }
 
   private toCreateData(createPlayerDto: CreatePlayerDto): Prisma.PlayerCreateInput {

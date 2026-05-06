@@ -292,6 +292,11 @@ select {
   color: #f7f5ef;
 }
 
+.form-field select option {
+  background: #181b24;
+  color: #f7f5ef;
+}
+
 .form-field input:focus,
 .form-field select:focus {
   outline: none;

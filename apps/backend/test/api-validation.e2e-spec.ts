@@ -945,6 +945,11 @@ describe('Team and Player API', () => {
         shortName: 'BMN',
       }),
     );
+
+    const teamResponse = await request(app.getHttpServer()).get(`/teams/${TEAM_ID}`);
+
+    expect(teamResponse.status).toBe(200);
+    expect(teamResponse.body.rating).toBe(81);
   });
 
   it('returns a player by id', async () => {
@@ -959,6 +964,24 @@ describe('Team and Player API', () => {
         shortName: 'BMN',
       }),
     );
+  });
+
+  it('recalculates team ratings when a player moves to another team', async () => {
+    const response = await request(app.getHttpServer()).patch(`/players/${PLAYER_ID}`).send({
+      overall: 86,
+      teamId: OTHER_TEAM_ID,
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.teamId).toBe(OTHER_TEAM_ID);
+
+    const previousTeamResponse = await request(app.getHttpServer()).get(`/teams/${TEAM_ID}`);
+    const nextTeamResponse = await request(app.getHttpServer()).get(`/teams/${OTHER_TEAM_ID}`);
+
+    expect(previousTeamResponse.status).toBe(200);
+    expect(previousTeamResponse.body.rating).toBe(82);
+    expect(nextTeamResponse.status).toBe(200);
+    expect(nextTeamResponse.body.rating).toBe(80);
   });
 
   it('returns matches filtered by season', async () => {
