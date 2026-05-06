@@ -25,6 +25,7 @@ const SCHEDULE_MATCH_SELECT = {
       id: true,
       name: true,
       shortName: true,
+      rating: true,
     },
   },
   awayTeam: {
@@ -32,6 +33,7 @@ const SCHEDULE_MATCH_SELECT = {
       id: true,
       name: true,
       shortName: true,
+      rating: true,
     },
   },
 } satisfies Prisma.MatchSelect;

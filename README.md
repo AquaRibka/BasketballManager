@@ -166,6 +166,7 @@ npm run dev --workspace @basketball-manager/frontend
 - Docker Compose: `docker-compose.yml`
 - Локальные переменные: `.env`
 - Пример переменных: `.env.example`
+- Dev runbook: [docs/dev-runbook.md](/home/newuser/Documents/BM/docs/dev-runbook.md:1)
 
 Проверка подключения backend к базе:
 

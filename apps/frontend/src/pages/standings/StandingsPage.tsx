@@ -4,21 +4,31 @@ import { StateNotice } from '../../components/state/StateNotice';
 import {
   ApiClientError,
   getErrorMessage,
+  savesApi,
   seasonsApi,
+  type CareerSaveState,
   type SeasonStandingRow,
   type SeasonStandingsResponse,
   type SeasonSummary,
 } from '../../shared/api/client';
+import {
+  clearActiveSaveId,
+  readActiveSaveId,
+} from '../../shared/career/active-save-storage';
 
 type PageState =
   | { status: 'loading' }
   | { status: 'no-season' }
   | {
       status: 'success';
-      season: SeasonSummary;
+      season: CareerSaveState['season'] | SeasonSummary;
       standings: SeasonStandingsResponse;
     }
   | { status: 'error'; message: string };
+
+function isMissingActiveSave(error: unknown) {
+  return error instanceof ApiClientError && error.statusCode === 404;
+}
 
 function formatWinRate(value: number) {
   return `${(value * 100).toFixed(1)}%`;
@@ -36,12 +46,51 @@ function formatPointDiff(value: number) {
   return value > 0 ? `+${value}` : String(value);
 }
 
+function getSeasonStatusLabel(status: string) {
+  switch (status) {
+    case 'COMPLETED':
+      return 'Сезон завершён';
+    case 'IN_PROGRESS':
+    default:
+      return 'Сезон в процессе';
+  }
+}
+
 export function StandingsPage() {
   const [state, setState] = useState<PageState>({ status: 'loading' });
   const [requestKey, setRequestKey] = useState(0);
   const [isRecovering, setIsRecovering] = useState(false);
 
   async function loadStandings(signal?: AbortSignal) {
+    const activeSaveId = readActiveSaveId();
+
+    if (activeSaveId) {
+      try {
+        const saveState = await savesApi.getById(activeSaveId, signal);
+
+        setState({
+          status: 'success',
+          season: saveState.season,
+          standings: saveState.standings,
+        });
+        return;
+      } catch (error) {
+        if (signal?.aborted) {
+          return;
+        }
+
+        if (!isMissingActiveSave(error)) {
+          setState({
+            status: 'error',
+            message: getErrorMessage(error),
+          });
+          return;
+        }
+
+        clearActiveSaveId();
+      }
+    }
+
     try {
       const season = await seasonsApi.getCurrent(signal);
       const standings = await seasonsApi.getStandings(season.id, signal);
@@ -159,7 +208,8 @@ export function StandingsPage() {
             <p className="section-kicker">Standings</p>
             <h2>{state.season.name}</h2>
             <p className="section-copy">
-              Текущий раунд: {state.season.currentRound} · Статус сезона: {state.standings.seasonStatus}
+              Текущий раунд: {state.season.currentRound} · Статус сезона:{' '}
+              {getSeasonStatusLabel(state.standings.seasonStatus)}
             </p>
           </div>
           {state.standings.champion ? (

@@ -4,11 +4,17 @@ import { StatePanel } from '../../components/state/StatePanel';
 import {
   ApiClientError,
   getErrorMessage,
+  savesApi,
   seasonsApi,
+  type CareerSaveState,
   type MatchSummary,
   type SeasonScheduleResponse,
   type SeasonSummary,
 } from '../../shared/api/client';
+import {
+  clearActiveSaveId,
+  readActiveSaveId,
+} from '../../shared/career/active-save-storage';
 
 type CalendarPageProps = {
   matchId: string | null;
@@ -21,10 +27,16 @@ type PageState =
   | { status: 'no-schedule'; season: SeasonSummary }
   | {
       status: 'success';
+      source: 'save' | 'season';
+      saveId?: string;
       schedule: SeasonScheduleResponse;
-      season: SeasonSummary;
+      season: CareerSaveState['season'] | SeasonSummary;
     }
   | { status: 'error'; message: string };
+
+function isMissingActiveSave(error: unknown) {
+  return error instanceof ApiClientError && error.statusCode === 404;
+}
 
 function formatMatchDate(value: string | null) {
   if (!value) {
@@ -63,6 +75,16 @@ function getRoundStatusLabel(status: string) {
   }
 }
 
+function getSeasonStatusLabel(status: string) {
+  switch (status) {
+    case 'COMPLETED':
+      return 'Сезон завершён';
+    case 'IN_PROGRESS':
+    default:
+      return 'Сезон в процессе';
+  }
+}
+
 function getMatchScore(match: MatchSummary) {
   if (match.homeScore === null || match.awayScore === null) {
     return 'vs';
@@ -78,7 +100,50 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
   const [isSimulating, setIsSimulating] = useState(false);
   const [isRecovering, setIsRecovering] = useState(false);
 
+  function handleBackToCalendar() {
+    setSelectedMatchId(null);
+    onNavigate('/calendar');
+
+    requestAnimationFrame(() => {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
+    });
+  }
+
   async function loadCalendar(signal?: AbortSignal) {
+    const activeSaveId = readActiveSaveId();
+
+    if (activeSaveId) {
+      try {
+        const saveState = await savesApi.getById(activeSaveId, signal);
+
+        setState({
+          status: 'success',
+          source: 'save',
+          saveId: saveState.save.id,
+          season: saveState.season,
+          schedule: saveState.schedule,
+        });
+        return;
+      } catch (error) {
+        if (signal?.aborted) {
+          return;
+        }
+
+        if (!isMissingActiveSave(error)) {
+          setState({
+            status: 'error',
+            message: getErrorMessage(error),
+          });
+          return;
+        }
+
+        clearActiveSaveId();
+      }
+    }
+
     try {
       const season = await seasonsApi.getCurrent(signal);
 
@@ -87,6 +152,7 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
 
         setState({
           status: 'success',
+          source: 'season',
           season,
           schedule,
         });
@@ -162,10 +228,9 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
   }, [matchId]);
 
   const selectedMatch =
-    allMatches.find((match) => match.id === (matchId ?? selectedMatchId)) ??
-    currentRoundGroup?.matches[0] ??
-    allMatches[0] ??
-    null;
+    matchId || selectedMatchId
+      ? allMatches.find((match) => match.id === (matchId ?? selectedMatchId)) ?? null
+      : null;
 
   useEffect(() => {
     if (!selectedMatch) {
@@ -173,7 +238,9 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
       return;
     }
 
-    setSelectedMatchId((currentId) => currentId ?? matchId ?? selectedMatch.id);
+    if (matchId) {
+      setSelectedMatchId(matchId);
+    }
   }, [matchId, selectedMatch]);
 
   async function handleSimulateCurrentRound() {
@@ -186,6 +253,27 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
     try {
       const simulation = await seasonsApi.simulateCurrentRound(state.season.id);
 
+      if (state.source === 'save' && state.saveId) {
+        if (simulation.seasonStatus !== 'COMPLETED') {
+          await seasonsApi.advanceToNextRound(state.season.id);
+        }
+
+        const saveState = await savesApi.getById(state.saveId);
+        const nextCurrentRound = saveState.schedule.rounds.find(
+          (round) => round.round === saveState.season.currentRound,
+        );
+
+        setState({
+          status: 'success',
+          source: 'save',
+          saveId: saveState.save.id,
+          season: saveState.season,
+          schedule: saveState.schedule,
+        });
+        setSelectedMatchId(nextCurrentRound?.matches[0]?.id ?? simulation.matches[0]?.id ?? null);
+        return;
+      }
+
       startTransition(() => {
         setState((currentState) => {
           if (currentState.status !== 'success') {
@@ -194,6 +282,8 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
 
           return {
             status: 'success',
+            source: currentState.source,
+            saveId: currentState.saveId,
             season: {
               ...currentState.season,
               currentRound: simulation.currentRound,
@@ -296,14 +386,14 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
           value: selectedMatch.playedAt ? formatMatchDate(selectedMatch.playedAt) : 'Еще нет',
         },
         {
-          label: 'Рейтинг home',
+          label: 'Рейтинг хозяев',
           value:
             selectedMatch.homeTeam.rating !== undefined
               ? String(selectedMatch.homeTeam.rating)
               : 'Нет данных',
         },
         {
-          label: 'Рейтинг away',
+          label: 'Рейтинг гостей',
           value:
             selectedMatch.awayTeam.rating !== undefined
               ? String(selectedMatch.awayTeam.rating)
@@ -408,15 +498,11 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
         <div className="team-summary-grid">
           <article className="summary-card">
             <span>Статус сезона</span>
-            <strong>{state.season.status}</strong>
+            <strong>{getSeasonStatusLabel(state.season.status)}</strong>
           </article>
           <article className="summary-card">
             <span>Матчей в календаре</span>
             <strong>{state.schedule.totalMatches}</strong>
-          </article>
-          <article className="summary-card">
-            <span>Статус текущего раунда</span>
-            <strong>{currentRoundGroup ? getRoundStatusLabel(currentRoundGroup.status) : 'Нет данных'}</strong>
           </article>
         </div>
       </section>
@@ -461,6 +547,7 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
                         <button
                           className="match-card-button"
                           type="button"
+                          aria-label={`${match.homeTeam.name} vs ${match.awayTeam.name}, ${getMatchStatusLabel(match.status)}`}
                           onClick={() => {
                             setSelectedMatchId(match.id);
                             onNavigate(`/calendar/matches/${match.id}`);
@@ -468,24 +555,20 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
                         >
                           <div className="match-card-top">
                             <span className="match-date">{formatMatchDate(match.date)}</span>
+                          </div>
+                          <div className="match-team-row">
+                            <strong>{match.homeTeam.shortName}</strong>
+                            <span>{match.homeTeam.name}</span>
+                          </div>
+                          <div className="match-score">{getMatchScore(match)}</div>
+                          <div className="match-team-row">
+                            <strong>{match.awayTeam.shortName}</strong>
+                            <span>{match.awayTeam.name}</span>
+                          </div>
+                          <div className="match-card-footer">
                             <span className={`match-status status-${match.status.toLowerCase()}`}>
                               {getMatchStatusLabel(match.status)}
                             </span>
-                          </div>
-                          <div className="match-teams">
-                            <div className="match-team-row">
-                              <strong>{match.homeTeam.shortName}</strong>
-                              <span>{match.homeTeam.name}</span>
-                            </div>
-                            <div className="match-score">{getMatchScore(match)}</div>
-                            <div className="match-team-row">
-                              <strong>{match.awayTeam.shortName}</strong>
-                              <span>{match.awayTeam.name}</span>
-                            </div>
-                          </div>
-                          <div className="match-card-footer">
-                            <span>Раунд {match.round ?? round.round}</span>
-                            <span className="match-link">К матчу</span>
                           </div>
                         </button>
                       </article>
@@ -505,7 +588,7 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
             <h2>Подробности матча</h2>
           </div>
           {matchId ? (
-            <button className="ghost-button" type="button" onClick={() => onNavigate('/calendar')}>
+            <button className="ghost-button" type="button" onClick={handleBackToCalendar}>
               Назад к календарю
             </button>
           ) : null}

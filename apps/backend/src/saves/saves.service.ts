@@ -8,6 +8,7 @@ const SAVE_TEAM_SELECT = {
   id: true,
   name: true,
   shortName: true,
+  rating: true,
 } satisfies Prisma.TeamSelect;
 
 const SAVE_MATCH_SELECT = {
@@ -25,6 +26,7 @@ const SAVE_MATCH_SELECT = {
       id: true,
       name: true,
       shortName: true,
+      rating: true,
     },
   },
   awayTeam: {
@@ -32,6 +34,7 @@ const SAVE_MATCH_SELECT = {
       id: true,
       name: true,
       shortName: true,
+      rating: true,
     },
   },
 } satisfies Prisma.MatchSelect;
@@ -79,8 +82,8 @@ function mapScheduleMatchesToRounds(
     awayScore: number | null;
     winnerTeamId: string | null;
     playedAt: Date | null;
-    homeTeam: { id: string; name: string; shortName: string };
-    awayTeam: { id: string; name: string; shortName: string };
+    homeTeam: { id: string; name: string; shortName: string; rating: number };
+    awayTeam: { id: string; name: string; shortName: string; rating: number };
   }>,
 ) {
   return matches.reduce<
@@ -97,8 +100,8 @@ function mapScheduleMatchesToRounds(
         awayScore: number | null;
         winnerTeamId: string | null;
         playedAt: string | null;
-        homeTeam: { id: string; name: string; shortName: string };
-        awayTeam: { id: string; name: string; shortName: string };
+        homeTeam: { id: string; name: string; shortName: string; rating: number };
+        awayTeam: { id: string; name: string; shortName: string; rating: number };
       }>;
     }>
   >((accumulator, match) => {
@@ -140,7 +143,7 @@ export class SavesService {
 
   private async createSeasonBundle(
     tx: Prisma.TransactionClient,
-    leagueTeams: Array<{ id: string; name: string; shortName: string }>,
+    leagueTeams: Array<{ id: string; name: string; shortName: string; rating: number }>,
     year: number,
   ) {
     const season = await tx.season.create({
@@ -166,8 +169,8 @@ export class SavesService {
       awayScore: number | null;
       winnerTeamId: string | null;
       playedAt: Date | null;
-      homeTeam: { id: string; name: string; shortName: string };
-      awayTeam: { id: string; name: string; shortName: string };
+      homeTeam: { id: string; name: string; shortName: string; rating: number };
+      awayTeam: { id: string; name: string; shortName: string; rating: number };
     }> = [];
 
     for (const pairing of pairings) {
@@ -199,6 +202,7 @@ export class SavesService {
               id: true,
               name: true,
               shortName: true,
+              rating: true,
             },
           },
           awayTeam: {
@@ -206,6 +210,7 @@ export class SavesService {
               id: true,
               name: true,
               shortName: true,
+              rating: true,
             },
           },
         },
@@ -432,11 +437,7 @@ export class SavesService {
       where: { id },
       include: {
         selectedTeam: {
-          select: {
-            id: true,
-            name: true,
-            shortName: true,
-          },
+          select: SAVE_TEAM_SELECT,
         },
         currentSeason: true,
       },

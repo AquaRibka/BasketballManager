@@ -11,8 +11,12 @@ import {
   type MatchSummary,
   type TeamSummary,
 } from '../../shared/api/client';
+import {
+  clearActiveSaveId,
+  readActiveSaveId,
+  writeActiveSaveId,
+} from '../../shared/career/active-save-storage';
 
-const ACTIVE_SAVE_STORAGE_KEY = 'bm-active-save-id';
 const isDevAdminMode = import.meta.env.DEV;
 
 type PageState =
@@ -41,18 +45,6 @@ const INITIAL_FORM_STATE: CreateSaveFormState = {
   name: 'My Career',
   teamId: '',
 };
-
-function readActiveSaveId() {
-  return window.localStorage.getItem(ACTIVE_SAVE_STORAGE_KEY);
-}
-
-function writeActiveSaveId(saveId: string) {
-  window.localStorage.setItem(ACTIVE_SAVE_STORAGE_KEY, saveId);
-}
-
-function clearActiveSaveId() {
-  window.localStorage.removeItem(ACTIVE_SAVE_STORAGE_KEY);
-}
 
 function formatDashboardDate(value: string | null) {
   if (!value) {

@@ -38,6 +38,7 @@ const MATCH_RESULT_TEAM_SELECT = {
   id: true,
   name: true,
   shortName: true,
+  rating: true,
 } satisfies Prisma.TeamSelect;
 
 const MATCH_WITH_ROSTERS_INCLUDE = {
