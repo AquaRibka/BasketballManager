@@ -4,15 +4,10 @@ import { ApiClientError, ApiNetworkError, isApiErrorResponse } from './errors';
 import type {
   ApiErrorResponse,
   ApiListResponse,
-  MatchSummary,
-  MatchTeam,
-  SeasonChampion,
   SeasonScheduleResponse,
-  SeasonStandingRow,
   SeasonStandingsResponse,
   SeasonSummary,
   TeamDetails,
-  TeamPlayer,
   TeamRosterResponse,
   TeamSummary,
 } from './types';
