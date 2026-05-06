@@ -8,6 +8,11 @@ import {
   type SeasonSummary,
 } from '../../shared/api/client';
 
+type CalendarPageProps = {
+  matchId: string | null;
+  onNavigate: (path: string) => void;
+};
+
 type PageState =
   | { status: 'loading' }
   | { status: 'no-season' }
@@ -64,7 +69,7 @@ function getMatchScore(match: MatchSummary) {
   return `${match.homeScore}:${match.awayScore}`;
 }
 
-export function CalendarPage() {
+export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
   const [state, setState] = useState<PageState>({ status: 'loading' });
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
@@ -143,8 +148,14 @@ export function CalendarPage() {
     [state],
   );
 
+  useEffect(() => {
+    if (matchId) {
+      setSelectedMatchId(matchId);
+    }
+  }, [matchId]);
+
   const selectedMatch =
-    allMatches.find((match) => match.id === selectedMatchId) ??
+    allMatches.find((match) => match.id === (matchId ?? selectedMatchId)) ??
     currentRoundGroup?.matches[0] ??
     allMatches[0] ??
     null;
@@ -155,8 +166,8 @@ export function CalendarPage() {
       return;
     }
 
-    setSelectedMatchId((currentId) => currentId ?? selectedMatch.id);
-  }, [selectedMatch]);
+    setSelectedMatchId((currentId) => currentId ?? matchId ?? selectedMatch.id);
+  }, [matchId, selectedMatch]);
 
   async function handleSimulateCurrentRound() {
     if (state.status !== 'success' || isSimulating) {
@@ -251,6 +262,48 @@ export function CalendarPage() {
       setIsRecovering(false);
     }
   }
+
+  const selectedMatchWinner =
+    selectedMatch && selectedMatch.winnerTeamId
+      ? selectedMatch.winnerTeamId === selectedMatch.homeTeam.id
+        ? selectedMatch.homeTeam
+        : selectedMatch.awayTeam
+      : null;
+
+  const selectedMatchStats = selectedMatch
+    ? [
+        {
+          label: 'Статус матча',
+          value: getMatchStatusLabel(selectedMatch.status),
+        },
+        {
+          label: 'Дата игры',
+          value: formatMatchDate(selectedMatch.date),
+        },
+        {
+          label: 'Победитель',
+          value: selectedMatchWinner?.name ?? 'Пока не определён',
+        },
+        {
+          label: 'Сыгран',
+          value: selectedMatch.playedAt ? formatMatchDate(selectedMatch.playedAt) : 'Еще нет',
+        },
+        {
+          label: 'Рейтинг home',
+          value:
+            selectedMatch.homeTeam.rating !== undefined
+              ? String(selectedMatch.homeTeam.rating)
+              : 'Нет данных',
+        },
+        {
+          label: 'Рейтинг away',
+          value:
+            selectedMatch.awayTeam.rating !== undefined
+              ? String(selectedMatch.awayTeam.rating)
+              : 'Нет данных',
+        },
+      ]
+    : [];
 
   if (state.status === 'loading') {
     return (
@@ -422,6 +475,7 @@ export function CalendarPage() {
                           type="button"
                           onClick={() => {
                             setSelectedMatchId(match.id);
+                            onNavigate(`/calendar/matches/${match.id}`);
                           }}
                         >
                           <div className="match-card-top">
@@ -457,8 +511,17 @@ export function CalendarPage() {
       </section>
 
       <section className="panel">
-        <p className="section-kicker">Match Card</p>
-        <h2>Выбранный матч</h2>
+        <div className="match-detail-heading">
+          <div>
+            <p className="section-kicker">Match Detail</p>
+            <h2>Подробности матча</h2>
+          </div>
+          {matchId ? (
+            <button className="ghost-button" type="button" onClick={() => onNavigate('/calendar')}>
+              Назад к календарю
+            </button>
+          ) : null}
+        </div>
         {selectedMatch ? (
           <div className="selected-match-card">
             <div className="selected-match-header">
@@ -476,6 +539,28 @@ export function CalendarPage() {
               </span>
             </div>
 
+            <div className="match-detail-teams">
+              <article
+                className={`match-side-card${
+                  selectedMatchWinner?.id === selectedMatch.homeTeam.id ? ' is-winner' : ''
+                }`}
+              >
+                <span className="match-side-label">Home</span>
+                <strong>{selectedMatch.homeTeam.shortName}</strong>
+                <p>{selectedMatch.homeTeam.name}</p>
+              </article>
+              <div className="selected-match-divider selected-match-divider-large">vs</div>
+              <article
+                className={`match-side-card${
+                  selectedMatchWinner?.id === selectedMatch.awayTeam.id ? ' is-winner' : ''
+                }`}
+              >
+                <span className="match-side-label">Away</span>
+                <strong>{selectedMatch.awayTeam.shortName}</strong>
+                <p>{selectedMatch.awayTeam.name}</p>
+              </article>
+            </div>
+
             <div className="selected-match-score">
               <div>
                 <span>{selectedMatch.homeTeam.shortName}</span>
@@ -486,6 +571,15 @@ export function CalendarPage() {
                 <span>{selectedMatch.awayTeam.shortName}</span>
                 <strong>{selectedMatch.awayScore ?? '-'}</strong>
               </div>
+            </div>
+
+            <div className="match-basic-stats">
+              {selectedMatchStats.map((item) => (
+                <article className="attribute-card" key={item.label}>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </article>
+              ))}
             </div>
 
             <div className="selected-match-meta">

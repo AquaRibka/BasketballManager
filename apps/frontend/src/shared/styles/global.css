@@ -359,6 +359,13 @@ select {
   cursor: not-allowed;
 }
 
+.match-detail-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
 .action-row {
   display: flex;
   flex-wrap: wrap;
@@ -508,6 +515,44 @@ select {
   background: rgba(255, 255, 255, 0.03);
 }
 
+.match-detail-teams {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.match-side-card {
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.match-side-card.is-winner {
+  border-color: rgba(88, 212, 140, 0.28);
+  background: rgba(48, 147, 93, 0.12);
+}
+
+.match-side-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.35rem;
+}
+
+.match-side-card p,
+.match-side-label {
+  margin: 0;
+  color: rgba(247, 245, 239, 0.68);
+}
+
+.match-side-label {
+  display: block;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .selected-match-score {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -519,6 +564,16 @@ select {
 .selected-match-score div {
   display: grid;
   gap: 8px;
+}
+
+.selected-match-divider-large {
+  align-self: center;
+}
+
+.match-basic-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
 }
 
 .team-detail-header {
@@ -719,10 +774,19 @@ select {
   }
 
   .round-header,
+  .match-detail-heading,
   .selected-match-header,
   .selected-match-meta {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .match-detail-teams {
+    grid-template-columns: 1fr;
+  }
+
+  .selected-match-divider-large {
+    justify-self: center;
   }
 }
 

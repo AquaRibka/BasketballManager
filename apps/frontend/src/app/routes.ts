@@ -36,6 +36,10 @@ export function resolveAppRoute(pathname: string): AppRoutePath {
     return DEFAULT_ROUTE;
   }
 
+  if (pathname === '/calendar' || pathname.startsWith('/calendar/')) {
+    return '/calendar';
+  }
+
   const matchedItem = NAV_ITEMS.find((item) => item.path === pathname);
   return matchedItem?.path ?? DEFAULT_ROUTE;
 }
@@ -47,4 +51,13 @@ export function getTeamIdFromPath(pathname: string): string | null {
 
   const teamId = pathname.slice('/teams/'.length).trim();
   return teamId.length > 0 ? teamId : null;
+}
+
+export function getCalendarMatchIdFromPath(pathname: string): string | null {
+  if (!pathname.startsWith('/calendar/matches/')) {
+    return null;
+  }
+
+  const matchId = pathname.slice('/calendar/matches/'.length).trim();
+  return matchId.length > 0 ? matchId : null;
 }
