@@ -1,33 +1,169 @@
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? '/api';
+import { API_BASE_URL, DEFAULT_JSON_HEADERS } from './config';
+import { apiEndpoints } from './endpoints';
+import { ApiClientError, ApiNetworkError, isApiErrorResponse } from './errors';
+import type {
+  ApiErrorResponse,
+  ApiListResponse,
+  MatchSummary,
+  MatchTeam,
+  SeasonChampion,
+  SeasonScheduleResponse,
+  SeasonStandingRow,
+  SeasonStandingsResponse,
+  SeasonSummary,
+  TeamDetails,
+  TeamPlayer,
+  TeamRosterResponse,
+  TeamSummary,
+} from './types';
 
-export type TeamSummary = {
-  id: string;
-  name: string;
-  city: string;
-  shortName: string;
-  rating: number;
+type RequestMethod = 'GET' | 'POST' | 'PATCH';
+
+type RequestOptions = {
+  body?: unknown;
+  headers?: HeadersInit;
+  method?: RequestMethod;
+  signal?: AbortSignal;
 };
 
-type TeamListResponse = {
-  items: TeamSummary[];
-  total: number;
-};
+async function parseResponseBody(response: Response): Promise<unknown> {
+  const contentType = response.headers.get('content-type') ?? '';
 
-async function request<T>(path: string): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`API request failed with status ${response.status}`);
+  if (!contentType.includes('application/json')) {
+    return null;
   }
 
-  return response.json() as Promise<T>;
+  return response.json() as Promise<unknown>;
 }
 
-export async function fetchTeams() {
-  const response = await request<TeamListResponse>('/teams');
-  return response.items;
+function buildRequestInit(options: RequestOptions): RequestInit {
+  const headers =
+    options.body === undefined
+      ? {
+          Accept: DEFAULT_JSON_HEADERS.Accept,
+          ...options.headers,
+        }
+      : {
+          ...DEFAULT_JSON_HEADERS,
+          ...options.headers,
+        };
+
+  return {
+    method: options.method ?? 'GET',
+    headers,
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    signal: options.signal,
+  };
 }
+
+async function request<TResponse>(
+  endpoint: string,
+  options: RequestOptions = {},
+): Promise<TResponse> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, buildRequestInit(options));
+  } catch (error) {
+    throw new ApiNetworkError(error instanceof Error ? error.message : undefined);
+  }
+
+  const payload = await parseResponseBody(response);
+
+  if (!response.ok) {
+    if (isApiErrorResponse(payload)) {
+      throw new ApiClientError(payload);
+    }
+
+    const fallbackError: ApiErrorResponse = {
+      statusCode: response.status,
+      code: 'HTTP_ERROR',
+      message: `API request failed with status ${response.status}`,
+      details: null,
+      path: endpoint,
+      timestamp: new Date().toISOString(),
+    };
+
+    throw new ApiClientError(fallbackError);
+  }
+
+  return payload as TResponse;
+}
+
+export const apiClient = {
+  get<TResponse>(endpoint: string, options: Omit<RequestOptions, 'method' | 'body'> = {}) {
+    return request<TResponse>(endpoint, { ...options, method: 'GET' });
+  },
+  post<TResponse>(
+    endpoint: string,
+    body?: unknown,
+    options: Omit<RequestOptions, 'method' | 'body'> = {},
+  ) {
+    return request<TResponse>(endpoint, { ...options, method: 'POST', body });
+  },
+  patch<TResponse>(
+    endpoint: string,
+    body?: unknown,
+    options: Omit<RequestOptions, 'method' | 'body'> = {},
+  ) {
+    return request<TResponse>(endpoint, { ...options, method: 'PATCH', body });
+  },
+};
+
+export const teamsApi = {
+  async list(signal?: AbortSignal) {
+    const response = await apiClient.get<ApiListResponse<TeamSummary>>(apiEndpoints.teams.list, {
+      signal,
+    });
+    return response.items;
+  },
+  getById(teamId: string, signal?: AbortSignal) {
+    return apiClient.get<TeamDetails>(apiEndpoints.teams.details(teamId), { signal });
+  },
+  getRoster(teamId: string, signal?: AbortSignal) {
+    return apiClient.get<TeamRosterResponse>(apiEndpoints.teams.roster(teamId), { signal });
+  },
+};
+
+export const seasonsApi = {
+  getCurrent(signal?: AbortSignal) {
+    return apiClient.get<SeasonSummary>(apiEndpoints.seasons.current, { signal });
+  },
+  getSchedule(seasonId: string, signal?: AbortSignal) {
+    return apiClient.get<SeasonScheduleResponse>(apiEndpoints.seasons.schedule(seasonId), {
+      signal,
+    });
+  },
+  getStandings(seasonId: string, signal?: AbortSignal) {
+    return apiClient.get<SeasonStandingsResponse>(apiEndpoints.seasons.standings(seasonId), {
+      signal,
+    });
+  },
+  simulateCurrentRound(seasonId: string, signal?: AbortSignal) {
+    return apiClient.post(apiEndpoints.seasons.simulateCurrentRound(seasonId), undefined, {
+      signal,
+    });
+  },
+  advanceToNextRound(seasonId: string, signal?: AbortSignal) {
+    return apiClient.post(apiEndpoints.seasons.nextRound(seasonId), undefined, { signal });
+  },
+};
+
+export type {
+  ApiErrorResponse,
+  ApiListResponse,
+  MatchSummary,
+  MatchTeam,
+  SeasonChampion,
+  SeasonScheduleResponse,
+  SeasonStandingRow,
+  SeasonStandingsResponse,
+  SeasonSummary,
+  TeamDetails,
+  TeamPlayer,
+  TeamRosterResponse,
+  TeamSummary,
+} from './types';
+
+export { apiEndpoints } from './endpoints';
+export { ApiClientError, ApiNetworkError, getErrorMessage } from './errors';

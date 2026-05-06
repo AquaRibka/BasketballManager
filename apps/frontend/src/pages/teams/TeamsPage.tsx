@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchTeams, type TeamSummary } from '../../shared/api/client';
+import { getErrorMessage, teamsApi, type TeamSummary } from '../../shared/api/client';
 
 type LoadState =
   | { status: 'loading' }
@@ -10,32 +10,28 @@ export function TeamsPage() {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
 
   useEffect(() => {
-    let cancelled = false;
+    const abortController = new AbortController();
 
     async function loadTeams() {
       try {
-        const teams = await fetchTeams();
-
-        if (!cancelled) {
-          setState({ status: 'success', teams });
-        }
+        const teams = await teamsApi.list(abortController.signal);
+        setState({ status: 'success', teams });
       } catch (error) {
-        if (!cancelled) {
-          setState({
-            status: 'error',
-            message:
-              error instanceof Error
-                ? error.message
-                : 'Не удалось подключиться к backend API.',
-          });
+        if (abortController.signal.aborted) {
+          return;
         }
+
+        setState({
+          status: 'error',
+          message: getErrorMessage(error),
+        });
       }
     }
 
     void loadTeams();
 
     return () => {
-      cancelled = true;
+      abortController.abort();
     };
   }, []);
 
