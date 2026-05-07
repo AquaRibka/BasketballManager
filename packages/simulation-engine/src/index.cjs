@@ -32,6 +32,25 @@ function averageBy(players, getValue, fallback = 60) {
   return total / players.length;
 }
 
+function topWeightedAverage(players, getValue, fallback = 60) {
+  if (players.length === 0) {
+    return fallback;
+  }
+
+  const rotationWeights = [1, 0.95, 0.9, 0.86, 0.82, 0.24, 0.16, 0.1, 0.06, 0.03];
+  const sortedPlayers = [...players].sort((left, right) => right.overall - left.overall);
+  let weightedTotal = 0;
+  let weightTotal = 0;
+
+  sortedPlayers.slice(0, rotationWeights.length).forEach((player, index) => {
+    const weight = rotationWeights[index];
+    weightedTotal += getValue(player) * weight;
+    weightTotal += weight;
+  });
+
+  return weightedTotal / weightTotal;
+}
+
 function resolveStamina(player) {
   if (typeof player.stamina === 'number') {
     return player.stamina;
@@ -90,17 +109,20 @@ function buildPositionStrength(players, averageOverall) {
 }
 
 function buildAttributeStrength(players) {
-  const shooting = averageBy(players, (player) => player.shooting);
-  const passing = averageBy(players, (player) => player.passing);
-  const defense = averageBy(players, (player) => player.defense);
-  const rebounding = averageBy(players, (player) => player.rebounding);
-  const athleticism = averageBy(players, (player) => player.athleticism ?? resolveStamina(player));
+  const shooting = topWeightedAverage(players, (player) => player.shooting);
+  const passing = topWeightedAverage(players, (player) => player.passing);
+  const defense = topWeightedAverage(players, (player) => player.defense);
+  const rebounding = topWeightedAverage(players, (player) => player.rebounding);
+  const athleticism = topWeightedAverage(
+    players,
+    (player) => player.athleticism ?? resolveStamina(player),
+  );
 
   return shooting * 0.26 + passing * 0.18 + defense * 0.24 + rebounding * 0.16 + athleticism * 0.16;
 }
 
 function buildStaminaFactor(players) {
-  const averageStamina = averageBy(players, (player) => resolveStamina(player));
+  const averageStamina = topWeightedAverage(players, (player) => resolveStamina(player));
   const depthStamina = averageBy(
     [...players].sort((left, right) => right.overall - left.overall).slice(0, 8),
     (player) => resolveStamina(player),
@@ -116,7 +138,7 @@ function calculateTeamStrengthV1(team, options = {}) {
   }
 
   const players = team.players ?? [];
-  const averageOverall = averageBy(players, (player) => player.overall);
+  const averageOverall = topWeightedAverage(players, (player) => player.overall);
   const positionStrength = buildPositionStrength(players, averageOverall);
   const attributeStrength = buildAttributeStrength(players);
   const staminaFactor = buildStaminaFactor(players);
@@ -124,13 +146,13 @@ function calculateTeamStrengthV1(team, options = {}) {
     typeof options.randomValue === 'number' && Number.isFinite(options.randomValue)
       ? clamp(options.randomValue, 0, 1)
       : 0.5;
-  const randomFactor = (randomValue - 0.5) * 5;
+  const randomFactor = (randomValue - 0.5) * 7;
 
   const rawStrength =
-    team.rating * 0.24 +
-    averageOverall * 0.34 +
-    positionStrength * 0.22 +
-    attributeStrength * 0.12 +
+    team.rating * 0.34 +
+    averageOverall * 0.2 +
+    positionStrength * 0.24 +
+    attributeStrength * 0.14 +
     staminaFactor * 0.08 +
     randomFactor;
 
@@ -142,8 +164,7 @@ function averageOverall(players) {
     return 60;
   }
 
-  const total = players.reduce((sum, player) => sum + player.overall, 0);
-  return total / players.length;
+  return rotationAverage(players, (player) => player.overall);
 }
 
 function averageAttribute(players, key) {
@@ -151,8 +172,22 @@ function averageAttribute(players, key) {
     return 60;
   }
 
-  const total = players.reduce((sum, player) => sum + player[key], 0);
-  return total / players.length;
+  return rotationAverage(players, (player) => player[key]);
+}
+
+function rotationAverage(players, getValue) {
+  const rotationWeights = [1, 0.95, 0.9, 0.86, 0.82, 0.24, 0.16, 0.1, 0.06, 0.03];
+  const sortedPlayers = [...players].sort((left, right) => right.overall - left.overall);
+  let weightedTotal = 0;
+  let weightTotal = 0;
+
+  sortedPlayers.slice(0, rotationWeights.length).forEach((player, index) => {
+    const weight = rotationWeights[index];
+    weightedTotal += getValue(player) * weight;
+    weightTotal += weight;
+  });
+
+  return weightedTotal / weightTotal;
 }
 
 function buildTeamProfile(team) {
@@ -246,108 +281,103 @@ function validateSimulationInput(input) {
 
 function calculatePaceModifier(teamProfile, opponentProfile) {
   return clamp(
-    (teamProfile.athleticism - 75) / 3.2 +
-      (teamProfile.passing - 75) / 4.6 +
-      (teamProfile.rebounding - opponentProfile.rebounding) / 10,
-    -6,
-    6,
+    (teamProfile.athleticism - 75) / 4.8 +
+      (teamProfile.passing - 75) / 7.2 +
+      (teamProfile.rebounding - opponentProfile.rebounding) / 14,
+    -4,
+    4,
   );
 }
 
 function buildGameContext(homeProfile, awayProfile, homeStrength, awayStrength) {
   const paceBase =
-    90 +
-    (homeProfile.athleticism + awayProfile.athleticism) / 16 +
-    (homeProfile.passing + awayProfile.passing) / 24 +
-    (homeProfile.overall + awayProfile.overall) / 40;
+    68 +
+    (homeProfile.athleticism + awayProfile.athleticism) / 30 +
+    (homeProfile.passing + awayProfile.passing) / 46 +
+    (homeProfile.overall + awayProfile.overall) / 78;
   const strengthDelta = homeStrength - awayStrength;
   const homePaceModifier = calculatePaceModifier(homeProfile, awayProfile);
   const awayPaceModifier = calculatePaceModifier(awayProfile, homeProfile);
 
   return {
-    basePossessions: clamp(Math.round(paceBase), 86, 102),
+    basePossessions: clamp(Math.round(paceBase), 70, 82),
     homePaceModifier,
     awayPaceModifier,
-    paceVariance: 4.5,
+    paceVariance: 5,
     strengthDelta,
     homeEfficiency: clamp(
-      0.95 +
-        homeStrength / 260 +
-        (homeProfile.shooting - awayProfile.defense) / 300 +
-        strengthDelta / 360,
-      0.88,
-      1.28,
+      0.87 +
+        homeStrength / 380 +
+        (homeProfile.shooting - awayProfile.defense) / 420 +
+        strengthDelta / 620,
+      0.78,
+      1.2,
     ),
     homeExecutionModifier: clamp(
-      (homeProfile.shooting - awayProfile.defense) / 340 +
-        (homeProfile.passing - awayProfile.defense) / 520,
-      -0.07,
-      0.09,
+      (homeProfile.shooting - awayProfile.defense) / 520 +
+        (homeProfile.passing - awayProfile.defense) / 760,
+      -0.06,
+      0.07,
     ),
     awayEfficiency: clamp(
-      0.93 +
-        awayStrength / 260 +
-        (awayProfile.shooting - homeProfile.defense) / 300 -
-        strengthDelta / 380,
-      0.86,
-      1.24,
+      0.85 +
+        awayStrength / 385 +
+        (awayProfile.shooting - homeProfile.defense) / 420 -
+        strengthDelta / 650,
+      0.76,
+      1.17,
     ),
     awayExecutionModifier: clamp(
-      (awayProfile.shooting - homeProfile.defense) / 340 +
-        (awayProfile.passing - homeProfile.defense) / 520,
-      -0.08,
-      0.08,
+      (awayProfile.shooting - homeProfile.defense) / 520 +
+        (awayProfile.passing - homeProfile.defense) / 760,
+      -0.07,
+      0.07,
     ),
   };
 }
 
 function generateRegulationScore(context, random) {
+  const gameSwing = centeredRandom(random, 0.075);
+  const homeLuck = centeredRandom(random, 0.12);
+  const awayLuck = centeredRandom(random, 0.12);
   const sharedPossessions = clamp(
     Math.round(
       context.basePossessions +
         (context.homePaceModifier + context.awayPaceModifier) / 2 +
         centeredRandom(random, context.paceVariance),
     ),
-    80,
-    108,
+    66,
+    86,
   );
   const possessionSplit = clamp(
     Math.round(
-      (context.homePaceModifier - context.awayPaceModifier) * 0.55 + centeredRandom(random, 2.2),
+      (context.homePaceModifier - context.awayPaceModifier) * 0.45 + centeredRandom(random, 2),
     ),
-    -5,
-    5,
+    -4,
+    4,
   );
-  const homePossessions = clamp(
-    sharedPossessions + possessionSplit,
-    78,
-    112,
-  );
-  const awayPossessions = clamp(
-    sharedPossessions - possessionSplit,
-    78,
-    112,
-  );
+  const homePossessions = clamp(sharedPossessions + possessionSplit, 64, 90);
+  const awayPossessions = clamp(sharedPossessions - possessionSplit, 64, 90);
   const homePointsPerPossession = clamp(
-    context.homeEfficiency + context.homeExecutionModifier + centeredRandom(random, 0.085),
-    0.85,
-    1.33,
+    context.homeEfficiency + context.homeExecutionModifier + gameSwing + homeLuck,
+    0.74,
+    1.26,
   );
   const awayPointsPerPossession = clamp(
-    context.awayEfficiency + context.awayExecutionModifier + centeredRandom(random, 0.085),
-    0.83,
-    1.29,
+    context.awayEfficiency + context.awayExecutionModifier + gameSwing + awayLuck,
+    0.72,
+    1.24,
   );
 
   const homeScore = clamp(
-    Math.round(homePossessions * homePointsPerPossession + centeredRandom(random, 6.5)),
-    58,
-    138,
+    Math.round(homePossessions * homePointsPerPossession + centeredRandom(random, 8.5)),
+    48,
+    112,
   );
   const awayScore = clamp(
-    Math.round(awayPossessions * awayPointsPerPossession + centeredRandom(random, 6.5)),
-    56,
-    138,
+    Math.round(awayPossessions * awayPointsPerPossession + centeredRandom(random, 8.5)),
+    46,
+    112,
   );
 
   return {
@@ -367,29 +397,29 @@ function resolveOvertime(homeScore, awayScore, context, random) {
     overtimeCount += 1;
 
     const overtimePace = clamp(
-      Math.round(context.basePossessions / 8 + (context.homePaceModifier + context.awayPaceModifier) / 4),
-      8,
-      16,
+      Math.round(
+        context.basePossessions / 8 + (context.homePaceModifier + context.awayPaceModifier) / 4,
+      ),
+      7,
+      12,
     );
     const homeOvertimeScore = clamp(
       Math.round(
-        overtimePace *
-          clamp(context.homeEfficiency + context.homeExecutionModifier, 0.88, 1.3) +
-          centeredRandom(random, 3.25) +
-          context.strengthDelta / 40,
+        overtimePace * clamp(context.homeEfficiency + context.homeExecutionModifier, 0.78, 1.22) +
+          centeredRandom(random, 4.5) +
+          context.strengthDelta / 70,
       ),
-      4,
-      24,
+      2,
+      18,
     );
     const awayOvertimeScore = clamp(
       Math.round(
-        overtimePace *
-          clamp(context.awayEfficiency + context.awayExecutionModifier, 0.86, 1.28) +
-          centeredRandom(random, 3.25) -
-          context.strengthDelta / 40,
+        overtimePace * clamp(context.awayEfficiency + context.awayExecutionModifier, 0.76, 1.2) +
+          centeredRandom(random, 4.5) -
+          context.strengthDelta / 70,
       ),
-      4,
-      24,
+      2,
+      18,
     );
 
     resolvedHomeScore += homeOvertimeScore;
@@ -424,8 +454,7 @@ function buildBaseTeamStatistics(score, possessions, teamProfile, opponentProfil
   );
   const freeThrowsAttempted = clamp(
     Math.round(
-      possessions *
-        (0.19 + teamProfile.athleticism / 1400 + centeredRandom(random, 0.025)),
+      possessions * (0.19 + teamProfile.athleticism / 1400 + centeredRandom(random, 0.025)),
     ),
     10,
     38,
@@ -517,9 +546,7 @@ function attachTeamRebounds(homeStats, awayStats, homeProfile, awayProfile, rand
     74,
   );
   const homeReboundShare = clamp(
-    0.5 +
-      (homeProfile.rebounding - awayProfile.rebounding) / 160 +
-      centeredRandom(random, 0.035),
+    0.5 + (homeProfile.rebounding - awayProfile.rebounding) / 160 + centeredRandom(random, 0.035),
     0.38,
     0.62,
   );

@@ -159,8 +159,8 @@ test('calculateTeamStrengthV1 returns a stable fallback value for an empty roste
   const first = calculateTeamStrengthV1(emptyTeam, { randomValue: 0.5 });
   const second = calculateTeamStrengthV1(emptyTeam, { randomValue: 0.5 });
 
-  assert.equal(first, 63.48);
-  assert.equal(second, 63.48);
+  assert.equal(first, 65.36);
+  assert.equal(second, 65.36);
 });
 
 test('calculateTeamStrengthV1 applies a bounded random factor', () => {
@@ -170,7 +170,33 @@ test('calculateTeamStrengthV1 applies a bounded random factor', () => {
 
   assert.ok(lowRoll < midRoll);
   assert.ok(midRoll < highRoll);
-  assert.ok(highRoll - lowRoll <= 5);
+  assert.ok(highRoll - lowRoll <= 7);
+});
+
+test('calculateTeamStrengthV1 is not dragged down by a deep weak bench player', () => {
+  const withWeakBench = {
+    ...balancedTeam,
+    id: 'team_with_weak_bench',
+    players: [
+      ...balancedTeam.players,
+      {
+        id: 'bench_project',
+        name: 'End Bench Project',
+        position: 'C',
+        overall: 35,
+        shooting: 34,
+        passing: 33,
+        defense: 35,
+        rebounding: 36,
+        athleticism: 34,
+      },
+    ],
+  };
+
+  const baseStrength = calculateTeamStrengthV1(balancedTeam, { randomValue: 0.5 });
+  const withBenchStrength = calculateTeamStrengthV1(withWeakBench, { randomValue: 0.5 });
+
+  assert.ok(baseStrength - withBenchStrength < 1.5);
 });
 
 test('stronger team statistically beats weaker team more often, with randomness preserved', () => {

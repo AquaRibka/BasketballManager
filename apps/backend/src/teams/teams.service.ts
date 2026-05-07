@@ -5,6 +5,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import { VTB_LEAGUE_SHORT_NAMES } from '../leagues/vtb-league';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
@@ -15,6 +16,11 @@ export class TeamsService {
 
   async getTeams() {
     const items = await this.prisma.team.findMany({
+      where: {
+        shortName: {
+          in: [...VTB_LEAGUE_SHORT_NAMES],
+        },
+      },
       orderBy: [{ name: 'asc' }],
     });
 

@@ -5,6 +5,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { MatchStatus, SeasonStatus, type Prisma } from '@prisma/client';
+import { VTB_LEAGUE_SHORT_NAMES } from '../leagues/vtb-league';
 import { MatchesService } from '../matches/matches.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSeasonDto } from './dto/create-season.dto';
@@ -55,16 +56,18 @@ const STANDINGS_SELECT = {
 } satisfies Prisma.StandingSelect;
 
 function buildInitialStandingRows(seasonId: string, teamIds: string[]) {
-  return [...teamIds].sort((left, right) => left.localeCompare(right)).map((teamId, index) => ({
-    seasonId,
-    teamId,
-    position: index + 1,
-    wins: 0,
-    losses: 0,
-    pointsFor: 0,
-    pointsAgainst: 0,
-    pointDiff: 0,
-  }));
+  return [...teamIds]
+    .sort((left, right) => left.localeCompare(right))
+    .map((teamId, index) => ({
+      seasonId,
+      teamId,
+      position: index + 1,
+      wins: 0,
+      losses: 0,
+      pointsFor: 0,
+      pointsAgainst: 0,
+      pointDiff: 0,
+    }));
 }
 
 @Injectable()
@@ -87,6 +90,11 @@ export class SeasonsService {
     }
 
     const teams = await this.prisma.team.findMany({
+      where: {
+        shortName: {
+          in: [...VTB_LEAGUE_SHORT_NAMES],
+        },
+      },
       orderBy: [{ name: 'asc' }],
       select: {
         id: true,
@@ -204,6 +212,11 @@ export class SeasonsService {
     }
 
     const teams = await this.prisma.team.findMany({
+      where: {
+        shortName: {
+          in: [...VTB_LEAGUE_SHORT_NAMES],
+        },
+      },
       orderBy: [{ name: 'asc' }],
       select: {
         id: true,
@@ -304,7 +317,8 @@ export class SeasonsService {
 
       accumulator.push({
         round: match.round ?? 0,
-        status: match.status === MatchStatus.COMPLETED ? MatchStatus.COMPLETED : MatchStatus.SCHEDULED,
+        status:
+          match.status === MatchStatus.COMPLETED ? MatchStatus.COMPLETED : MatchStatus.SCHEDULED,
         matches: [match],
       });
 
@@ -347,7 +361,8 @@ export class SeasonsService {
 
     const items = sortedItems.map((standing, index) => {
       const gamesPlayed = standing.wins + standing.losses;
-      const winPercentage = gamesPlayed === 0 ? 0 : Number((standing.wins / gamesPlayed).toFixed(3));
+      const winPercentage =
+        gamesPlayed === 0 ? 0 : Number((standing.wins / gamesPlayed).toFixed(3));
 
       return {
         position: index + 1,

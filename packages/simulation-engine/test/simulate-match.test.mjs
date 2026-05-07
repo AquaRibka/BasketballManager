@@ -193,7 +193,7 @@ test('simulateMatch returns a valid result for teams without a roster', () => {
   assert.equal(result.homeScore > 0, true);
   assert.equal(result.awayScore > 0, true);
   assert.equal(result.statistics.homeTeam.points, result.homeScore);
-  assert.equal(result.statistics.homeTeam.possessions >= 78, true);
+  assert.equal(result.statistics.homeTeam.possessions >= 64, true);
 });
 
 test('simulateMatch rejects identical home and away teams', () => {
@@ -284,8 +284,8 @@ test('simulateMatch returns score and statistics consistent with the result', ()
   assert.equal(result.statistics.awayTeam.points, result.awayScore);
   assert.equal(result.homeScore >= 55, true);
   assert.equal(result.awayScore >= 55, true);
-  assert.equal(result.homeScore <= 138 + result.overtimeCount * 24, true);
-  assert.equal(result.awayScore <= 138 + result.overtimeCount * 24, true);
+  assert.equal(result.homeScore <= 112 + result.overtimeCount * 18, true);
+  assert.equal(result.awayScore <= 112 + result.overtimeCount * 18, true);
   assert.equal(
     result.statistics.homeTeam.fieldGoalsMade <= result.statistics.homeTeam.fieldGoalsAttempted,
     true,
@@ -310,8 +310,7 @@ test('simulateMatch returns score and statistics consistent with the result', ()
     result.statistics.homeTeam.fieldGoalPercentage,
     Number(
       (
-        result.statistics.homeTeam.fieldGoalsMade /
-        result.statistics.homeTeam.fieldGoalsAttempted
+        result.statistics.homeTeam.fieldGoalsMade / result.statistics.homeTeam.fieldGoalsAttempted
       ).toFixed(3),
     ),
   );
@@ -319,13 +318,18 @@ test('simulateMatch returns score and statistics consistent with the result', ()
     result.statistics.awayTeam.fieldGoalPercentage,
     Number(
       (
-        result.statistics.awayTeam.fieldGoalsMade /
-        result.statistics.awayTeam.fieldGoalsAttempted
+        result.statistics.awayTeam.fieldGoalsMade / result.statistics.awayTeam.fieldGoalsAttempted
       ).toFixed(3),
     ),
   );
-  assert.equal(result.statistics.homeTeam.assists <= result.statistics.homeTeam.fieldGoalsMade, true);
-  assert.equal(result.statistics.awayTeam.assists <= result.statistics.awayTeam.fieldGoalsMade, true);
+  assert.equal(
+    result.statistics.homeTeam.assists <= result.statistics.homeTeam.fieldGoalsMade,
+    true,
+  );
+  assert.equal(
+    result.statistics.awayTeam.assists <= result.statistics.awayTeam.fieldGoalsMade,
+    true,
+  );
   assert.equal(result.statistics.homeTeam.rebounds >= 20, true);
   assert.equal(result.statistics.awayTeam.rebounds >= 20, true);
 });
@@ -353,7 +357,10 @@ test('simulateMatch generates team-level box score stats that stay tied to score
 
   assert.equal(reconstructedHomePoints, result.statistics.homeTeam.points);
   assert.equal(reconstructedAwayPoints, result.statistics.awayTeam.points);
-  assert.equal(Math.abs(result.statistics.homeTeam.rebounds - result.statistics.awayTeam.rebounds) <= 20, true);
+  assert.equal(
+    Math.abs(result.statistics.homeTeam.rebounds - result.statistics.awayTeam.rebounds) <= 20,
+    true,
+  );
   assert.equal(result.statistics.homeTeam.assists >= 10, true);
   assert.equal(result.statistics.awayTeam.assists >= 10, true);
 });

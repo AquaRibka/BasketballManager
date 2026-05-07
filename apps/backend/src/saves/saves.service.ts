@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { MatchStatus, SeasonStatus, type Prisma } from '@prisma/client';
+import { VTB_LEAGUE_SHORT_NAMES } from '../leagues/vtb-league';
 import { PrismaService } from '../prisma/prisma.service';
 import { createRoundRobinSchedule } from '../seasons/schedule-generator';
 import { CreateSaveDto } from './dto/create-save.dto';
@@ -55,10 +56,7 @@ const SAVE_STANDINGS_SELECT = {
   },
 } satisfies Prisma.StandingSelect;
 
-function buildInitialStandingRows(
-  seasonId: string,
-  teams: Array<{ id: string }>,
-) {
+function buildInitialStandingRows(seasonId: string, teams: Array<{ id: string }>) {
   return teams.map((team, index) => ({
     seasonId,
     teamId: team.id,
@@ -125,7 +123,8 @@ function mapScheduleMatchesToRounds(
 
     accumulator.push({
       round: match.round ?? 0,
-      status: match.status === MatchStatus.COMPLETED ? MatchStatus.COMPLETED : MatchStatus.SCHEDULED,
+      status:
+        match.status === MatchStatus.COMPLETED ? MatchStatus.COMPLETED : MatchStatus.SCHEDULED,
       matches: [serializedMatch],
     });
 
@@ -235,8 +234,13 @@ export class SavesService {
   }
 
   async createSave(createSaveDto: CreateSaveDto) {
-    const selectedTeam = await this.prisma.team.findUnique({
-      where: { id: createSaveDto.teamId },
+    const selectedTeam = await this.prisma.team.findFirst({
+      where: {
+        id: createSaveDto.teamId,
+        shortName: {
+          in: [...VTB_LEAGUE_SHORT_NAMES],
+        },
+      },
       select: SAVE_TEAM_SELECT,
     });
 
@@ -245,6 +249,11 @@ export class SavesService {
     }
 
     const leagueTeams = await this.prisma.team.findMany({
+      where: {
+        shortName: {
+          in: [...VTB_LEAGUE_SHORT_NAMES],
+        },
+      },
       orderBy: [{ name: 'asc' }],
       select: SAVE_TEAM_SELECT,
     });
@@ -356,6 +365,11 @@ export class SavesService {
     }
 
     const leagueTeams = await this.prisma.team.findMany({
+      where: {
+        shortName: {
+          in: [...VTB_LEAGUE_SHORT_NAMES],
+        },
+      },
       orderBy: [{ name: 'asc' }],
       select: SAVE_TEAM_SELECT,
     });

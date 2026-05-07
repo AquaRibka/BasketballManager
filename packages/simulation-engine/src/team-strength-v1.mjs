@@ -13,6 +13,25 @@ function averageBy(players, getValue, fallback = 60) {
   return total / players.length;
 }
 
+function topWeightedAverage(players, getValue, fallback = 60) {
+  if (players.length === 0) {
+    return fallback;
+  }
+
+  const rotationWeights = [1, 0.95, 0.9, 0.86, 0.82, 0.24, 0.16, 0.1, 0.06, 0.03];
+  const sortedPlayers = [...players].sort((left, right) => right.overall - left.overall);
+  let weightedTotal = 0;
+  let weightTotal = 0;
+
+  sortedPlayers.slice(0, rotationWeights.length).forEach((player, index) => {
+    const weight = rotationWeights[index];
+    weightedTotal += getValue(player) * weight;
+    weightTotal += weight;
+  });
+
+  return weightedTotal / weightTotal;
+}
+
 function resolveStamina(player) {
   if (typeof player.stamina === 'number') {
     return player.stamina;
@@ -70,17 +89,20 @@ function buildPositionStrength(players, averageOverall) {
 }
 
 function buildAttributeStrength(players) {
-  const shooting = averageBy(players, (player) => player.shooting);
-  const passing = averageBy(players, (player) => player.passing);
-  const defense = averageBy(players, (player) => player.defense);
-  const rebounding = averageBy(players, (player) => player.rebounding);
-  const athleticism = averageBy(players, (player) => player.athleticism ?? resolveStamina(player));
+  const shooting = topWeightedAverage(players, (player) => player.shooting);
+  const passing = topWeightedAverage(players, (player) => player.passing);
+  const defense = topWeightedAverage(players, (player) => player.defense);
+  const rebounding = topWeightedAverage(players, (player) => player.rebounding);
+  const athleticism = topWeightedAverage(
+    players,
+    (player) => player.athleticism ?? resolveStamina(player),
+  );
 
   return shooting * 0.26 + passing * 0.18 + defense * 0.24 + rebounding * 0.16 + athleticism * 0.16;
 }
 
 function buildStaminaFactor(players) {
-  const averageStamina = averageBy(players, (player) => resolveStamina(player));
+  const averageStamina = topWeightedAverage(players, (player) => resolveStamina(player));
   const depthStamina = averageBy(
     [...players].sort((left, right) => right.overall - left.overall).slice(0, 8),
     (player) => resolveStamina(player),
@@ -96,7 +118,7 @@ export function calculateTeamStrengthV1(team, options = {}) {
   }
 
   const players = team.players ?? [];
-  const averageOverall = averageBy(players, (player) => player.overall);
+  const averageOverall = topWeightedAverage(players, (player) => player.overall);
   const positionStrength = buildPositionStrength(players, averageOverall);
   const attributeStrength = buildAttributeStrength(players);
   const staminaFactor = buildStaminaFactor(players);
@@ -104,13 +126,13 @@ export function calculateTeamStrengthV1(team, options = {}) {
     typeof options.randomValue === 'number' && Number.isFinite(options.randomValue)
       ? clamp(options.randomValue, 0, 1)
       : 0.5;
-  const randomFactor = (randomValue - 0.5) * 5;
+  const randomFactor = (randomValue - 0.5) * 7;
 
   const rawStrength =
-    team.rating * 0.24 +
-    averageOverall * 0.34 +
-    positionStrength * 0.22 +
-    attributeStrength * 0.12 +
+    team.rating * 0.34 +
+    averageOverall * 0.2 +
+    positionStrength * 0.24 +
+    attributeStrength * 0.14 +
     staminaFactor * 0.08 +
     randomFactor;
 
