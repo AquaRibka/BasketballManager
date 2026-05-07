@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
+import { calculatePlayerOverall, type PlayerOverallInput } from './lib/player-overall';
 
 const DEFAULT_TEAM_RATING = 60;
 
@@ -52,13 +53,15 @@ export class PlayersService {
   }
 
   async createPlayer(createPlayerDto: CreatePlayerDto) {
-    this.validateOverallAndPotential(createPlayerDto.overall, createPlayerDto.potential);
+    const overall = this.calculateOverallFromAttributes(createPlayerDto);
+
+    this.validateOverallAndPotential(overall, createPlayerDto.potential);
     await this.ensureTeamExists(createPlayerDto.teamId);
 
     try {
       return await this.prisma.$transaction(async (tx) => {
         const createdPlayer = await tx.player.create({
-          data: this.toCreateData(createPlayerDto),
+          data: this.toCreateData(createPlayerDto, overall),
           include: {
             team: {
               select: {
@@ -90,7 +93,14 @@ export class PlayersService {
       throw new NotFoundException('Player not found');
     }
 
-    const nextOverall = updatePlayerDto.overall ?? existingPlayer.overall;
+    const nextOverall = this.calculateOverallFromAttributes({
+      position: updatePlayerDto.position ?? existingPlayer.position,
+      shooting: updatePlayerDto.shooting ?? existingPlayer.shooting,
+      passing: updatePlayerDto.passing ?? existingPlayer.passing,
+      defense: updatePlayerDto.defense ?? existingPlayer.defense,
+      rebounding: updatePlayerDto.rebounding ?? existingPlayer.rebounding,
+      athleticism: updatePlayerDto.athleticism ?? existingPlayer.athleticism,
+    });
     const nextPotential = updatePlayerDto.potential ?? existingPlayer.potential;
 
     this.validateOverallAndPotential(nextOverall, nextPotential);
@@ -100,7 +110,7 @@ export class PlayersService {
       return await this.prisma.$transaction(async (tx) => {
         const updatedPlayer = await tx.player.update({
           where: { id },
-          data: this.toUpdateData(updatePlayerDto),
+          data: this.toUpdateData(updatePlayerDto, nextOverall),
           include: {
             team: {
               select: {
@@ -160,7 +170,10 @@ export class PlayersService {
     return Math.round(totalOverall / players.length);
   }
 
-  private toCreateData(createPlayerDto: CreatePlayerDto): Prisma.PlayerCreateInput {
+  private toCreateData(
+    createPlayerDto: CreatePlayerDto,
+    overall: number,
+  ): Prisma.PlayerCreateInput {
     return {
       name: createPlayerDto.name.trim(),
       age: createPlayerDto.age,
@@ -171,7 +184,7 @@ export class PlayersService {
       rebounding: createPlayerDto.rebounding,
       athleticism: createPlayerDto.athleticism,
       potential: createPlayerDto.potential,
-      overall: createPlayerDto.overall,
+      overall,
       team: createPlayerDto.teamId
         ? {
             connect: {
@@ -182,7 +195,10 @@ export class PlayersService {
     };
   }
 
-  private toUpdateData(updatePlayerDto: UpdatePlayerDto): Prisma.PlayerUpdateInput {
+  private toUpdateData(
+    updatePlayerDto: UpdatePlayerDto,
+    overall: number,
+  ): Prisma.PlayerUpdateInput {
     const data: Prisma.PlayerUpdateInput = {};
 
     if (typeof updatePlayerDto.name === 'string') {
@@ -221,9 +237,7 @@ export class PlayersService {
       data.potential = updatePlayerDto.potential;
     }
 
-    if (typeof updatePlayerDto.overall === 'number') {
-      data.overall = updatePlayerDto.overall;
-    }
+    data.overall = overall;
 
     if (typeof updatePlayerDto.teamId === 'string') {
       data.team = {
@@ -242,6 +256,10 @@ export class PlayersService {
         'Player overall must be less than or equal to potential',
       );
     }
+  }
+
+  private calculateOverallFromAttributes(player: PlayerOverallInput) {
+    return calculatePlayerOverall(player);
   }
 
   private async ensureTeamExists(teamId?: string | null) {
