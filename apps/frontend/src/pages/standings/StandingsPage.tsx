@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { SeasonStatus } from '@basketball-manager/shared';
 import { StatePanel } from '../../components/state/StatePanel';
 import { StateNotice } from '../../components/state/StateNotice';
 import {
@@ -11,10 +12,7 @@ import {
   type SeasonStandingsResponse,
   type SeasonSummary,
 } from '../../shared/api/client';
-import {
-  clearActiveSaveId,
-  readActiveSaveId,
-} from '../../shared/career/active-save-storage';
+import { clearActiveSaveId, readActiveSaveId } from '../../shared/career/active-save-storage';
 
 type PageState =
   | { status: 'loading' }
@@ -46,7 +44,7 @@ function formatPointDiff(value: number) {
   return value > 0 ? `+${value}` : String(value);
 }
 
-function getSeasonStatusLabel(status: string) {
+function getSeasonStatusLabel(status: SeasonStatus) {
   switch (status) {
     case 'COMPLETED':
       return 'Сезон завершён';
@@ -159,7 +157,7 @@ export function StandingsPage() {
   }
 
   const leader = useMemo(
-    () => (state.status === 'success' ? state.standings.items[0] ?? null : null),
+    () => (state.status === 'success' ? (state.standings.items[0] ?? null) : null),
     [state],
   );
 
@@ -273,10 +271,7 @@ export function StandingsPage() {
               </thead>
               <tbody>
                 {state.standings.items.map((row) => (
-                  <tr
-                    className={row.position === 1 ? 'is-leading' : undefined}
-                    key={row.teamId}
-                  >
+                  <tr className={row.position === 1 ? 'is-leading' : undefined} key={row.teamId}>
                     <td className="standings-position">{row.position}</td>
                     <td>
                       <div className="standings-team">

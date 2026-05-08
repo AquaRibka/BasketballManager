@@ -1,136 +1,67 @@
-export type ApiErrorCode =
-  | 'VALIDATION_ERROR'
-  | 'NOT_FOUND'
-  | 'CONFLICT'
-  | 'UNPROCESSABLE_ENTITY'
-  | 'INTERNAL_ERROR'
-  | 'SERVICE_UNAVAILABLE';
+import type {
+  ApiErrorCode as SharedApiErrorCode,
+  ApiErrorDetails as SharedApiErrorDetails,
+  ApiErrorResponse as SharedApiErrorResponse,
+  ApiListResponse as SharedApiListResponse,
+  ApiValidationIssue as SharedApiValidationIssue,
+  CareerSaveSeasonShape,
+  CareerSaveSummaryShape,
+  CreatePlayerPayloadShape,
+  CreateTeamPayloadShape,
+  MatchStatus,
+  MatchSummaryShape,
+  MatchTeamSummary,
+  PlayerPosition,
+  PlayerSummaryShape,
+  SeasonFullSimulationResponseShape,
+  SeasonNextRoundResponseShape,
+  SeasonRoundSimulationResponseShape,
+  SeasonScheduleRoundShape,
+  SeasonStandingsResponseShape,
+  SeasonStatus,
+  SeasonSummaryShape,
+  TeamDetailsShape,
+  TeamPlayerShape,
+  TeamRosterResponseShape,
+  TeamSummaryShape,
+} from '@basketball-manager/shared';
 
-export type ApiValidationIssue = {
-  field: string;
-  messages: string[];
-};
+export type {
+  CareerSaveStatus,
+  MatchStatus,
+  PlayerPosition,
+  SeasonStatus,
+} from '@basketball-manager/shared';
 
-export type ApiErrorDetails = {
-  errors?: ApiValidationIssue[];
-} & Record<string, unknown>;
+export type ApiValidationIssue = SharedApiValidationIssue;
+export type ApiErrorCode = SharedApiErrorCode;
+export type ApiErrorDetails = SharedApiErrorDetails;
+export type ApiErrorResponse = SharedApiErrorResponse;
+export type ApiListResponse<TItem> = SharedApiListResponse<TItem>;
 
-export type ApiErrorResponse = {
-  statusCode: number;
-  code: ApiErrorCode | string;
-  message: string;
-  details: ApiErrorDetails | null;
-  path: string;
-  timestamp: string;
-};
+export type TeamSummary = TeamSummaryShape;
 
-export type ApiListResponse<TItem> = {
-  items: TItem[];
-  total: number;
-};
+export type CreateTeamPayload = CreateTeamPayloadShape;
 
-export type TeamSummary = {
-  id: string;
-  name: string;
-  city: string;
-  shortName: string;
-  rating: number;
-  createdAt: string;
-  updatedAt: string;
-};
+export type TeamPlayer = TeamPlayerShape;
 
-export type CreateTeamPayload = {
-  name: string;
-  city: string;
-  shortName: string;
-  rating: number;
-};
+export type CreatePlayerPayload = CreatePlayerPayloadShape;
 
-export type PlayerPosition = 'PG' | 'SG' | 'SF' | 'PF' | 'C';
+export type PlayerSummary = PlayerSummaryShape;
 
-export type TeamPlayer = {
-  id: string;
-  name: string;
-  age: number;
-  position: string;
-  shooting: number;
-  passing: number;
-  defense: number;
-  rebounding: number;
-  athleticism: number;
-  potential: number;
-  overall: number;
-  teamId: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
+export type TeamDetails = TeamDetailsShape;
 
-export type CreatePlayerPayload = {
-  name: string;
-  age: number;
-  position: PlayerPosition;
-  shooting: number;
-  passing: number;
-  defense: number;
-  rebounding: number;
-  athleticism: number;
-  potential: number;
-  overall: number;
-  teamId?: string;
-};
+export type TeamRosterResponse = TeamRosterResponseShape;
 
-export type PlayerSummary = TeamPlayer & {
-  team?: Pick<TeamSummary, 'id' | 'name' | 'shortName'> | null;
-};
-
-export type TeamDetails = TeamSummary & {
-  players: TeamPlayer[];
-};
-
-export type TeamRosterResponse = {
-  teamId: string;
-  items: TeamPlayer[];
-  total: number;
-};
-
-export type MatchTeam = {
-  id: string;
-  name: string;
-  shortName: string;
+export type MatchTeam = MatchTeamSummary & {
   rating?: number;
 };
 
-export type MatchSummary = {
-  id: string;
-  seasonId: string | null;
-  round: number | null;
-  status: string;
-  homeTeam: MatchTeam;
-  awayTeam: MatchTeam;
-  date: string | null;
-  homeScore: number | null;
-  awayScore: number | null;
-  winnerTeamId: string | null;
-  playedAt: string | null;
-};
+export type MatchSummary = MatchSummaryShape<MatchTeam>;
 
-export type SeasonSummary = {
-  id: string;
-  name: string;
-  year: number;
-  status: string;
-  currentRound: number;
-  startedAt: string;
-  createdAt: string;
-  updatedAt: string;
-  finishedAt: string | null;
-};
+export type SeasonSummary = SeasonSummaryShape;
 
-export type SeasonScheduleRound = {
-  round: number;
-  status: string;
-  matches: MatchSummary[];
-};
+export type SeasonScheduleRound = SeasonScheduleRoundShape<MatchSummary>;
 
 export type SeasonScheduleResponse = {
   seasonId: string;
@@ -139,92 +70,21 @@ export type SeasonScheduleResponse = {
   totalMatches: number;
 };
 
-export type SeasonRoundSimulationResponse = {
-  seasonId: string;
-  round: number;
-  status: string;
-  matches: MatchSummary[];
-  standingsUpdated: boolean;
-  currentRound: number;
-  seasonStatus: string;
-  finishedAt: string | null;
-};
+export type SeasonRoundSimulationResponse = SeasonRoundSimulationResponseShape<MatchSummary>;
 
-export type SeasonNextRoundResponse = {
-  seasonId: string;
-  previousRound: number;
-  currentRound: number;
-  seasonStatus: string;
-};
+export type SeasonNextRoundResponse = SeasonNextRoundResponseShape;
 
-export type SeasonFullSimulationResponse = {
-  seasonId: string;
-  startedFromRound: number;
-  completedAtRound: number;
-  simulatedMatches: number;
-  simulatedRoundCount: number;
-  seasonStatus: string;
-  simulatedRounds: Array<{
-    round: number;
-    matchesSimulated: number;
-  }>;
-  finishedAt: string | null;
-};
+export type SeasonFullSimulationResponse = SeasonFullSimulationResponseShape;
 
-export type SeasonStandingRow = {
-  position: number;
-  teamId: string;
-  teamName: string;
-  shortName: string;
-  gamesPlayed: number;
-  wins: number;
-  losses: number;
-  pointsFor: number;
-  pointsAgainst: number;
-  pointDiff: number;
-  winPercentage: number;
-};
+export type SeasonStandingRow = SeasonStandingsResponseShape['items'][number];
 
-export type SeasonChampion = {
-  teamId: string;
-  teamName: string;
-  shortName: string;
-};
+export type SeasonChampion = NonNullable<SeasonStandingsResponseShape['champion']>;
 
-export type SeasonStandingsResponse = {
-  seasonId: string;
-  seasonStatus: string;
-  isFinal: boolean;
-  updatedAt: string | null;
-  champion: SeasonChampion | null;
-  items: SeasonStandingRow[];
-};
+export type SeasonStandingsResponse = SeasonStandingsResponseShape;
 
-export type CareerSaveSummary = {
-  id: string;
-  name: string;
-  teamId: string;
-  teamName: string;
-  seasonId: string;
-  currentRound: number;
-  status: 'ACTIVE';
-  createdAt: string;
-  updatedAt: string;
-};
+export type CareerSaveSummary = CareerSaveSummaryShape;
 
-export type CareerSaveSeason = {
-  id: string;
-  name: string;
-  year: number;
-  status: string;
-  currentRound: number;
-  totalRounds: number;
-  teamCount: number;
-  startedAt: string;
-  finishedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
+export type CareerSaveSeason = CareerSaveSeasonShape;
 
 export type CareerSaveState = {
   save: CareerSaveSummary;

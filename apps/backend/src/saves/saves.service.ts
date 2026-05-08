@@ -1,4 +1,10 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import type {
+  CareerSaveStatus,
+  MatchSummaryShape,
+  MatchTeamSummary,
+  SeasonScheduleRoundShape,
+} from '@basketball-manager/shared';
 import { MatchStatus, SeasonStatus, type Prisma } from '@prisma/client';
 import { VTB_LEAGUE_SHORT_NAMES } from '../leagues/vtb-league';
 import { PrismaService } from '../prisma/prisma.service';
@@ -56,6 +62,16 @@ const SAVE_STANDINGS_SELECT = {
   },
 } satisfies Prisma.StandingSelect;
 
+const ACTIVE_SAVE_STATUS: CareerSaveStatus = 'ACTIVE';
+
+type SaveMatchTeam = MatchTeamSummary & {
+  rating: number;
+};
+
+type SaveMatchSummary = MatchSummaryShape<SaveMatchTeam>;
+
+type SaveScheduleRound = SeasonScheduleRoundShape<SaveMatchSummary>;
+
 function buildInitialStandingRows(seasonId: string, teams: Array<{ id: string }>) {
   return teams.map((team, index) => ({
     seasonId,
@@ -83,28 +99,10 @@ function mapScheduleMatchesToRounds(
     homeTeam: { id: string; name: string; shortName: string; rating: number };
     awayTeam: { id: string; name: string; shortName: string; rating: number };
   }>,
-) {
-  return matches.reduce<
-    Array<{
-      round: number;
-      status: MatchStatus;
-      matches: Array<{
-        id: string;
-        seasonId: string | null;
-        round: number | null;
-        status: MatchStatus;
-        date: string | null;
-        homeScore: number | null;
-        awayScore: number | null;
-        winnerTeamId: string | null;
-        playedAt: string | null;
-        homeTeam: { id: string; name: string; shortName: string; rating: number };
-        awayTeam: { id: string; name: string; shortName: string; rating: number };
-      }>;
-    }>
-  >((accumulator, match) => {
+): SaveScheduleRound[] {
+  return matches.reduce<SaveScheduleRound[]>((accumulator, match) => {
     const existingRound = accumulator.find((roundEntry) => roundEntry.round === match.round);
-    const serializedMatch = {
+    const serializedMatch: SaveMatchSummary = {
       ...match,
       date: match.date?.toISOString() ?? null,
       playedAt: match.playedAt?.toISOString() ?? null,
@@ -304,7 +302,7 @@ export class SavesService {
           teamName: selectedTeam.name,
           seasonId: season.id,
           currentRound: careerSave.currentRound,
-          status: 'ACTIVE' as const,
+          status: ACTIVE_SAVE_STATUS,
           createdAt: careerSave.createdAt.toISOString(),
           updatedAt: careerSave.updatedAt.toISOString(),
         },
@@ -535,7 +533,7 @@ export class SavesService {
         teamName: careerSave.selectedTeam.name,
         seasonId: careerSave.currentSeasonId,
         currentRound: careerSave.currentRound,
-        status: 'ACTIVE' as const,
+        status: ACTIVE_SAVE_STATUS,
         createdAt: careerSave.createdAt.toISOString(),
         updatedAt: careerSave.updatedAt.toISOString(),
       },

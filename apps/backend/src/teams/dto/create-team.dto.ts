@@ -1,8 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
+import type { CreateTeamPayloadShape } from '@basketball-manager/shared';
 import { TrimString } from '../../common/decorators/trim-string.decorator';
 import { IsInt, IsNotEmpty, IsString, Max, MaxLength, Min } from 'class-validator';
 
-export class CreateTeamDto {
+export class CreateTeamDto implements CreateTeamPayloadShape {
   @ApiProperty({ example: 'CSKA Moscow', maxLength: 120 })
   @TrimString()
   @IsString()

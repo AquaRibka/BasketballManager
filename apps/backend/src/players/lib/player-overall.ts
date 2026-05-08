@@ -1,11 +1,16 @@
-const PLAYER_ATTRIBUTE_MIN = 0;
-const PLAYER_ATTRIBUTE_MAX = 100;
+import {
+  OVERALL_V1_MAX,
+  OVERALL_V1_MIN,
+  PLAYER_POSITIONS,
+  PLAYER_RANGE_PRESETS,
+  type PlayerPosition,
+} from '@basketball-manager/shared';
+
 const PLAYER_OVERALL_MIN = 1;
 const PLAYER_OVERALL_MAX = 100;
+export const PLAYER_OVERALL_POSITIONS = PLAYER_POSITIONS;
 
-export const PLAYER_OVERALL_POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C'] as const;
-
-export type PlayerOverallPosition = (typeof PLAYER_OVERALL_POSITIONS)[number];
+export type PlayerOverallPosition = PlayerPosition;
 
 export interface PlayerOverallWeights {
   shooting: number;
@@ -85,9 +90,9 @@ function assertFiniteAttribute(name: string, value: number) {
     throw new TypeError(`${name} must be a finite number`);
   }
 
-  if (value < PLAYER_ATTRIBUTE_MIN || value > PLAYER_ATTRIBUTE_MAX) {
+  if (value < PLAYER_RANGE_PRESETS.attribute.min || value > PLAYER_RANGE_PRESETS.attribute.max) {
     throw new RangeError(
-      `${name} must be between ${PLAYER_ATTRIBUTE_MIN} and ${PLAYER_ATTRIBUTE_MAX}`,
+      `${name} must be between ${PLAYER_RANGE_PRESETS.attribute.min} and ${PLAYER_RANGE_PRESETS.attribute.max}`,
     );
   }
 }
@@ -155,5 +160,5 @@ export function calculatePlayerOverall(
     player.rebounding * weights.rebounding +
     stamina * weights.stamina;
 
-  return clamp(Math.round(rawOverall), PLAYER_OVERALL_MIN, PLAYER_OVERALL_MAX);
+  return clamp(Math.round(rawOverall), OVERALL_V1_MIN, OVERALL_V1_MAX);
 }

@@ -1,7 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import type {
+  TeamDetailsShape,
+  TeamPlayerShape,
+  TeamRosterResponseShape,
+  TeamSummaryShape,
+} from '@basketball-manager/shared';
 import { PlayerPosition } from '@prisma/client';
 
-export class TeamPlayerDto {
+export class TeamPlayerDto implements TeamPlayerShape {
   @ApiProperty({ example: 'cmon3yv4y0003qfsbfdn5nihz' })
   id!: string;
 
@@ -36,7 +42,7 @@ export class TeamPlayerDto {
   overall!: number;
 
   @ApiPropertyOptional({ example: 'cmon3wd920000k7sbuepwfi6r', nullable: true })
-  teamId?: string | null;
+  teamId!: string | null;
 
   @ApiProperty({ example: '2026-05-01T16:09:33.730Z' })
   createdAt!: string;
@@ -45,7 +51,7 @@ export class TeamPlayerDto {
   updatedAt!: string;
 }
 
-export class TeamResponseDto {
+export class TeamResponseDto implements TeamSummaryShape {
   @ApiProperty({ example: 'cmon3wd920000k7sbuepwfi6r' })
   id!: string;
 
@@ -68,7 +74,7 @@ export class TeamResponseDto {
   updatedAt!: string;
 }
 
-export class TeamDetailsResponseDto extends TeamResponseDto {
+export class TeamDetailsResponseDto extends TeamResponseDto implements TeamDetailsShape {
   @ApiProperty({ type: [TeamPlayerDto] })
   players!: TeamPlayerDto[];
 }
@@ -81,7 +87,7 @@ export class TeamListResponseDto {
   total!: number;
 }
 
-export class TeamRosterResponseDto {
+export class TeamRosterResponseDto implements TeamRosterResponseShape {
   @ApiProperty({ example: 'cmon3wd920000k7sbuepwfi6r' })
   teamId!: string;
 

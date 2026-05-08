@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import type { SeasonStatus } from '@basketball-manager/shared';
 import { StateNotice } from '../../components/state/StateNotice';
 import { StatePanel } from '../../components/state/StatePanel';
 import {
@@ -101,7 +102,7 @@ function getAutosaveCopy(autosave: AutosaveState) {
   }
 }
 
-function getSeasonStatusLabel(status: string) {
+function getSeasonStatusLabel(status: SeasonStatus) {
   switch (status) {
     case 'COMPLETED':
       return 'Сезон завершён';
@@ -196,7 +197,10 @@ export function SeasonPage() {
 
         if (error instanceof ApiClientError && error.statusCode === 404) {
           clearActiveSaveId();
-          await loadTeamsForSaveCreation(abortController.signal, 'Активное сохранение не найдено. Создай карьеру заново.');
+          await loadTeamsForSaveCreation(
+            abortController.signal,
+            'Активное сохранение не найдено. Создай карьеру заново.',
+          );
           return;
         }
 
@@ -504,7 +508,8 @@ export function SeasonPage() {
     const nextMatch = getNextMatch(state.saveState);
     const standing = getSelectedTeamStanding(state.saveState);
     const completedMatches = state.saveState.schedule.rounds.reduce(
-      (count, round) => count + round.matches.filter((match) => match.status === 'COMPLETED').length,
+      (count, round) =>
+        count + round.matches.filter((match) => match.status === 'COMPLETED').length,
       0,
     );
     const totalMatches = state.saveState.schedule.totalMatches;
@@ -642,8 +647,8 @@ export function SeasonPage() {
             <p className="section-kicker">Career Dashboard</p>
             <h2>{saveState.save.name}</h2>
             <p className="section-copy">
-              {saveState.season.name} · {getSeasonStatusLabel(saveState.season.status)} · сохранение от{' '}
-              {formatSaveDate(saveState.save.updatedAt)}
+              {saveState.season.name} · {getSeasonStatusLabel(saveState.season.status)} · сохранение
+              от {formatSaveDate(saveState.save.updatedAt)}
             </p>
             <div className={`autosave-indicator is-${autosave.status}`} role="status">
               <span className="autosave-dot" aria-hidden="true" />
@@ -722,7 +727,11 @@ export function SeasonPage() {
           <article className="summary-card">
             <span>Current standing</span>
             <strong>{standing ? `${standing.position} место` : 'Нет данных'}</strong>
-            <p>{standing ? `${standing.wins}-${standing.losses} · Win% ${(standing.winPercentage * 100).toFixed(1)}` : 'Standings ещё не инициализированы'}</p>
+            <p>
+              {standing
+                ? `${standing.wins}-${standing.losses} · Win% ${(standing.winPercentage * 100).toFixed(1)}`
+                : 'Standings ещё не инициализированы'}
+            </p>
           </article>
           <article className="summary-card">
             <span>Season progress</span>
@@ -754,20 +763,31 @@ export function SeasonPage() {
             </div>
             <div className="dashboard-metric">
               <span>Разница очков</span>
-              <strong>{standing ? (standing.pointDiff > 0 ? `+${standing.pointDiff}` : String(standing.pointDiff)) : '0'}</strong>
+              <strong>
+                {standing
+                  ? standing.pointDiff > 0
+                    ? `+${standing.pointDiff}`
+                    : String(standing.pointDiff)
+                  : '0'}
+              </strong>
             </div>
           </div>
         </article>
 
         <article className="panel dashboard-card dashboard-next-match">
           <p className="section-kicker">Next Match</p>
-          <h2>{nextMatch ? `Раунд ${nextMatch.round ?? saveState.season.currentRound}` : 'Матчи закончились'}</h2>
+          <h2>
+            {nextMatch
+              ? `Раунд ${nextMatch.round ?? saveState.season.currentRound}`
+              : 'Матчи закончились'}
+          </h2>
           {nextMatch && nextMatchDetails ? (
             <>
               <div className="next-match-banner">
                 <span>{nextMatchDetails.venue}</span>
                 <strong>
-                  {saveState.save.teamName} {nextMatchDetails.teamLabel} {nextMatchDetails.opponent.name}
+                  {saveState.save.teamName} {nextMatchDetails.teamLabel}{' '}
+                  {nextMatchDetails.opponent.name}
                 </strong>
               </div>
               <div className="dashboard-metric-list">
@@ -800,11 +820,15 @@ export function SeasonPage() {
             <div className="dashboard-metric-list">
               <div className="dashboard-metric">
                 <span>Победы / поражения</span>
-                <strong>{standing.wins}-{standing.losses}</strong>
+                <strong>
+                  {standing.wins}-{standing.losses}
+                </strong>
               </div>
               <div className="dashboard-metric">
                 <span>Очки за / против</span>
-                <strong>{standing.pointsFor}/{standing.pointsAgainst}</strong>
+                <strong>
+                  {standing.pointsFor}/{standing.pointsAgainst}
+                </strong>
               </div>
               <div className="dashboard-metric">
                 <span>Процент побед</span>
@@ -846,7 +870,10 @@ export function SeasonPage() {
                 </strong>
               </div>
               <div className="progress-track is-secondary">
-                <div className="progress-fill is-secondary" style={{ width: `${matchProgress}%` }} />
+                <div
+                  className="progress-fill is-secondary"
+                  style={{ width: `${matchProgress}%` }}
+                />
               </div>
             </div>
           </div>

@@ -59,24 +59,173 @@ model Team {
 }
 
 model Player {
-  id               String            @id @default(cuid())
-  name             String            @db.VarChar(120)
-  age              Int
-  position         PlayerPosition
+  id                  String                     @id @default(cuid())
+  name                String                     @db.VarChar(120)
+  age                 Int
+  position            PlayerPosition
+  shooting            Int
+  passing             Int
+  defense             Int
+  rebounding          Int
+  athleticism         Int
+  potential           Int
+  overall             Int
+  teamId              String?
+  team                Team?                      @relation(fields: [teamId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  technicalAttributes PlayerTechnicalAttributes?
+  physicalProfile     PlayerPhysicalProfile?
+  mentalAttributes    PlayerMentalAttributes?
+  tacticalAttributes  PlayerTacticalAttributes?
+  hiddenAttributes    PlayerHiddenAttributes?
+  healthProfile       PlayerHealthProfile?
+  potentialProfile    PlayerPotentialProfile?
+  reputationProfile   PlayerReputationProfile?
+  matchPlayerStats    MatchPlayerStat[]
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+
+  @@index([teamId])
+}
+
+model PlayerTechnicalAttributes {
+  id               String   @id @default(cuid())
+  playerId         String   @unique
+  player           Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   shooting         Int
   passing          Int
   defense          Int
   rebounding       Int
-  athleticism      Int
-  potential        Int
-  overall          Int
-  teamId           String?
-  team             Team?             @relation(fields: [teamId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  matchPlayerStats MatchPlayerStat[]
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  ballHandling     Int
+  dribbling        Int
+  midRangeShot     Int
+  threePointShot   Int
+  freeThrow        Int
+  rimFinishing     Int
+  dunking          Int
+  postMoves        Int
+  perimeterDefense Int
+  interiorDefense  Int
+  offensiveRebound Int
+  defensiveRebound Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
 
-  @@index([teamId])
+model PlayerPhysicalProfile {
+  id              String   @id @default(cuid())
+  playerId        String   @unique
+  player          Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  heightCm        Int
+  weightKg        Int
+  wingspanCm      Int?
+  standingReachCm Int?
+  speed           Int
+  acceleration    Int
+  strength        Int
+  agility         Int
+  vertical        Int
+  stamina         Int
+  endurance       Int
+  durability      Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model PlayerMentalAttributes {
+  id              String   @id @default(cuid())
+  playerId        String   @unique
+  player          Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  confidence      Int
+  composure       Int
+  workEthic       Int
+  professionalism Int
+  leadership      Int
+  competitiveness Int
+  teamOrientation Int
+  loyalty         Int
+  ego             Int
+  clutchFactor    Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model PlayerTacticalAttributes {
+  id                   String   @id @default(cuid())
+  playerId             String   @unique
+  player               Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  basketballIQ         Int
+  decisionMaking       Int
+  shotSelection        Int
+  helpDefenseAwareness Int
+  offBallAwareness     Int
+  pickAndRollRead      Int
+  spacingSense         Int
+  playDiscipline       Int
+  foulDiscipline       Int
+  transitionInstincts  Int
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model PlayerHiddenAttributes {
+  id                String   @id @default(cuid())
+  playerId          String   @unique
+  player            Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  consistency       Int
+  injuryProneness   Int
+  declineResistance Int
+  adaptability      Int
+  discipline        Int
+  ambition          Int
+  resilience        Int
+  pressureHandling  Int
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model PlayerHealthProfile {
+  id             String   @id @default(cuid())
+  playerId       String   @unique
+  player         Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  durability     Int
+  recoveryRate   Int
+  injuryRisk     Int
+  fatigueBase    Int
+  matchFitness   Int
+  painTolerance  Int
+  medicalOutlook Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model PlayerPotentialProfile {
+  id              String   @id @default(cuid())
+  playerId        String   @unique
+  player          Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  potential       Int
+  growthRate      Int
+  learningAbility Int
+  peakWindowStart Int
+  peakWindowEnd   Int
+  ceilingTier     Int
+  readiness       Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model PlayerReputationProfile {
+  id                      String   @id @default(cuid())
+  playerId                String   @unique
+  player                  Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  reputation              Int
+  leagueReputation        Int
+  internationalReputation Int
+  starPower               Int
+  fanAppeal               Int
+  mediaHandling           Int
+  agentInfluence          Int
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 }
 
 model Match {

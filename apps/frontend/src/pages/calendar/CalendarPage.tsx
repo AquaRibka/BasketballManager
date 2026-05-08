@@ -1,4 +1,5 @@
 import { startTransition, useEffect, useMemo, useState } from 'react';
+import type { MatchStatus, SeasonStatus } from '@basketball-manager/shared';
 import { StateNotice } from '../../components/state/StateNotice';
 import { StatePanel } from '../../components/state/StatePanel';
 import {
@@ -11,10 +12,7 @@ import {
   type SeasonScheduleResponse,
   type SeasonSummary,
 } from '../../shared/api/client';
-import {
-  clearActiveSaveId,
-  readActiveSaveId,
-} from '../../shared/career/active-save-storage';
+import { clearActiveSaveId, readActiveSaveId } from '../../shared/career/active-save-storage';
 
 type CalendarPageProps = {
   matchId: string | null;
@@ -51,31 +49,27 @@ function formatMatchDate(value: string | null) {
   }).format(new Date(value));
 }
 
-function getMatchStatusLabel(status: string) {
+function getMatchStatusLabel(status: MatchStatus) {
   switch (status) {
     case 'COMPLETED':
       return 'Завершен';
-    case 'LIVE':
-      return 'Идёт матч';
     case 'SCHEDULED':
     default:
       return 'Запланирован';
   }
 }
 
-function getRoundStatusLabel(status: string) {
+function getRoundStatusLabel(status: MatchStatus) {
   switch (status) {
     case 'COMPLETED':
       return 'Раунд завершен';
-    case 'LIVE':
-      return 'Раунд в процессе';
     case 'SCHEDULED':
     default:
       return 'Раунд ожидает симуляции';
   }
 }
 
-function getSeasonStatusLabel(status: string) {
+function getSeasonStatusLabel(status: SeasonStatus) {
   switch (status) {
     case 'COMPLETED':
       return 'Сезон завершён';
@@ -213,11 +207,12 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
 
   const currentRoundGroup =
     state.status === 'success'
-      ? state.schedule.rounds.find((round) => round.round === state.season.currentRound) ?? null
+      ? (state.schedule.rounds.find((round) => round.round === state.season.currentRound) ?? null)
       : null;
 
   const allMatches = useMemo(
-    () => (state.status === 'success' ? state.schedule.rounds.flatMap((round) => round.matches) : []),
+    () =>
+      state.status === 'success' ? state.schedule.rounds.flatMap((round) => round.matches) : [],
     [state],
   );
 
@@ -229,7 +224,7 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
 
   const selectedMatch =
     matchId || selectedMatchId
-      ? allMatches.find((match) => match.id === (matchId ?? selectedMatchId)) ?? null
+      ? (allMatches.find((match) => match.id === (matchId ?? selectedMatchId)) ?? null)
       : null;
 
   useEffect(() => {
@@ -480,13 +475,16 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
             <p className="section-kicker">Schedule</p>
             <h2>{state.season.name}</h2>
             <p className="section-copy">
-              Текущий раунд: {state.season.currentRound} · Всего раундов: {state.schedule.totalRounds}
+              Текущий раунд: {state.season.currentRound} · Всего раундов:{' '}
+              {state.schedule.totalRounds}
             </p>
           </div>
           <button
             className="hero-home-link schedule-action-button"
             type="button"
-            disabled={!currentRoundGroup || isSimulating || currentRoundGroup.status === 'COMPLETED'}
+            disabled={
+              !currentRoundGroup || isSimulating || currentRoundGroup.status === 'COMPLETED'
+            }
             onClick={() => {
               void handleSimulateCurrentRound();
             }}

@@ -45,7 +45,6 @@ type PlayerFormState = {
   rebounding: string;
   athleticism: string;
   potential: string;
-  overall: string;
   teamId: string;
 };
 
@@ -76,7 +75,6 @@ const INITIAL_PLAYER_FORM: PlayerFormState = {
   rebounding: '60',
   athleticism: '60',
   potential: '70',
-  overall: '60',
   teamId: '',
 };
 
@@ -207,7 +205,6 @@ export function TeamsPage({ onNavigate }: TeamsPageProps) {
       rebounding: Number(playerForm.rebounding),
       athleticism: Number(playerForm.athleticism),
       potential: Number(playerForm.potential),
-      overall: Number(playerForm.overall),
       teamId: playerForm.teamId || undefined,
     };
 
@@ -236,8 +233,8 @@ export function TeamsPage({ onNavigate }: TeamsPageProps) {
         <p className="section-kicker">Команды</p>
         <h2>Обзор клубов для карьерного режима</h2>
         <p className="section-copy">
-          Страница показывает, что основной маршрут уже связан с backend API и готов к
-          дальнейшему развитию состава, ростеров и карточек команды.
+          Страница показывает, что основной маршрут уже связан с backend API и готов к дальнейшему
+          развитию состава, ростеров и карточек команды.
         </p>
       </section>
 
@@ -416,7 +413,7 @@ export function TeamsPage({ onNavigate }: TeamsPageProps) {
                   <input
                     name="shooting"
                     type="number"
-                    min={0}
+                    min={1}
                     max={100}
                     value={playerForm.shooting}
                     onChange={(event) => handlePlayerFieldChange('shooting', event.target.value)}
@@ -429,7 +426,7 @@ export function TeamsPage({ onNavigate }: TeamsPageProps) {
                   <input
                     name="passing"
                     type="number"
-                    min={0}
+                    min={1}
                     max={100}
                     value={playerForm.passing}
                     onChange={(event) => handlePlayerFieldChange('passing', event.target.value)}
@@ -444,7 +441,7 @@ export function TeamsPage({ onNavigate }: TeamsPageProps) {
                   <input
                     name="defense"
                     type="number"
-                    min={0}
+                    min={1}
                     max={100}
                     value={playerForm.defense}
                     onChange={(event) => handlePlayerFieldChange('defense', event.target.value)}
@@ -457,7 +454,7 @@ export function TeamsPage({ onNavigate }: TeamsPageProps) {
                   <input
                     name="rebounding"
                     type="number"
-                    min={0}
+                    min={1}
                     max={100}
                     value={playerForm.rebounding}
                     onChange={(event) => handlePlayerFieldChange('rebounding', event.target.value)}
@@ -472,12 +469,10 @@ export function TeamsPage({ onNavigate }: TeamsPageProps) {
                   <input
                     name="athleticism"
                     type="number"
-                    min={0}
+                    min={1}
                     max={100}
                     value={playerForm.athleticism}
-                    onChange={(event) =>
-                      handlePlayerFieldChange('athleticism', event.target.value)
-                    }
+                    onChange={(event) => handlePlayerFieldChange('athleticism', event.target.value)}
                   />
                   <FieldError errors={playerValidationErrors.athleticism} />
                 </label>
@@ -487,7 +482,7 @@ export function TeamsPage({ onNavigate }: TeamsPageProps) {
                   <input
                     name="potential"
                     type="number"
-                    min={0}
+                    min={1}
                     max={100}
                     value={playerForm.potential}
                     onChange={(event) => handlePlayerFieldChange('potential', event.target.value)}
@@ -495,19 +490,6 @@ export function TeamsPage({ onNavigate }: TeamsPageProps) {
                   <FieldError errors={playerValidationErrors.potential} />
                 </label>
               </div>
-
-              <label className="form-field">
-                <span>Overall</span>
-                <input
-                  name="overall"
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={playerForm.overall}
-                  onChange={(event) => handlePlayerFieldChange('overall', event.target.value)}
-                />
-                <FieldError errors={playerValidationErrors.overall} />
-              </label>
 
               <button
                 className="ghost-button admin-submit-button"

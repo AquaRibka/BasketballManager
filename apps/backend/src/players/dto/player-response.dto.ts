@@ -1,7 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import type { PlayerSummaryShape, PlayerTeamSummaryShape } from '@basketball-manager/shared';
 import { PlayerPosition } from '@prisma/client';
 
-export class PlayerTeamSummaryDto {
+export class PlayerTeamSummaryDto implements PlayerTeamSummaryShape {
   @ApiProperty({ example: 'cmon3wd920000k7sbuepwfi6r' })
   id!: string;
 
@@ -12,7 +13,7 @@ export class PlayerTeamSummaryDto {
   shortName!: string;
 }
 
-export class PlayerResponseDto {
+export class PlayerResponseDto implements PlayerSummaryShape {
   @ApiProperty({ example: 'cmon3yv4y0003qfsbfdn5nihz' })
   id!: string;
 
@@ -47,7 +48,7 @@ export class PlayerResponseDto {
   overall!: number;
 
   @ApiPropertyOptional({ example: 'cmon3wd920000k7sbuepwfi6r', nullable: true })
-  teamId?: string | null;
+  teamId!: string | null;
 
   @ApiProperty({ example: '2026-05-01T16:09:33.730Z' })
   createdAt!: string;
