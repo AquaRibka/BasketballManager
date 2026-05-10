@@ -11,6 +11,14 @@ import type {
   MatchStatus,
   MatchSummaryShape,
   MatchTeamSummary,
+  PlayerBodyType,
+  PlayerDominantHand,
+  PlayerHealthDetailsShape,
+  PlayerHealthSummaryShape,
+  PlayerInjuryStatus,
+  PlayerInjurySeverity,
+  PlayerHiddenSummaryShape,
+  PlayerPhysicalSummaryShape,
   PlayerPosition,
   PlayerSummaryShape,
   SeasonFullSimulationResponseShape,
@@ -29,6 +37,10 @@ import type {
 export type {
   CareerSaveStatus,
   MatchStatus,
+  PlayerBodyType,
+  PlayerDominantHand,
+  PlayerInjuryStatus,
+  PlayerInjurySeverity,
   PlayerPosition,
   SeasonStatus,
 } from '@basketball-manager/shared';
@@ -44,6 +56,10 @@ export type TeamSummary = TeamSummaryShape;
 export type CreateTeamPayload = CreateTeamPayloadShape;
 
 export type TeamPlayer = TeamPlayerShape;
+export type PlayerPhysicalSummary = PlayerPhysicalSummaryShape;
+export type PlayerHealthSummary = PlayerHealthSummaryShape;
+export type PlayerHiddenSummary = PlayerHiddenSummaryShape;
+export type PlayerHealthDetails = PlayerHealthDetailsShape;
 
 export type CreatePlayerPayload = CreatePlayerPayloadShape;
 

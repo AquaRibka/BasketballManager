@@ -1,7 +1,7 @@
 import { createPrismaClient } from './lib/create-prisma-client.mjs';
 import prismaClientPkg from '@prisma/client';
 
-const { PlayerPosition } = prismaClientPkg;
+const { PlayerBodyType, PlayerDominantHand, PlayerPosition } = prismaClientPkg;
 
 const prisma = createPrismaClient();
 
@@ -325,6 +325,64 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function hashString(value) {
+  return [...value].reduce((accumulator, character) => accumulator + character.charCodeAt(0), 0);
+}
+
+function buildDateOfBirth(age, seed) {
+  const hash = hashString(seed);
+  const month = hash % 12;
+  const day = (hash % 28) + 1;
+  return new Date(Date.UTC(2026 - age, month, day));
+}
+
+function buildDominantHand(seed) {
+  const hash = hashString(seed) % 10;
+
+  if (hash === 0) {
+    return PlayerDominantHand.LEFT;
+  }
+
+  if (hash === 1) {
+    return PlayerDominantHand.AMBIDEXTROUS;
+  }
+
+  return PlayerDominantHand.RIGHT;
+}
+
+function buildSecondaryPositions(position) {
+  switch (position) {
+    case PlayerPosition.PG:
+      return [PlayerPosition.SG];
+    case PlayerPosition.SG:
+      return [PlayerPosition.PG, PlayerPosition.SF];
+    case PlayerPosition.SF:
+      return [PlayerPosition.SG, PlayerPosition.PF];
+    case PlayerPosition.PF:
+      return [PlayerPosition.SF, PlayerPosition.C];
+    case PlayerPosition.C:
+      return [PlayerPosition.PF];
+    default:
+      return [];
+  }
+}
+
+function physicalDefaults(position) {
+  switch (position) {
+    case PlayerPosition.PG:
+      return { heightCm: 185, weightKg: 82, wingspanCm: 192, bodyType: PlayerBodyType.SLIM };
+    case PlayerPosition.SG:
+      return { heightCm: 191, weightKg: 88, wingspanCm: 199, bodyType: PlayerBodyType.ATHLETIC };
+    case PlayerPosition.SF:
+      return { heightCm: 198, weightKg: 94, wingspanCm: 206, bodyType: PlayerBodyType.ATHLETIC };
+    case PlayerPosition.PF:
+      return { heightCm: 205, weightKg: 104, wingspanCm: 214, bodyType: PlayerBodyType.STRONG };
+    case PlayerPosition.C:
+    default:
+      return { heightCm: 211, weightKg: 112, wingspanCm: 221, bodyType: PlayerBodyType.HEAVY };
+  }
+}
+
 function positionBias(position) {
   switch (position) {
     case PlayerPosition.PG:
@@ -400,7 +458,10 @@ function buildRoster(team, teamIndex) {
     return {
       name,
       age: clamp(age, 16, 40),
+      dateOfBirth: buildDateOfBirth(clamp(age, 16, 40), `${team.shortName}-${name}`),
+      dominantHand: buildDominantHand(`${team.shortName}-${name}`),
       position,
+      secondaryPositions: buildSecondaryPositions(position),
       shooting,
       passing,
       defense,
@@ -408,6 +469,7 @@ function buildRoster(team, teamIndex) {
       athleticism,
       overall,
       potential,
+      physicalProfile: physicalDefaults(position),
     };
   });
 }
@@ -440,12 +502,141 @@ async function seed() {
       },
     });
 
-    await prisma.player.createMany({
-      data: roster.map((player) => ({
-        ...player,
-        teamId: team.id,
-      })),
-    });
+    for (const player of roster) {
+      await prisma.player.create({
+        data: {
+          name: player.name,
+          age: player.age,
+          dateOfBirth: player.dateOfBirth,
+          dominantHand: player.dominantHand,
+          position: player.position,
+          secondaryPositions: player.secondaryPositions,
+          shooting: player.shooting,
+          passing: player.passing,
+          defense: player.defense,
+          rebounding: player.rebounding,
+          athleticism: player.athleticism,
+          overall: player.overall,
+          potential: player.potential,
+          teamId: team.id,
+          physicalProfile: {
+            create: {
+              ...player.physicalProfile,
+              standingReachCm: player.physicalProfile.heightCm + 53,
+              speed: clamp(player.athleticism + 3, 1, 100),
+              acceleration: clamp(player.athleticism + 4, 1, 100),
+              strength: clamp(Math.round((player.defense + player.rebounding) / 2), 1, 100),
+              explosiveness: clamp(player.athleticism + 5, 1, 100),
+              agility: clamp(player.athleticism + 2, 1, 100),
+              balance: clamp(player.athleticism + 2, 1, 100),
+              coordination: clamp(player.athleticism + 3, 1, 100),
+              reaction: clamp(player.athleticism + 4, 1, 100),
+              vertical: clamp(player.athleticism + 1, 1, 100),
+              stamina: clamp(player.athleticism + 2, 1, 100),
+              endurance: clamp(player.athleticism + 1, 1, 100),
+              recovery: clamp(71 + Math.max(0, 28 - player.age), 1, 100),
+              durability: clamp(68 + Math.max(0, player.age - 24), 1, 100),
+            },
+          },
+          healthProfile: {
+            create: {
+              overallCondition: clamp(82 + Math.round(player.athleticism / 10), 1, 100),
+              fatigue: 18,
+              postInjuryCondition: 100,
+              durability: clamp(72 + Math.round(player.athleticism / 8), 1, 100),
+              recoveryRate: clamp(74 + Math.round(player.athleticism / 10), 1, 100),
+              injuryRisk: clamp(32 + Math.round((100 - player.athleticism) / 8), 1, 100),
+              fatigueBase: 20,
+              matchFitness: clamp(80 + Math.round(player.athleticism / 12), 1, 100),
+              painTolerance: clamp(68 + Math.round(player.athleticism / 10), 1, 100),
+              medicalOutlook: 72,
+            },
+          },
+          mentalAttributes: {
+            create: {
+              confidence: 72,
+              selfControl: 70,
+              concentration: 71,
+              composure: 70,
+              determination: 74,
+              workEthic: 76,
+              professionalism: 72,
+              leadership: 66,
+              aggressiveness: 64,
+              competitiveness: 73,
+              teamwork: 75,
+              teamOrientation: 75,
+              loyalty: 68,
+              ego: 55,
+              clutchFactor: 67,
+            },
+          },
+          hiddenAttributes: {
+            create: {
+              consistency: 69,
+              injuryProneness: 45,
+              importantMatches: 70,
+              wantsToLeave: 28,
+              declineResistance: 64,
+              adaptability: 71,
+              discipline: 70,
+              ambition: 76,
+              resilience: 72,
+              pressureHandling: 68,
+              setbackResponse: 72,
+            },
+          },
+          tacticalAttributes: {
+            create: {
+              basketballIQ: 74,
+              courtVision: 73,
+              defenseReading: 70,
+              offenseReading: 72,
+              decisionMaking: 72,
+              shotSelection: 71,
+              offBallMovement: 70,
+              spacing: 71,
+              pickAndRollOffense: 70,
+              pickAndRollDefense: 69,
+              helpDefense: 70,
+              discipline: 74,
+              helpDefenseAwareness: 70,
+              offBallAwareness: 70,
+              pickAndRollRead: 70,
+              spacingSense: 71,
+              playDiscipline: 74,
+              foulDiscipline: 73,
+              transitionInstincts: 71,
+            },
+          },
+          potentialProfile: {
+            create: {
+              potential: player.potential,
+              currentAbility: player.overall,
+              growthRate: clamp(72 + Math.round((player.potential - player.overall) / 4), 1, 100),
+              learningAbility: 74,
+              peakWindowStart: clamp(player.age - 1, 20, 28),
+              peakWindowEnd: clamp(player.age + 5, 24, 34),
+              ceilingTier: clamp(Math.round((player.potential + player.overall) / 2), 1, 100),
+              readiness: clamp(Math.round(player.overall * 0.7 + player.potential * 0.3), 1, 100),
+            },
+          },
+          reputationProfile: {
+            create: {
+              reputation: clamp(Math.round(player.overall * 0.88), 1, 100),
+              hiddenReputation: clamp(Math.round(player.overall * 0.88), 1, 100),
+              leagueReputation: clamp(Math.round(player.overall * 0.86), 1, 100),
+              internationalReputation: clamp(Math.round(player.overall * 0.78), 1, 100),
+              starPower: clamp(Math.round(player.overall * 0.84), 1, 100),
+              fanAppeal: clamp(Math.round(player.overall * 0.82), 1, 100),
+              mediaHandling: clamp(66 + Math.round(player.overall / 8), 1, 100),
+              mediaAppeal: clamp(Math.round(player.overall * 0.83), 1, 100),
+              agentInfluence: clamp(52 + Math.round(player.overall / 10), 1, 100),
+            },
+          },
+        },
+      });
+    }
   }
 
   const playerCount = await prisma.player.count({

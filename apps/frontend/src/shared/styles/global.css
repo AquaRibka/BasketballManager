@@ -963,6 +963,12 @@ select {
   gap: 12px;
 }
 
+.player-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
 .season-dashboard-hero,
 .dashboard-create-header,
 .dashboard-card,

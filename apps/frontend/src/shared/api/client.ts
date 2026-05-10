@@ -217,6 +217,8 @@ export type {
   CreateTeamPayload,
   MatchSummary,
   MatchTeam,
+  PlayerBodyType,
+  PlayerDominantHand,
   PlayerPosition,
   PlayerSummary,
   SeasonChampion,

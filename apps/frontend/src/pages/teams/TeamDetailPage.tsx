@@ -18,7 +18,7 @@ type LoadState =
   | { status: 'success'; team: TeamDetails }
   | { status: 'error'; message: string };
 
-type SortField = 'overall' | 'age' | 'name' | 'position' | 'potential';
+type SortField = 'overall' | 'age' | 'name' | 'position';
 
 const positionOptions = ['ALL', 'PG', 'SG', 'SF', 'PF', 'C'] as const;
 
@@ -30,8 +30,6 @@ function getSortValue(player: TeamPlayer, sortField: SortField): number | string
       return player.name;
     case 'position':
       return player.position;
-    case 'potential':
-      return player.potential;
     case 'overall':
     default:
       return player.overall;
@@ -57,8 +55,7 @@ export function TeamDetailPage({ teamId, onNavigate }: TeamDetailPageProps) {
   const [state, setState] = useState<LoadState>({ status: 'loading' });
   const [requestKey, setRequestKey] = useState(0);
   const [sortField, setSortField] = useState<SortField>('overall');
-  const [positionFilter, setPositionFilter] =
-    useState<(typeof positionOptions)[number]>('ALL');
+  const [positionFilter, setPositionFilter] = useState<(typeof positionOptions)[number]>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const deferredSearchQuery = useDeferredValue(searchQuery);
@@ -209,7 +206,9 @@ export function TeamDetailPage({ teamId, onNavigate }: TeamDetailPageProps) {
               <article className="summary-card">
                 <span>Лидер состава</span>
                 <strong>
-                  {summary.topPlayer ? `${summary.topPlayer.name} (${summary.topPlayer.overall})` : 'N/A'}
+                  {summary.topPlayer
+                    ? `${summary.topPlayer.name} (${summary.topPlayer.overall})`
+                    : 'N/A'}
                 </strong>
               </article>
             </div>
@@ -261,7 +260,6 @@ export function TeamDetailPage({ teamId, onNavigate }: TeamDetailPageProps) {
                     }}
                   >
                     <option value="overall">Overall</option>
-                    <option value="potential">Potential</option>
                     <option value="age">Возраст</option>
                     <option value="position">Позиция</option>
                     <option value="name">Имя</option>
@@ -284,7 +282,6 @@ export function TeamDetailPage({ teamId, onNavigate }: TeamDetailPageProps) {
                       <th>Поз.</th>
                       <th>Возраст</th>
                       <th>OVR</th>
-                      <th>POT</th>
                       <th>SHO</th>
                       <th>PAS</th>
                       <th>DEF</th>
@@ -310,7 +307,6 @@ export function TeamDetailPage({ teamId, onNavigate }: TeamDetailPageProps) {
                           <td>{player.position}</td>
                           <td>{player.age}</td>
                           <td>{player.overall}</td>
-                          <td>{player.potential}</td>
                           <td>{player.shooting}</td>
                           <td>{player.passing}</td>
                           <td>{player.defense}</td>

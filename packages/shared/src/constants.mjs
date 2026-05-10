@@ -4,6 +4,10 @@ export const OVERALL_V1_MIN = 1;
 export const OVERALL_V1_MAX = 100;
 
 export const PLAYER_POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C'];
+export const PLAYER_DOMINANT_HANDS = ['LEFT', 'RIGHT', 'AMBIDEXTROUS'];
+export const PLAYER_BODY_TYPES = ['SLIM', 'ATHLETIC', 'STRONG', 'HEAVY'];
+export const PLAYER_INJURY_SEVERITIES = ['MINOR', 'MODERATE', 'MAJOR', 'SEVERE'];
+export const PLAYER_INJURY_STATUSES = ['ACTIVE', 'RECOVERING', 'RECOVERED'];
 export const MATCH_STATUSES = ['SCHEDULED', 'COMPLETED'];
 export const SEASON_STATUSES = ['IN_PROGRESS', 'COMPLETED'];
 export const CAREER_SAVE_STATUSES = ['ACTIVE'];

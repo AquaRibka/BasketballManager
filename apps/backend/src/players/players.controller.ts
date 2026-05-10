@@ -12,7 +12,11 @@ import {
 } from '@nestjs/swagger';
 import { CuidParamDto } from '../common/dto/cuid-param.dto';
 import { CreatePlayerDto } from './dto/create-player.dto';
-import { PlayerListResponseDto, PlayerResponseDto } from './dto/player-response.dto';
+import {
+  PlayerHealthDetailsResponseDto,
+  PlayerListResponseDto,
+  PlayerResponseDto,
+} from './dto/player-response.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
 import { PlayersService } from './players.service';
 
@@ -36,6 +40,16 @@ export class PlayersController {
   @ApiNotFoundResponse({ description: 'Player not found' })
   getPlayerById(@Param() params: CuidParamDto) {
     return this.playersService.getPlayerById(params.id);
+  }
+
+  @Get(':id/health')
+  @ApiOperation({ summary: 'Get player health profile and injury history' })
+  @ApiParam({ name: 'id', description: 'Player cuid', example: 'cmon3yv4y0003qfsbfdn5nihz' })
+  @ApiOkResponse({ type: PlayerHealthDetailsResponseDto })
+  @ApiBadRequestResponse({ description: 'The provided player id is invalid' })
+  @ApiNotFoundResponse({ description: 'Player not found' })
+  getPlayerHealthById(@Param() params: CuidParamDto) {
+    return this.playersService.getPlayerHealthById(params.id);
   }
 
   @Post()

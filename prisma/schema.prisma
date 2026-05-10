@@ -14,6 +14,32 @@ enum PlayerPosition {
   C
 }
 
+enum PlayerDominantHand {
+  LEFT
+  RIGHT
+  AMBIDEXTROUS
+}
+
+enum PlayerBodyType {
+  SLIM
+  ATHLETIC
+  STRONG
+  HEAVY
+}
+
+enum PlayerInjurySeverity {
+  MINOR
+  MODERATE
+  MAJOR
+  SEVERE
+}
+
+enum PlayerInjuryStatus {
+  ACTIVE
+  RECOVERING
+  RECOVERED
+}
+
 enum MatchStatus {
   SCHEDULED
   COMPLETED
@@ -62,7 +88,10 @@ model Player {
   id                  String                     @id @default(cuid())
   name                String                     @db.VarChar(120)
   age                 Int
+  dateOfBirth         DateTime?
+  dominantHand        PlayerDominantHand?
   position            PlayerPosition
+  secondaryPositions  PlayerPosition[]           @default([])
   shooting            Int
   passing             Int
   defense             Int
@@ -80,6 +109,7 @@ model Player {
   healthProfile       PlayerHealthProfile?
   potentialProfile    PlayerPotentialProfile?
   reputationProfile   PlayerReputationProfile?
+  injuryHistory       PlayerInjuryHistory[]
   matchPlayerStats    MatchPlayerStat[]
   createdAt           DateTime                   @default(now())
   updatedAt           DateTime                   @updatedAt
@@ -112,23 +142,29 @@ model PlayerTechnicalAttributes {
 }
 
 model PlayerPhysicalProfile {
-  id              String   @id @default(cuid())
-  playerId        String   @unique
-  player          Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  id              String          @id @default(cuid())
+  playerId        String          @unique
+  player          Player          @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   heightCm        Int
   weightKg        Int
   wingspanCm      Int?
+  bodyType        PlayerBodyType?
   standingReachCm Int?
   speed           Int
   acceleration    Int
   strength        Int
+  explosiveness   Int
   agility         Int
+  balance         Int
+  coordination    Int
+  reaction        Int
   vertical        Int
   stamina         Int
   endurance       Int
+  recovery        Int
   durability      Int
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 }
 
 model PlayerMentalAttributes {
@@ -136,11 +172,16 @@ model PlayerMentalAttributes {
   playerId        String   @unique
   player          Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   confidence      Int
+  selfControl     Int
+  concentration   Int
   composure       Int
+  determination   Int
   workEthic       Int
   professionalism Int
   leadership      Int
+  aggressiveness  Int
   competitiveness Int
+  teamwork        Int
   teamOrientation Int
   loyalty         Int
   ego             Int
@@ -154,8 +195,17 @@ model PlayerTacticalAttributes {
   playerId             String   @unique
   player               Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   basketballIQ         Int
+  courtVision          Int
+  defenseReading       Int
+  offenseReading       Int
   decisionMaking       Int
   shotSelection        Int
+  offBallMovement      Int
+  spacing              Int
+  pickAndRollOffense   Int
+  pickAndRollDefense   Int
+  helpDefense          Int
+  discipline           Int
   helpDefenseAwareness Int
   offBallAwareness     Int
   pickAndRollRead      Int
@@ -173,29 +223,54 @@ model PlayerHiddenAttributes {
   player            Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   consistency       Int
   injuryProneness   Int
+  importantMatches  Int
+  wantsToLeave      Int
   declineResistance Int
   adaptability      Int
   discipline        Int
   ambition          Int
   resilience        Int
   pressureHandling  Int
+  setbackResponse   Int
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
 
 model PlayerHealthProfile {
-  id             String   @id @default(cuid())
-  playerId       String   @unique
-  player         Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  durability     Int
-  recoveryRate   Int
-  injuryRisk     Int
-  fatigueBase    Int
-  matchFitness   Int
-  painTolerance  Int
-  medicalOutlook Int
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  playerId            String   @unique
+  player              Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  overallCondition    Int
+  fatigue             Int
+  postInjuryCondition Int
+  durability          Int
+  recoveryRate        Int
+  injuryRisk          Int
+  fatigueBase         Int
+  matchFitness        Int
+  painTolerance       Int
+  medicalOutlook      Int
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model PlayerInjuryHistory {
+  id               String               @id @default(cuid())
+  playerId         String
+  player           Player               @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  title            String               @db.VarChar(120)
+  bodyPart         String               @db.VarChar(80)
+  severity         PlayerInjurySeverity
+  status           PlayerInjuryStatus   @default(RECOVERED)
+  occurredAt       DateTime
+  expectedReturnAt DateTime?
+  returnedAt       DateTime?
+  gamesMissed      Int                  @default(0)
+  notes            String?              @db.VarChar(500)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([playerId, occurredAt])
 }
 
 model PlayerPotentialProfile {
@@ -203,6 +278,7 @@ model PlayerPotentialProfile {
   playerId        String   @unique
   player          Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   potential       Int
+  currentAbility  Int
   growthRate      Int
   learningAbility Int
   peakWindowStart Int
@@ -218,11 +294,13 @@ model PlayerReputationProfile {
   playerId                String   @unique
   player                  Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   reputation              Int
+  hiddenReputation        Int
   leagueReputation        Int
   internationalReputation Int
   starPower               Int
   fanAppeal               Int
   mediaHandling           Int
+  mediaAppeal             Int
   agentInfluence          Int
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt

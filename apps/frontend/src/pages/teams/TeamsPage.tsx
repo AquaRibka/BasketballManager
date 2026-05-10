@@ -7,6 +7,8 @@ import {
   teamsApi,
   type CreatePlayerPayload,
   type CreateTeamPayload,
+  type PlayerBodyType,
+  type PlayerDominantHand,
   type PlayerPosition,
   type TeamSummary,
 } from '../../shared/api/client';
@@ -38,7 +40,15 @@ type TeamFormState = {
 type PlayerFormState = {
   name: string;
   age: string;
+  dateOfBirth: string;
+  dominantHand: '' | PlayerDominantHand;
   position: PlayerPosition;
+  secondaryPositionOne: '' | PlayerPosition;
+  secondaryPositionTwo: '' | PlayerPosition;
+  heightCm: string;
+  weightKg: string;
+  wingspanCm: string;
+  bodyType: '' | PlayerBodyType;
   shooting: string;
   passing: string;
   defense: string;
@@ -58,6 +68,19 @@ const PLAYER_POSITION_OPTIONS: Array<{ value: PlayerPosition; label: string }> =
   { value: 'C', label: 'C' },
 ];
 
+const DOMINANT_HAND_OPTIONS: Array<{ value: PlayerDominantHand; label: string }> = [
+  { value: 'RIGHT', label: 'Правая' },
+  { value: 'LEFT', label: 'Левая' },
+  { value: 'AMBIDEXTROUS', label: 'Обе' },
+];
+
+const BODY_TYPE_OPTIONS: Array<{ value: PlayerBodyType; label: string }> = [
+  { value: 'SLIM', label: 'Стройный' },
+  { value: 'ATHLETIC', label: 'Атлетичный' },
+  { value: 'STRONG', label: 'Силовой' },
+  { value: 'HEAVY', label: 'Массивный' },
+];
+
 const INITIAL_TEAM_FORM: TeamFormState = {
   name: '',
   city: '',
@@ -68,7 +91,15 @@ const INITIAL_TEAM_FORM: TeamFormState = {
 const INITIAL_PLAYER_FORM: PlayerFormState = {
   name: '',
   age: '20',
+  dateOfBirth: '',
+  dominantHand: 'RIGHT',
   position: 'PG',
+  secondaryPositionOne: '',
+  secondaryPositionTwo: '',
+  heightCm: '185',
+  weightKg: '82',
+  wingspanCm: '192',
+  bodyType: 'SLIM',
   shooting: '60',
   passing: '60',
   defense: '60',
@@ -198,7 +229,18 @@ export function TeamsPage({ onNavigate }: TeamsPageProps) {
     const payload: CreatePlayerPayload = {
       name: playerForm.name,
       age: Number(playerForm.age),
+      dateOfBirth: playerForm.dateOfBirth
+        ? new Date(playerForm.dateOfBirth).toISOString()
+        : undefined,
+      dominantHand: playerForm.dominantHand || undefined,
       position: playerForm.position,
+      secondaryPositions: [playerForm.secondaryPositionOne, playerForm.secondaryPositionTwo].filter(
+        (position): position is PlayerPosition => Boolean(position),
+      ),
+      heightCm: Number(playerForm.heightCm),
+      weightKg: Number(playerForm.weightKg),
+      wingspanCm: playerForm.wingspanCm ? Number(playerForm.wingspanCm) : undefined,
+      bodyType: playerForm.bodyType || undefined,
       shooting: Number(playerForm.shooting),
       passing: Number(playerForm.passing),
       defense: Number(playerForm.defense),
@@ -387,6 +429,150 @@ export function TeamsPage({ onNavigate }: TeamsPageProps) {
                     ))}
                   </select>
                   <FieldError errors={playerValidationErrors.position} />
+                </label>
+              </div>
+
+              <div className="form-inline-grid">
+                <label className="form-field">
+                  <span>Дата рождения</span>
+                  <input
+                    name="dateOfBirth"
+                    type="date"
+                    value={playerForm.dateOfBirth}
+                    onChange={(event) => handlePlayerFieldChange('dateOfBirth', event.target.value)}
+                  />
+                  <FieldError errors={playerValidationErrors.dateOfBirth} />
+                </label>
+
+                <label className="form-field">
+                  <span>Рабочая рука</span>
+                  <select
+                    name="dominantHand"
+                    value={playerForm.dominantHand}
+                    onChange={(event) =>
+                      handlePlayerFieldChange(
+                        'dominantHand',
+                        event.target.value as PlayerFormState['dominantHand'],
+                      )
+                    }
+                  >
+                    {DOMINANT_HAND_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <FieldError errors={playerValidationErrors.dominantHand} />
+                </label>
+              </div>
+
+              <div className="form-inline-grid">
+                <label className="form-field">
+                  <span>Вторичная позиция 1</span>
+                  <select
+                    name="secondaryPositionOne"
+                    value={playerForm.secondaryPositionOne}
+                    onChange={(event) =>
+                      handlePlayerFieldChange(
+                        'secondaryPositionOne',
+                        event.target.value as PlayerFormState['secondaryPositionOne'],
+                      )
+                    }
+                  >
+                    <option value="">Нет</option>
+                    {PLAYER_POSITION_OPTIONS.map((option) => (
+                      <option key={`secondary-one-${option.value}`} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="form-field">
+                  <span>Вторичная позиция 2</span>
+                  <select
+                    name="secondaryPositionTwo"
+                    value={playerForm.secondaryPositionTwo}
+                    onChange={(event) =>
+                      handlePlayerFieldChange(
+                        'secondaryPositionTwo',
+                        event.target.value as PlayerFormState['secondaryPositionTwo'],
+                      )
+                    }
+                  >
+                    <option value="">Нет</option>
+                    {PLAYER_POSITION_OPTIONS.map((option) => (
+                      <option key={`secondary-two-${option.value}`} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <FieldError errors={playerValidationErrors.secondaryPositions} />
+
+              <div className="form-inline-grid">
+                <label className="form-field">
+                  <span>Телосложение</span>
+                  <select
+                    name="bodyType"
+                    value={playerForm.bodyType}
+                    onChange={(event) =>
+                      handlePlayerFieldChange(
+                        'bodyType',
+                        event.target.value as PlayerFormState['bodyType'],
+                      )
+                    }
+                  >
+                    {BODY_TYPE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <FieldError errors={playerValidationErrors.bodyType} />
+                </label>
+
+                <label className="form-field">
+                  <span>Рост (см)</span>
+                  <input
+                    name="heightCm"
+                    type="number"
+                    min={165}
+                    max={230}
+                    value={playerForm.heightCm}
+                    onChange={(event) => handlePlayerFieldChange('heightCm', event.target.value)}
+                  />
+                  <FieldError errors={playerValidationErrors.heightCm} />
+                </label>
+              </div>
+
+              <div className="form-inline-grid">
+                <label className="form-field">
+                  <span>Вес (кг)</span>
+                  <input
+                    name="weightKg"
+                    type="number"
+                    min={65}
+                    max={160}
+                    value={playerForm.weightKg}
+                    onChange={(event) => handlePlayerFieldChange('weightKg', event.target.value)}
+                  />
+                  <FieldError errors={playerValidationErrors.weightKg} />
+                </label>
+
+                <label className="form-field">
+                  <span>Размах рук (см)</span>
+                  <input
+                    name="wingspanCm"
+                    type="number"
+                    min={170}
+                    max={245}
+                    value={playerForm.wingspanCm}
+                    onChange={(event) => handlePlayerFieldChange('wingspanCm', event.target.value)}
+                  />
+                  <FieldError errors={playerValidationErrors.wingspanCm} />
                 </label>
               </div>
 

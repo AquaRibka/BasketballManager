@@ -4,6 +4,10 @@ export const OVERALL_V1_MIN: number;
 export const OVERALL_V1_MAX: number;
 
 export const PLAYER_POSITIONS: readonly ['PG', 'SG', 'SF', 'PF', 'C'];
+export const PLAYER_DOMINANT_HANDS: readonly ['LEFT', 'RIGHT', 'AMBIDEXTROUS'];
+export const PLAYER_BODY_TYPES: readonly ['SLIM', 'ATHLETIC', 'STRONG', 'HEAVY'];
+export const PLAYER_INJURY_SEVERITIES: readonly ['MINOR', 'MODERATE', 'MAJOR', 'SEVERE'];
+export const PLAYER_INJURY_STATUSES: readonly ['ACTIVE', 'RECOVERING', 'RECOVERED'];
 export const MATCH_STATUSES: readonly ['SCHEDULED', 'COMPLETED'];
 export const SEASON_STATUSES: readonly ['IN_PROGRESS', 'COMPLETED'];
 export const CAREER_SAVE_STATUSES: readonly ['ACTIVE'];
@@ -91,6 +95,10 @@ export const OVERALL_V1_POSITION_WEIGHTS: Record<
 export const SIMULATION_CONTRACT_VERSION: 'v1';
 
 export type PlayerPosition = 'PG' | 'SG' | 'SF' | 'PF' | 'C';
+export type PlayerDominantHand = 'LEFT' | 'RIGHT' | 'AMBIDEXTROUS';
+export type PlayerBodyType = 'SLIM' | 'ATHLETIC' | 'STRONG' | 'HEAVY';
+export type PlayerInjurySeverity = 'MINOR' | 'MODERATE' | 'MAJOR' | 'SEVERE';
+export type PlayerInjuryStatus = 'ACTIVE' | 'RECOVERING' | 'RECOVERED';
 export type MatchStatus = 'SCHEDULED' | 'COMPLETED';
 export type SeasonStatus = 'IN_PROGRESS' | 'COMPLETED';
 export type CareerSaveStatus = 'ACTIVE';
@@ -216,22 +224,126 @@ export interface TeamPlayerShape {
   name: string;
   age: number;
   position: PlayerPosition;
+  dateOfBirth: string | null;
+  dominantHand: PlayerDominantHand | null;
+  secondaryPositions: PlayerPosition[];
   shooting: number;
   passing: number;
   defense: number;
   rebounding: number;
   athleticism: number;
-  potential: number;
   overall: number;
+  physicalProfile: PlayerPhysicalSummaryShape | null;
+  healthProfile: PlayerHealthSummaryShape | null;
+  psychologyProfile: PlayerPsychologySummaryShape | null;
+  tacticalProfile: PlayerTacticalSummaryShape | null;
   teamId: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PlayerPhysicalSummaryShape {
+  heightCm: number;
+  weightKg: number;
+  wingspanCm: number | null;
+  bodyType: PlayerBodyType | null;
+  speed: number;
+  acceleration: number;
+  vertical: number;
+  strength: number;
+  endurance: number;
+  balance: number;
+  agility: number;
+  coordination: number;
+  reaction: number;
+  recovery: number;
+  explosiveness: number;
+}
+
+export interface PlayerPsychologySummaryShape {
+  selfControl: number;
+  concentration: number;
+  determination: number;
+  leadership: number;
+  workEthic: number;
+  aggressiveness: number;
+  teamwork: number;
+  confidence: number;
+}
+
+export interface PlayerHealthSummaryShape {
+  overallCondition: number;
+  fatigue: number;
+  postInjuryCondition: number;
+  injuryRisk: number;
+  durability: number;
+  recoveryRate: number;
+  painTolerance: number;
+  medicalOutlook: number;
+}
+
+export interface PlayerInjuryHistoryEntryShape {
+  id: string;
+  title: string;
+  bodyPart: string;
+  severity: PlayerInjurySeverity;
+  status: PlayerInjuryStatus;
+  occurredAt: string;
+  expectedReturnAt: string | null;
+  returnedAt: string | null;
+  gamesMissed: number;
+  notes: string | null;
+}
+
+export interface PlayerHealthDetailsShape {
+  playerId: string;
+  playerName: string;
+  healthProfile: PlayerHealthSummaryShape | null;
+  injuryHistory: PlayerInjuryHistoryEntryShape[];
+}
+
+export interface PlayerTacticalSummaryShape {
+  basketballIQ: number;
+  shotSelection: number;
+  courtVision: number;
+  defenseReading: number;
+  offenseReading: number;
+  decisionMaking: number;
+  offBallMovement: number;
+  spacing: number;
+  pickAndRollOffense: number;
+  pickAndRollDefense: number;
+  helpDefense: number;
+  discipline: number;
+}
+
+export interface PlayerHiddenSummaryShape {
+  potential: number;
+  currentAbility: number;
+  professionalism: number;
+  loyalty: number;
+  consistency: number;
+  injuryProneness: number;
+  importantMatches: number;
+  mediaAppeal: number;
+  ego: number;
+  wantsToLeave: number;
+  agentInfluence: number;
+  learningAbility: number;
+  hiddenReputation: number;
 }
 
 export interface CreatePlayerPayloadShape {
   name: string;
   age: number;
   position: PlayerPosition;
+  dateOfBirth?: string;
+  dominantHand?: PlayerDominantHand;
+  secondaryPositions?: PlayerPosition[];
+  heightCm?: number;
+  weightKg?: number;
+  wingspanCm?: number;
+  bodyType?: PlayerBodyType;
   shooting: number;
   passing: number;
   defense: number;
