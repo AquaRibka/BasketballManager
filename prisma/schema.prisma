@@ -40,6 +40,21 @@ enum PlayerInjuryStatus {
   RECOVERED
 }
 
+enum PlayerDevelopmentFocus {
+  BALANCED
+  SCORING
+  PLAYMAKING
+  DEFENSE
+  ATHLETICISM
+  REBOUNDING
+}
+
+enum PlayerCareerStatus {
+  ACTIVE
+  FORMER
+  FREE_AGENT
+}
+
 enum MatchStatus {
   SCHEDULED
   COMPLETED
@@ -51,37 +66,43 @@ enum SeasonStatus {
 }
 
 model Season {
-  id           String       @id @default(cuid())
-  name         String       @db.VarChar(120)
-  year         Int
-  status       SeasonStatus @default(IN_PROGRESS)
-  currentRound Int          @default(1)
-  startedAt    DateTime     @default(now())
-  finishedAt   DateTime?
-  careerSaves  CareerSave[]
-  matches      Match[]
-  standings    Standing[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id                  String                @id @default(cuid())
+  name                String                @db.VarChar(120)
+  year                Int
+  status              SeasonStatus          @default(IN_PROGRESS)
+  currentRound        Int                   @default(1)
+  startedAt           DateTime              @default(now())
+  finishedAt          DateTime?
+  careerSaves         CareerSave[]
+  matches             Match[]
+  standings           Standing[]
+  playerCareerHistory PlayerCareerHistory[]
+  playerSeasonStats   PlayerSeasonStat[]
+  playerAwards        PlayerAward[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
 
   @@index([status])
   @@index([year])
 }
 
 model Team {
-  id               String            @id @default(cuid())
-  name             String            @db.VarChar(120)
-  city             String            @db.VarChar(120)
-  shortName        String            @unique @db.VarChar(10)
-  rating           Int               @default(60)
-  careerSaves      CareerSave[]
-  players          Player[]
-  homeMatches      Match[]           @relation("HomeTeamMatches")
-  awayMatches      Match[]           @relation("AwayTeamMatches")
-  standings        Standing[]
-  matchPlayerStats MatchPlayerStat[]
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id                   String                @id @default(cuid())
+  name                 String                @db.VarChar(120)
+  city                 String                @db.VarChar(120)
+  shortName            String                @unique @db.VarChar(10)
+  rating               Int                   @default(60)
+  careerSaves          CareerSave[]
+  players              Player[]
+  homeMatches          Match[]               @relation("HomeTeamMatches")
+  awayMatches          Match[]               @relation("AwayTeamMatches")
+  standings            Standing[]
+  matchPlayerStats     MatchPlayerStat[]
+  careerHistoryEntries PlayerCareerHistory[]
+  playerSeasonStats    PlayerSeasonStat[]
+  playerAwards         PlayerAward[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
 }
 
 model Player {
@@ -109,6 +130,9 @@ model Player {
   healthProfile       PlayerHealthProfile?
   potentialProfile    PlayerPotentialProfile?
   reputationProfile   PlayerReputationProfile?
+  careerHistory       PlayerCareerHistory[]
+  seasonStats         PlayerSeasonStat[]
+  awards              PlayerAward[]
   injuryHistory       PlayerInjuryHistory[]
   matchPlayerStats    MatchPlayerStat[]
   createdAt           DateTime                   @default(now())
@@ -274,19 +298,101 @@ model PlayerInjuryHistory {
 }
 
 model PlayerPotentialProfile {
-  id              String   @id @default(cuid())
-  playerId        String   @unique
-  player          Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  potential       Int
-  currentAbility  Int
-  growthRate      Int
-  learningAbility Int
-  peakWindowStart Int
-  peakWindowEnd   Int
-  ceilingTier     Int
-  readiness       Int
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String                 @id @default(cuid())
+  playerId         String                 @unique
+  player           Player                 @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  potential        Int
+  potentialAbility Int
+  currentAbility   Int
+  growthRate       Int
+  developmentFocus PlayerDevelopmentFocus @default(BALANCED)
+  peakStartAge     Int
+  peakEndAge       Int
+  declineStartAge  Int
+  learningAbility  Int
+  peakWindowStart  Int
+  peakWindowEnd    Int
+  ceilingTier      Int
+  readiness        Int
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+}
+
+model PlayerCareerHistory {
+  id             String             @id @default(cuid())
+  playerId       String
+  player         Player             @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  seasonId       String?
+  season         Season?            @relation(fields: [seasonId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  seasonLabel    String             @db.VarChar(40)
+  teamId         String?
+  team           Team?              @relation(fields: [teamId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  league         String             @db.VarChar(80)
+  role           String             @db.VarChar(80)
+  jerseyNumber   Int?
+  status         PlayerCareerStatus @default(ACTIVE)
+  transferDate   DateTime?
+  transferReason String?            @db.VarChar(120)
+  achievements   String[]           @default([])
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([playerId, seasonLabel])
+  @@index([playerId, transferDate])
+  @@index([teamId])
+  @@index([seasonId])
+}
+
+model PlayerSeasonStat {
+  id               String   @id @default(cuid())
+  playerId         String
+  player           Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  seasonId         String?
+  season           Season?  @relation(fields: [seasonId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  seasonLabel      String   @db.VarChar(40)
+  teamId           String?
+  team             Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  league           String   @db.VarChar(80)
+  gamesPlayed      Int
+  gamesStarted     Int
+  minutesPerGame   Float
+  pointsPerGame    Float
+  reboundsPerGame  Float
+  assistsPerGame   Float
+  stealsPerGame    Float
+  blocksPerGame    Float
+  turnoversPerGame Float
+  foulsPerGame     Float
+  fgPct            Float
+  threePct         Float
+  ftPct            Float
+  efficiencyRating Float
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([playerId, seasonLabel])
+  @@index([seasonId])
+  @@index([teamId])
+}
+
+model PlayerAward {
+  id          String   @id @default(cuid())
+  playerId    String
+  player      Player   @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  seasonId    String?
+  season      Season?  @relation(fields: [seasonId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  seasonLabel String   @db.VarChar(40)
+  awardType   String   @db.VarChar(80)
+  league      String   @db.VarChar(80)
+  teamId      String?
+  team        Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  description String?  @db.VarChar(240)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([playerId, seasonLabel])
+  @@index([seasonId])
+  @@index([teamId])
 }
 
 model PlayerReputationProfile {

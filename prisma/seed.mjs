@@ -5,6 +5,15 @@ const { PlayerBodyType, PlayerDominantHand, PlayerPosition } = prismaClientPkg;
 
 const prisma = createPrismaClient();
 
+function getCurrentSeasonLabel(referenceDate = new Date()) {
+  const year = referenceDate.getUTCFullYear();
+  const month = referenceDate.getUTCMonth() + 1;
+  const startYear = month >= 7 ? year : year - 1;
+  const endYearShort = String((startYear + 1) % 100).padStart(2, '0');
+
+  return `${startYear}/${endYearShort}`;
+}
+
 const teamSeeds = [
   {
     name: 'CSKA Moscow',
@@ -474,6 +483,106 @@ function buildRoster(team, teamIndex) {
   });
 }
 
+function buildSeasonStatLine(player, playerIndex) {
+  const roleFactor = Math.max(0.55, 1.08 - playerIndex * 0.06);
+  const gamesPlayed = clamp(Math.round(18 + player.overall * 0.22 + roleFactor * 8), 12, 44);
+  const gamesStarted = clamp(
+    Math.round(Math.max(0, gamesPlayed * (playerIndex < 5 ? 0.72 : playerIndex < 9 ? 0.34 : 0.08))),
+    0,
+    gamesPlayed,
+  );
+  const minutesPerGame = Number(
+    clamp(
+      Math.round((10 + player.overall * 0.22 + roleFactor * 6 + player.athleticism * 0.05) * 10) /
+        10,
+      8,
+      34,
+    ).toFixed(1),
+  );
+  const pointsPerGame = Number(
+    clamp(
+      Math.round((player.shooting * 0.11 + player.overall * 0.045 + roleFactor * 3.8) * 10) / 10,
+      2,
+      26,
+    ).toFixed(1),
+  );
+  const reboundsPerGame = Number(
+    clamp(Math.round((player.rebounding * 0.075 + roleFactor * 1.7) * 10) / 10, 1, 13).toFixed(1),
+  );
+  const assistsPerGame = Number(
+    clamp(Math.round((player.passing * 0.065 + roleFactor * 1.5) * 10) / 10, 0.5, 10).toFixed(1),
+  );
+  const stealsPerGame = Number(
+    clamp(Math.round((player.defense * 0.012 + roleFactor * 0.28) * 10) / 10, 0.2, 2.8).toFixed(1),
+  );
+  const blocksPerGame = Number(
+    clamp(
+      Math.round(
+        ((player.position === PlayerPosition.C || player.position === PlayerPosition.PF
+          ? 0.65
+          : 0.18) +
+          player.defense * 0.006) *
+          10,
+      ) / 10,
+      0.1,
+      2.7,
+    ).toFixed(1),
+  );
+  const turnoversPerGame = Number(
+    clamp(Math.round((player.passing * 0.018 + roleFactor * 0.8) * 10) / 10, 0.5, 4.8).toFixed(1),
+  );
+  const foulsPerGame = Number(
+    clamp(
+      Math.round((1.2 + player.defense * 0.012 + playerIndex * 0.04) * 10) / 10,
+      1,
+      4.8,
+    ).toFixed(1),
+  );
+  const fgPct = Number(
+    clamp(Math.round(38 + player.shooting * 0.16 + roleFactor * 4), 36, 64).toFixed(1),
+  );
+  const threePct = Number(
+    clamp(Math.round(26 + player.shooting * 0.13 + roleFactor * 3), 24, 49).toFixed(1),
+  );
+  const ftPct = Number(
+    clamp(Math.round(58 + player.shooting * 0.24 + roleFactor * 3), 55, 94).toFixed(1),
+  );
+  const efficiencyRating = Number(
+    clamp(
+      Math.round(
+        (pointsPerGame +
+          reboundsPerGame * 1.2 +
+          assistsPerGame * 1.4 +
+          stealsPerGame * 2 +
+          blocksPerGame * 2 -
+          turnoversPerGame) *
+          10,
+      ) / 10,
+      4,
+      34,
+    ).toFixed(1),
+  );
+
+  return {
+    seasonLabel: getCurrentSeasonLabel(),
+    league: 'VTB United League',
+    gamesPlayed,
+    gamesStarted,
+    minutesPerGame,
+    pointsPerGame,
+    reboundsPerGame,
+    assistsPerGame,
+    stealsPerGame,
+    blocksPerGame,
+    turnoversPerGame,
+    foulsPerGame,
+    fgPct,
+    threePct,
+    ftPct,
+    efficiencyRating,
+  };
+}
+
 async function seed() {
   const seededTeams = [];
 
@@ -502,7 +611,7 @@ async function seed() {
       },
     });
 
-    for (const player of roster) {
+    for (const [playerIndex, player] of roster.entries()) {
       await prisma.player.create({
         data: {
           name: player.name,
@@ -612,8 +721,13 @@ async function seed() {
           potentialProfile: {
             create: {
               potential: player.potential,
+              potentialAbility: player.potential,
               currentAbility: player.overall,
               growthRate: clamp(72 + Math.round((player.potential - player.overall) / 4), 1, 100),
+              developmentFocus: 'BALANCED',
+              peakStartAge: clamp(player.age - 1, 20, 28),
+              peakEndAge: clamp(player.age + 5, 24, 34),
+              declineStartAge: clamp(player.age + 8, 27, 37),
               learningAbility: 74,
               peakWindowStart: clamp(player.age - 1, 20, 28),
               peakWindowEnd: clamp(player.age + 5, 24, 34),
@@ -633,6 +747,21 @@ async function seed() {
               mediaAppeal: clamp(Math.round(player.overall * 0.83), 1, 100),
               agentInfluence: clamp(52 + Math.round(player.overall / 10), 1, 100),
             },
+          },
+          careerHistory: {
+            create: {
+              seasonLabel: getCurrentSeasonLabel(),
+              league: 'VTB United League',
+              role: 'Roster',
+              jerseyNumber: null,
+              status: 'ACTIVE',
+              transferDate: new Date(),
+              transferReason: 'Initial roster assignment',
+              achievements: [],
+            },
+          },
+          seasonStats: {
+            create: buildSeasonStatLine(player, playerIndex),
           },
         },
       });

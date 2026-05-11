@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import type { PlayerCareerStatus, PlayerDevelopmentFocus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
@@ -160,6 +160,73 @@ export class PlayersService {
             shortName: true,
           },
         },
+        seasonStats: {
+          select: {
+            id: true,
+            seasonLabel: true,
+            league: true,
+            gamesPlayed: true,
+            gamesStarted: true,
+            minutesPerGame: true,
+            pointsPerGame: true,
+            reboundsPerGame: true,
+            assistsPerGame: true,
+            stealsPerGame: true,
+            blocksPerGame: true,
+            turnoversPerGame: true,
+            foulsPerGame: true,
+            fgPct: true,
+            threePct: true,
+            ftPct: true,
+            efficiencyRating: true,
+            team: {
+              select: {
+                id: true,
+                name: true,
+                shortName: true,
+              },
+            },
+          },
+          orderBy: [{ seasonLabel: 'desc' }, { createdAt: 'desc' }],
+        },
+        awards: {
+          select: {
+            id: true,
+            seasonLabel: true,
+            awardType: true,
+            league: true,
+            description: true,
+            team: {
+              select: {
+                id: true,
+                name: true,
+                shortName: true,
+              },
+            },
+          },
+          orderBy: [{ seasonLabel: 'desc' }, { createdAt: 'desc' }],
+        },
+        careerHistory: {
+          select: {
+            id: true,
+            seasonLabel: true,
+            league: true,
+            role: true,
+            jerseyNumber: true,
+            status: true,
+            transferDate: true,
+            transferReason: true,
+            achievements: true,
+            team: {
+              select: {
+                id: true,
+                name: true,
+                shortName: true,
+              },
+            },
+          },
+          orderBy: [{ transferDate: 'desc' }, { createdAt: 'desc' }],
+        },
       },
     });
 
@@ -251,7 +318,13 @@ export class PlayersService {
         potentialProfile: {
           select: {
             potential: true,
+            potentialAbility: true,
             currentAbility: true,
+            growthRate: true,
+            developmentFocus: true,
+            peakStartAge: true,
+            peakEndAge: true,
+            declineStartAge: true,
             learningAbility: true,
           },
         },
@@ -373,6 +446,10 @@ export class PlayersService {
       include: {
         physicalProfile: true,
         healthProfile: true,
+        careerHistory: {
+          where: { status: 'ACTIVE' },
+          select: { id: true },
+        },
       },
     });
 
@@ -468,6 +545,13 @@ export class PlayersService {
           },
         });
 
+        if (existingPlayer.teamId !== updatedPlayer.teamId) {
+          await this.recordCareerHistoryTransfer(tx, {
+            playerId: updatedPlayer.id,
+            nextTeamId: updatedPlayer.teamId,
+          });
+        }
+
         const affectedTeamIds = new Set<string>();
 
         if (existingPlayer.teamId) {
@@ -543,6 +627,17 @@ export class PlayersService {
             },
           }
         : undefined,
+      careerHistory: {
+        create: [
+          this.buildCareerHistoryCreateInput({
+            teamId: createPlayerDto.teamId,
+            status: createPlayerDto.teamId ? 'ACTIVE' : 'FREE_AGENT',
+            transferReason: createPlayerDto.teamId
+              ? 'Initial team assignment'
+              : 'Created as free agent',
+          }),
+        ],
+      },
       physicalProfile: {
         create: this.buildPhysicalProfileCreateInput(createPlayerDto),
       },
@@ -584,6 +679,7 @@ export class PlayersService {
       potential: number;
       rebounding: number;
       position: PlayerOverallInput['position'];
+      teamId: string | null;
       physicalProfile: { id: string } | null;
       healthProfile: { id: string } | null;
     },
@@ -646,7 +742,7 @@ export class PlayersService {
     data.potentialProfile = {
       upsert: {
         create: this.buildPotentialProfileCreateInput(nextPotential, overall, nextAge),
-        update: this.buildPotentialProfileUpdateInput(nextPotential, overall),
+        update: this.buildPotentialProfileUpdateInput(nextPotential, overall, nextAge),
       },
     };
     data.reputationProfile = {
@@ -696,6 +792,10 @@ export class PlayersService {
         connect: {
           id: updatePlayerDto.teamId,
         },
+      };
+    } else if (updatePlayerDto.teamId === null && existingPlayer.teamId) {
+      data.team = {
+        disconnect: true,
       };
     }
 
@@ -757,11 +857,17 @@ export class PlayersService {
   ): Prisma.PlayerPotentialProfileCreateWithoutPlayerInput {
     const peakWindowStart = Math.max(22, Math.min(26, age - 1));
     const peakWindowEnd = Math.max(peakWindowStart + 3, Math.min(32, age + 5));
+    const declineStartAge = Math.max(peakWindowEnd + 1, Math.min(36, peakWindowEnd + 3));
 
     return {
       potential,
+      potentialAbility: potential,
       currentAbility,
       growthRate: this.clampAttribute(72 + Math.max(0, potential - currentAbility) / 4),
+      developmentFocus: 'BALANCED',
+      peakStartAge: peakWindowStart,
+      peakEndAge: peakWindowEnd,
+      declineStartAge,
       learningAbility: 74,
       peakWindowStart,
       peakWindowEnd,
@@ -796,10 +902,20 @@ export class PlayersService {
   private buildPotentialProfileUpdateInput(
     potential: number,
     currentAbility: number,
+    age: number,
   ): Prisma.PlayerPotentialProfileUpdateWithoutPlayerInput {
+    const peakWindowStart = Math.max(22, Math.min(26, age - 1));
+    const peakWindowEnd = Math.max(peakWindowStart + 3, Math.min(32, age + 5));
+    const declineStartAge = Math.max(peakWindowEnd + 1, Math.min(36, peakWindowEnd + 3));
+
     return {
       potential,
+      potentialAbility: potential,
       currentAbility,
+      growthRate: this.clampAttribute(72 + Math.max(0, potential - currentAbility) / 4),
+      peakStartAge: peakWindowStart,
+      peakEndAge: peakWindowEnd,
+      declineStartAge,
       ceilingTier: this.clampAttribute(Math.round((potential + currentAbility) / 2)),
       readiness: this.clampAttribute(Math.round(currentAbility * 0.7 + potential * 0.3)),
     };
@@ -1083,6 +1199,165 @@ export class PlayersService {
     };
   }
 
+  private buildCareerHistoryCreateInput(params: {
+    teamId?: string | null;
+    status: PlayerCareerStatus;
+    transferReason: string;
+    transferDate?: Date;
+  }): Prisma.PlayerCareerHistoryCreateWithoutPlayerInput {
+    return {
+      seasonLabel: this.getCurrentSeasonLabel(params.transferDate),
+      league: 'VTB United League',
+      role: params.teamId ? 'Roster' : 'Free Agent',
+      jerseyNumber: null,
+      status: params.status,
+      transferDate: params.transferDate ?? new Date(),
+      transferReason: params.transferReason,
+      achievements: [],
+      team: params.teamId
+        ? {
+            connect: { id: params.teamId },
+          }
+        : undefined,
+    };
+  }
+
+  private async recordCareerHistoryTransfer(
+    tx: Prisma.TransactionClient,
+    params: { playerId: string; nextTeamId: string | null },
+  ) {
+    await tx.playerCareerHistory.updateMany({
+      where: {
+        playerId: params.playerId,
+        status: 'ACTIVE',
+      },
+      data: {
+        status: 'FORMER',
+      },
+    });
+
+    await tx.playerCareerHistory.create({
+      data: {
+        player: {
+          connect: { id: params.playerId },
+        },
+        ...this.buildCareerHistoryCreateInput({
+          teamId: params.nextTeamId,
+          status: params.nextTeamId ? 'ACTIVE' : 'FREE_AGENT',
+          transferReason: params.nextTeamId ? 'Transferred to new team' : 'Released to free agency',
+        }),
+      },
+    });
+  }
+
+  private getCurrentSeasonLabel(referenceDate = new Date()) {
+    const year = referenceDate.getUTCFullYear();
+    const month = referenceDate.getUTCMonth() + 1;
+    const startYear = month >= 7 ? year : year - 1;
+    const endYearShort = String((startYear + 1) % 100).padStart(2, '0');
+
+    return `${startYear}/${endYearShort}`;
+  }
+
+  private roundStat(value: number, digits = 1) {
+    const factor = 10 ** digits;
+    return Math.round(value * factor) / factor;
+  }
+
+  private calculateCareerTotals(
+    seasonStats:
+      | Array<{
+          gamesPlayed: number;
+          gamesStarted: number;
+          minutesPerGame: number;
+          pointsPerGame: number;
+          reboundsPerGame: number;
+          assistsPerGame: number;
+          stealsPerGame: number;
+          blocksPerGame: number;
+          turnoversPerGame: number;
+          foulsPerGame: number;
+          fgPct: number;
+          threePct: number;
+          ftPct: number;
+          efficiencyRating: number;
+        }>
+      | undefined,
+  ) {
+    if (!seasonStats?.length) {
+      return null;
+    }
+
+    const totals = seasonStats.reduce(
+      (acc, entry) => {
+        const gp = entry.gamesPlayed;
+
+        acc.seasonsCount += 1;
+        acc.gamesPlayed += gp;
+        acc.gamesStarted += entry.gamesStarted;
+        acc.totalMinutes += entry.minutesPerGame * gp;
+        acc.totalPoints += entry.pointsPerGame * gp;
+        acc.totalRebounds += entry.reboundsPerGame * gp;
+        acc.totalAssists += entry.assistsPerGame * gp;
+        acc.totalSteals += entry.stealsPerGame * gp;
+        acc.totalBlocks += entry.blocksPerGame * gp;
+        acc.totalTurnovers += entry.turnoversPerGame * gp;
+        acc.totalFouls += entry.foulsPerGame * gp;
+        acc.weightedFgPct += entry.fgPct * gp;
+        acc.weightedThreePct += entry.threePct * gp;
+        acc.weightedFtPct += entry.ftPct * gp;
+        acc.weightedEfficiency += entry.efficiencyRating * gp;
+
+        return acc;
+      },
+      {
+        seasonsCount: 0,
+        gamesPlayed: 0,
+        gamesStarted: 0,
+        totalMinutes: 0,
+        totalPoints: 0,
+        totalRebounds: 0,
+        totalAssists: 0,
+        totalSteals: 0,
+        totalBlocks: 0,
+        totalTurnovers: 0,
+        totalFouls: 0,
+        weightedFgPct: 0,
+        weightedThreePct: 0,
+        weightedFtPct: 0,
+        weightedEfficiency: 0,
+      },
+    );
+
+    const gp = Math.max(1, totals.gamesPlayed);
+
+    return {
+      seasonsCount: totals.seasonsCount,
+      gamesPlayed: totals.gamesPlayed,
+      gamesStarted: totals.gamesStarted,
+      totalMinutes: this.roundStat(totals.totalMinutes),
+      totalPoints: this.roundStat(totals.totalPoints),
+      totalRebounds: this.roundStat(totals.totalRebounds),
+      totalAssists: this.roundStat(totals.totalAssists),
+      totalSteals: this.roundStat(totals.totalSteals),
+      totalBlocks: this.roundStat(totals.totalBlocks),
+      totalTurnovers: this.roundStat(totals.totalTurnovers),
+      totalFouls: this.roundStat(totals.totalFouls),
+      averageMinutesPerGame: this.roundStat(totals.totalMinutes / gp),
+      averagePointsPerGame: this.roundStat(totals.totalPoints / gp),
+      averageReboundsPerGame: this.roundStat(totals.totalRebounds / gp),
+      averageAssistsPerGame: this.roundStat(totals.totalAssists / gp),
+      averageStealsPerGame: this.roundStat(totals.totalSteals / gp),
+      averageBlocksPerGame: this.roundStat(totals.totalBlocks / gp),
+      averageTurnoversPerGame: this.roundStat(totals.totalTurnovers / gp),
+      averageFoulsPerGame: this.roundStat(totals.totalFouls / gp),
+      fgPct: this.roundStat(totals.weightedFgPct / gp),
+      threePct: this.roundStat(totals.weightedThreePct / gp),
+      ftPct: this.roundStat(totals.weightedFtPct / gp),
+      efficiencyRating: this.roundStat(totals.weightedEfficiency / gp),
+    };
+  }
+
   private clampAttribute(value: number) {
     return Math.max(1, Math.min(100, value));
   }
@@ -1160,12 +1435,105 @@ export class PlayersService {
       name: string;
       shortName: string;
     } | null;
+    careerHistory?: Array<{
+      id: string;
+      seasonLabel: string;
+      league: string;
+      role: string;
+      jerseyNumber: number | null;
+      status: PlayerCareerStatus;
+      transferDate: Date | null;
+      transferReason: string | null;
+      achievements: string[];
+      team: {
+        id: string;
+        name: string;
+        shortName: string;
+      } | null;
+    }>;
+    seasonStats?: Array<{
+      id: string;
+      seasonLabel: string;
+      league: string;
+      gamesPlayed: number;
+      gamesStarted: number;
+      minutesPerGame: number;
+      pointsPerGame: number;
+      reboundsPerGame: number;
+      assistsPerGame: number;
+      stealsPerGame: number;
+      blocksPerGame: number;
+      turnoversPerGame: number;
+      foulsPerGame: number;
+      fgPct: number;
+      threePct: number;
+      ftPct: number;
+      efficiencyRating: number;
+      team: {
+        id: string;
+        name: string;
+        shortName: string;
+      } | null;
+    }>;
+    awards?: Array<{
+      id: string;
+      seasonLabel: string;
+      awardType: string;
+      league: string;
+      description: string | null;
+      team: {
+        id: string;
+        name: string;
+        shortName: string;
+      } | null;
+    }>;
   }) {
     return {
       ...player,
       dateOfBirth: player.dateOfBirth?.toISOString() ?? null,
       createdAt: player.createdAt.toISOString(),
       updatedAt: player.updatedAt.toISOString(),
+      careerHistory: player.careerHistory?.map((entry) => ({
+        id: entry.id,
+        season: entry.seasonLabel,
+        league: entry.league,
+        role: entry.role,
+        jerseyNumber: entry.jerseyNumber,
+        status: entry.status,
+        transferDate: entry.transferDate?.toISOString() ?? null,
+        transferReason: entry.transferReason,
+        achievements: entry.achievements,
+        team: entry.team,
+      })),
+      seasonStats: player.seasonStats?.map((entry) => ({
+        id: entry.id,
+        season: entry.seasonLabel,
+        league: entry.league,
+        team: entry.team,
+        gamesPlayed: entry.gamesPlayed,
+        gamesStarted: entry.gamesStarted,
+        minutesPerGame: entry.minutesPerGame,
+        pointsPerGame: entry.pointsPerGame,
+        reboundsPerGame: entry.reboundsPerGame,
+        assistsPerGame: entry.assistsPerGame,
+        stealsPerGame: entry.stealsPerGame,
+        blocksPerGame: entry.blocksPerGame,
+        turnoversPerGame: entry.turnoversPerGame,
+        foulsPerGame: entry.foulsPerGame,
+        fgPct: entry.fgPct,
+        threePct: entry.threePct,
+        ftPct: entry.ftPct,
+        efficiencyRating: entry.efficiencyRating,
+      })),
+      awards: player.awards?.map((entry) => ({
+        id: entry.id,
+        season: entry.seasonLabel,
+        awardType: entry.awardType,
+        league: entry.league,
+        description: entry.description,
+        team: entry.team,
+      })),
+      careerTotals: this.calculateCareerTotals(player.seasonStats),
       healthProfile: player.healthProfile,
       psychologyProfile: player.mentalAttributes
         ? {
@@ -1216,7 +1584,13 @@ export class PlayersService {
     } | null;
     potentialProfile: {
       potential: number;
+      potentialAbility: number;
       currentAbility: number;
+      growthRate: number;
+      developmentFocus: PlayerDevelopmentFocus;
+      peakStartAge: number;
+      peakEndAge: number;
+      declineStartAge: number;
       learningAbility: number;
     } | null;
     reputationProfile: {
@@ -1236,7 +1610,13 @@ export class PlayersService {
 
     return {
       potential: player.potentialProfile.potential,
+      potentialAbility: player.potentialProfile.potentialAbility,
       currentAbility: player.potentialProfile.currentAbility,
+      growthRate: player.potentialProfile.growthRate,
+      developmentFocus: player.potentialProfile.developmentFocus,
+      peakStartAge: player.potentialProfile.peakStartAge,
+      peakEndAge: player.potentialProfile.peakEndAge,
+      declineStartAge: player.potentialProfile.declineStartAge,
       professionalism: player.mentalAttributes.professionalism,
       loyalty: player.mentalAttributes.loyalty,
       consistency: player.hiddenAttributes.consistency,

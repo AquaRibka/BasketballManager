@@ -928,17 +928,112 @@ select {
 
 .player-detail-grid {
   display: grid;
-  gap: 20px;
+  gap: 14px;
 }
 
 .player-display-card,
 .player-detail-main {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .player-display-card .player-identity strong {
-  font-size: 1.3rem;
+  font-size: 1.45rem;
+  line-height: 1.08;
+}
+
+.player-identity span {
+  font-size: 0.95rem;
+  color: rgba(247, 245, 239, 0.62);
+}
+
+.player-display-card-fm {
+  gap: 12px;
+}
+
+.player-fm-header {
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 74, 180, 0.18);
+  background:
+    linear-gradient(145deg, rgba(135, 50, 255, 0.08), rgba(255, 74, 180, 0.05)),
+    rgba(9, 11, 20, 0.96);
+  box-shadow: inset 0 0 0 1px rgba(86, 122, 255, 0.06);
+}
+
+.player-fm-header-top,
+.player-fm-identity {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.player-fm-header-table {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid rgba(145, 92, 255, 0.18);
+  background: rgba(145, 92, 255, 0.08);
+}
+
+.player-fm-header-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: rgba(145, 92, 255, 0.08);
+}
+
+.player-fm-header-cell,
+.player-fm-rating-box {
+  display: grid;
+  gap: 3px;
+  padding: 7px 10px 8px;
+  border-radius: 10px;
+  border: 0;
+  background: rgba(17, 18, 30, 0.98);
+}
+
+.player-fm-header-cell span,
+.player-fm-rating-box span,
+.player-fm-panel-header span {
+  color: rgba(247, 245, 239, 0.62);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.player-fm-header-cell strong {
+  font-size: 0.96rem;
+  line-height: 1.25;
+}
+
+.player-fm-rating-stack {
+  display: grid;
+  grid-template-columns: repeat(3, 88px);
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.player-fm-rating-box {
+  min-height: 78px;
+  padding: 8px 10px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.player-fm-rating-box strong {
+  font-size: 1.9rem;
+  text-align: center;
+  line-height: 1;
+  align-self: center;
+}
+
+.player-fm-rating-box.is-primary {
+  border-color: rgba(255, 74, 180, 0.28);
+  background: linear-gradient(145deg, rgba(255, 74, 180, 0.12), rgba(88, 119, 255, 0.08));
 }
 
 .player-pill-row {
@@ -950,23 +1045,170 @@ select {
 .player-pill {
   display: inline-flex;
   align-items: center;
-  min-height: 38px;
+  min-height: 34px;
   padding: 0 14px;
   border-radius: 999px;
   background: rgba(255, 176, 103, 0.14);
   border: 1px solid rgba(255, 176, 103, 0.24);
+  font-size: 0.92rem;
 }
 
-.attributes-grid {
+.player-section {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
+  gap: 8px;
 }
 
-.player-profile-grid {
+.player-section-surface {
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.player-fm-layout {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  grid-template-areas:
+    'overview overview'
+    'core physical'
+    'psychology tactical';
   gap: 12px;
+  align-items: stretch;
+}
+
+.player-fm-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(104, 86, 255, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01)),
+    rgba(8, 10, 18, 0.96);
+  box-shadow: inset 0 0 0 1px rgba(255, 74, 180, 0.05);
+}
+
+.player-fm-panel-overview,
+.player-fm-panel-tactical {
+  grid-column: auto;
+}
+
+.player-fm-panel-overview {
+  grid-area: overview;
+}
+
+.player-fm-panel-core {
+  grid-area: core;
+}
+
+.player-fm-panel-physical {
+  grid-area: physical;
+}
+
+.player-fm-panel-psychology {
+  grid-area: psychology;
+}
+
+.player-fm-panel-tactical {
+  grid-area: tactical;
+}
+
+.player-fm-panel-header {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+.player-fm-table {
+  display: grid;
+  gap: 1px;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.player-fm-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(70px, auto) minmax(110px, 1fr) minmax(70px, auto);
+  gap: 0;
+  background: rgba(11, 13, 24, 0.98);
+}
+
+.player-fm-table-overview .player-fm-row {
+  grid-template-columns: minmax(156px, 1.2fr) minmax(118px, auto) minmax(156px, 1.2fr) minmax(
+      118px,
+      auto
+    );
+}
+
+.player-fm-row span,
+.player-fm-row strong {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
+
+.player-fm-row span {
+  color: rgba(247, 245, 239, 0.64);
+  font-size: 0.78rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.player-fm-row strong {
+  justify-content: flex-end;
+  color: #f7f5ef;
+  font-size: 0.9rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.player-fm-table-overview .player-fm-row strong {
+  white-space: nowrap;
+}
+
+.player-fm-row > *:last-child {
+  border-right: 0;
+}
+
+.player-fm-empty {
+  color: rgba(247, 245, 239, 0.32) !important;
+}
+
+.player-fm-bars {
+  display: grid;
+  gap: 8px;
+}
+
+.player-fm-bar-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(0, 1.8fr) 42px;
+  gap: 10px;
+  align-items: center;
+}
+
+.player-fm-bar-row span {
+  color: rgba(247, 245, 239, 0.68);
+  font-size: 0.8rem;
+}
+
+.player-fm-bar-row strong {
+  text-align: right;
+  font-size: 0.92rem;
+}
+
+.player-fm-bar-track {
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.player-fm-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff4ab4 0%, #8b5dff 55%, #42d4ff 100%);
 }
 
 .season-dashboard-hero,
@@ -990,20 +1232,69 @@ select {
 
 .dashboard-hero-header {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.95fr);
+  gap: 22px;
   align-items: start;
 }
 
-.dashboard-hero-actions {
+.dashboard-hero-copy {
   display: grid;
-  gap: 12px;
-  justify-items: stretch;
+  gap: 14px;
 }
 
-.dashboard-hero-actions .team-badge {
-  justify-self: stretch;
-  text-align: center;
+.dashboard-hero-copy h2 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.dashboard-hero-actions,
+.dashboard-action-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.dashboard-round-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px 20px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 176, 103, 0.28);
+  background:
+    linear-gradient(160deg, rgba(255, 176, 103, 0.12), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.02);
+}
+
+.dashboard-round-card span,
+.dashboard-round-card p {
+  margin: 0;
+}
+
+.dashboard-round-card span {
+  color: rgba(247, 245, 239, 0.68);
+  font-size: 0.9rem;
+}
+
+.dashboard-round-card strong {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.dashboard-round-card p {
+  color: rgba(247, 245, 239, 0.6);
+  font-size: 0.9rem;
+}
+
+.schedule-action-button-primary {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.schedule-action-button-danger {
+  color: rgba(247, 245, 239, 0.88);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.summary-card-hero {
+  padding: 20px 22px;
 }
 
 .autosave-indicator {
@@ -1187,6 +1478,41 @@ select {
 
   .dashboard-hero-header {
     grid-template-columns: 1fr;
+  }
+
+  .player-fm-header,
+  .player-fm-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'overview'
+      'core'
+      'physical'
+      'psychology'
+      'tactical';
+  }
+
+  .player-fm-header-top {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .player-fm-header-row,
+  .player-fm-rating-stack {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .player-fm-row {
+    grid-template-columns: minmax(92px, 1fr) minmax(64px, auto) minmax(92px, 1fr) minmax(64px, auto);
+  }
+
+  .player-fm-table-overview .player-fm-row {
+    grid-template-columns: minmax(92px, 1fr) minmax(84px, auto) minmax(92px, 1fr) minmax(84px, auto);
+  }
+
+  .player-fm-panel-overview,
+  .player-fm-panel-tactical {
+    grid-column: auto;
   }
 
   .form-inline-grid,

@@ -12,6 +12,9 @@ import type {
   MatchSummaryShape,
   MatchTeamSummary,
   PlayerBodyType,
+  PlayerAwardShape,
+  PlayerCareerHistoryEntryShape,
+  PlayerCareerTotalsShape,
   PlayerDominantHand,
   PlayerHealthDetailsShape,
   PlayerHealthSummaryShape,
@@ -20,6 +23,7 @@ import type {
   PlayerHiddenSummaryShape,
   PlayerPhysicalSummaryShape,
   PlayerPosition,
+  PlayerSeasonStatEntryShape,
   PlayerSummaryShape,
   SeasonFullSimulationResponseShape,
   SeasonNextRoundResponseShape,
@@ -60,6 +64,10 @@ export type PlayerPhysicalSummary = PlayerPhysicalSummaryShape;
 export type PlayerHealthSummary = PlayerHealthSummaryShape;
 export type PlayerHiddenSummary = PlayerHiddenSummaryShape;
 export type PlayerHealthDetails = PlayerHealthDetailsShape;
+export type PlayerCareerHistoryEntry = PlayerCareerHistoryEntryShape;
+export type PlayerSeasonStatEntry = PlayerSeasonStatEntryShape;
+export type PlayerCareerTotals = PlayerCareerTotalsShape;
+export type PlayerAward = PlayerAwardShape;
 
 export type CreatePlayerPayload = CreatePlayerPayloadShape;
 

@@ -1,13 +1,20 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   PLAYER_BODY_TYPES,
+  PLAYER_CAREER_STATUSES,
+  PLAYER_DEVELOPMENT_FOCUS,
   PLAYER_DOMINANT_HANDS,
   PLAYER_INJURY_SEVERITIES,
   PLAYER_INJURY_STATUSES,
   PLAYER_POSITIONS,
 } from '@basketball-manager/shared';
 import type {
+  PlayerAwardShape,
   PlayerBodyType,
+  PlayerCareerHistoryEntryShape,
+  PlayerCareerTotalsShape,
+  PlayerCareerStatus,
+  PlayerDevelopmentFocus,
   PlayerDominantHand,
   PlayerHealthDetailsShape,
   PlayerHealthSummaryShape,
@@ -17,6 +24,7 @@ import type {
   PlayerInjuryStatus,
   PlayerPhysicalSummaryShape,
   PlayerPsychologySummaryShape,
+  PlayerSeasonStatEntryShape,
   PlayerSummaryShape,
   PlayerTacticalSummaryShape,
   PlayerTeamSummaryShape,
@@ -32,6 +40,185 @@ export class PlayerTeamSummaryDto implements PlayerTeamSummaryShape {
 
   @ApiProperty({ example: 'CSKA' })
   shortName!: string;
+}
+
+export class PlayerCareerHistoryEntryDto implements PlayerCareerHistoryEntryShape {
+  @ApiProperty({ example: 'cmoxxxxy0001abcd1234efgh' })
+  id!: string;
+
+  @ApiProperty({ example: '2025/26' })
+  season!: string;
+
+  @ApiProperty({ example: 'VTB United League' })
+  league!: string;
+
+  @ApiProperty({ example: 'Starter' })
+  role!: string;
+
+  @ApiPropertyOptional({ example: 8, nullable: true })
+  jerseyNumber!: number | null;
+
+  @ApiProperty({ enum: PLAYER_CAREER_STATUSES, example: 'ACTIVE' })
+  status!: PlayerCareerStatus;
+
+  @ApiPropertyOptional({ example: '2025-08-01T00:00:00.000Z', nullable: true })
+  transferDate!: string | null;
+
+  @ApiPropertyOptional({ example: 'Signed with first team', nullable: true })
+  transferReason!: string | null;
+
+  @ApiProperty({ type: [String], example: ['League Champion'] })
+  achievements!: string[];
+
+  @ApiPropertyOptional({ type: PlayerTeamSummaryDto, nullable: true })
+  team!: PlayerTeamSummaryDto | null;
+}
+
+export class PlayerAwardDto implements PlayerAwardShape {
+  @ApiProperty({ example: 'cmoxxxxy0003abcd1234mnop' })
+  id!: string;
+
+  @ApiProperty({ example: '2025/26' })
+  season!: string;
+
+  @ApiProperty({ example: 'League MVP' })
+  awardType!: string;
+
+  @ApiProperty({ example: 'VTB United League' })
+  league!: string;
+
+  @ApiPropertyOptional({ example: 'Best player of the regular season', nullable: true })
+  description!: string | null;
+
+  @ApiPropertyOptional({ type: PlayerTeamSummaryDto, nullable: true })
+  team!: PlayerTeamSummaryDto | null;
+}
+
+export class PlayerSeasonStatEntryDto implements PlayerSeasonStatEntryShape {
+  @ApiProperty({ example: 'cmoxxxxy0002abcd1234ijkl' })
+  id!: string;
+
+  @ApiProperty({ example: '2025/26' })
+  season!: string;
+
+  @ApiProperty({ example: 'VTB United League' })
+  league!: string;
+
+  @ApiPropertyOptional({ type: PlayerTeamSummaryDto, nullable: true })
+  team!: PlayerTeamSummaryDto | null;
+
+  @ApiProperty({ example: 34, minimum: 0 })
+  gamesPlayed!: number;
+
+  @ApiProperty({ example: 27.6, minimum: 0 })
+  minutesPerGame!: number;
+
+  @ApiProperty({ example: 14.8, minimum: 0 })
+  pointsPerGame!: number;
+
+  @ApiProperty({ example: 5.2, minimum: 0 })
+  reboundsPerGame!: number;
+
+  @ApiProperty({ example: 4.9, minimum: 0 })
+  assistsPerGame!: number;
+
+  @ApiProperty({ example: 1.3, minimum: 0 })
+  stealsPerGame!: number;
+
+  @ApiProperty({ example: 0.4, minimum: 0 })
+  blocksPerGame!: number;
+
+  @ApiProperty({ example: 2.1, minimum: 0 })
+  turnoversPerGame!: number;
+
+  @ApiProperty({ example: 2.4, minimum: 0 })
+  foulsPerGame!: number;
+
+  @ApiProperty({ example: 47.8, minimum: 0, maximum: 100 })
+  fgPct!: number;
+
+  @ApiProperty({ example: 36.4, minimum: 0, maximum: 100 })
+  threePct!: number;
+
+  @ApiProperty({ example: 82.1, minimum: 0, maximum: 100 })
+  ftPct!: number;
+
+  @ApiProperty({ example: 17.6, minimum: 0 })
+  efficiencyRating!: number;
+
+  @ApiProperty({ example: 24, minimum: 0 })
+  gamesStarted!: number;
+}
+
+export class PlayerCareerTotalsDto implements PlayerCareerTotalsShape {
+  @ApiProperty({ example: 4, minimum: 0 })
+  seasonsCount!: number;
+
+  @ApiProperty({ example: 138, minimum: 0 })
+  gamesPlayed!: number;
+
+  @ApiProperty({ example: 97, minimum: 0 })
+  gamesStarted!: number;
+
+  @ApiProperty({ example: 3568.4, minimum: 0 })
+  totalMinutes!: number;
+
+  @ApiProperty({ example: 1824.6, minimum: 0 })
+  totalPoints!: number;
+
+  @ApiProperty({ example: 604.1, minimum: 0 })
+  totalRebounds!: number;
+
+  @ApiProperty({ example: 488.3, minimum: 0 })
+  totalAssists!: number;
+
+  @ApiProperty({ example: 152.7, minimum: 0 })
+  totalSteals!: number;
+
+  @ApiProperty({ example: 43.8, minimum: 0 })
+  totalBlocks!: number;
+
+  @ApiProperty({ example: 271.5, minimum: 0 })
+  totalTurnovers!: number;
+
+  @ApiProperty({ example: 318.4, minimum: 0 })
+  totalFouls!: number;
+
+  @ApiProperty({ example: 25.9, minimum: 0 })
+  averageMinutesPerGame!: number;
+
+  @ApiProperty({ example: 13.2, minimum: 0 })
+  averagePointsPerGame!: number;
+
+  @ApiProperty({ example: 4.4, minimum: 0 })
+  averageReboundsPerGame!: number;
+
+  @ApiProperty({ example: 3.5, minimum: 0 })
+  averageAssistsPerGame!: number;
+
+  @ApiProperty({ example: 1.1, minimum: 0 })
+  averageStealsPerGame!: number;
+
+  @ApiProperty({ example: 0.3, minimum: 0 })
+  averageBlocksPerGame!: number;
+
+  @ApiProperty({ example: 2.0, minimum: 0 })
+  averageTurnoversPerGame!: number;
+
+  @ApiProperty({ example: 2.3, minimum: 0 })
+  averageFoulsPerGame!: number;
+
+  @ApiProperty({ example: 47.8, minimum: 0, maximum: 100 })
+  fgPct!: number;
+
+  @ApiProperty({ example: 36.4, minimum: 0, maximum: 100 })
+  threePct!: number;
+
+  @ApiProperty({ example: 82.1, minimum: 0, maximum: 100 })
+  ftPct!: number;
+
+  @ApiProperty({ example: 17.6, minimum: 0 })
+  efficiencyRating!: number;
 }
 
 export class PlayerPhysicalProfileDto implements PlayerPhysicalSummaryShape {
@@ -175,8 +362,26 @@ export class PlayerHiddenProfileDto implements PlayerHiddenSummaryShape {
   @ApiProperty({ example: 91, minimum: 1, maximum: 100 })
   potential!: number;
 
+  @ApiProperty({ example: 91, minimum: 1, maximum: 100 })
+  potentialAbility!: number;
+
   @ApiProperty({ example: 82, minimum: 1, maximum: 100 })
   currentAbility!: number;
+
+  @ApiProperty({ example: 84, minimum: 1, maximum: 100 })
+  growthRate!: number;
+
+  @ApiProperty({ enum: PLAYER_DEVELOPMENT_FOCUS, example: 'BALANCED' })
+  developmentFocus!: PlayerDevelopmentFocus;
+
+  @ApiProperty({ example: 23, minimum: 16, maximum: 40 })
+  peakStartAge!: number;
+
+  @ApiProperty({ example: 28, minimum: 16, maximum: 40 })
+  peakEndAge!: number;
+
+  @ApiProperty({ example: 31, minimum: 16, maximum: 45 })
+  declineStartAge!: number;
 
   @ApiProperty({ example: 84, minimum: 1, maximum: 100 })
   professionalism!: number;
@@ -275,6 +480,18 @@ export class PlayerResponseDto implements PlayerSummaryShape {
 
   @ApiPropertyOptional({ type: PlayerTeamSummaryDto, nullable: true })
   team?: PlayerTeamSummaryDto | null;
+
+  @ApiPropertyOptional({ type: [PlayerCareerHistoryEntryDto] })
+  careerHistory?: PlayerCareerHistoryEntryDto[];
+
+  @ApiPropertyOptional({ type: [PlayerSeasonStatEntryDto] })
+  seasonStats?: PlayerSeasonStatEntryDto[];
+
+  @ApiPropertyOptional({ type: PlayerCareerTotalsDto, nullable: true })
+  careerTotals?: PlayerCareerTotalsDto | null;
+
+  @ApiPropertyOptional({ type: [PlayerAwardDto] })
+  awards?: PlayerAwardDto[];
 }
 
 export class PlayerListResponseDto {

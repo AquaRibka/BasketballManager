@@ -643,7 +643,7 @@ export function SeasonPage() {
     <>
       <section className="panel season-dashboard-hero">
         <div className="dashboard-hero-header">
-          <div>
+          <div className="dashboard-hero-copy">
             <p className="section-kicker">Career Dashboard</p>
             <h2>{saveState.save.name}</h2>
             <p className="section-copy">
@@ -659,55 +659,60 @@ export function SeasonPage() {
             </div>
           </div>
           <div className="dashboard-hero-actions">
-            <button
-              className="hero-home-link schedule-action-button"
-              type="button"
-              disabled={!canSimulateSeason || isSimulating || isSimulatingSeason}
-              onClick={() => {
-                void handleSimulateCurrentRound();
-              }}
-            >
-              {isSimulating ? 'Симулируем раунд...' : 'Симулировать текущий раунд'}
-            </button>
-            <button
-              className="ghost-button schedule-action-button"
-              type="button"
-              disabled={!canSimulateSeason || isSimulatingSeason || isSimulating}
-              onClick={() => {
-                void handleSimulateWholeSeason();
-              }}
-            >
-              {isSimulatingSeason ? 'Симулируем сезон...' : 'Быстрая симуляция сезона'}
-            </button>
-            {canStartNextSeason ? (
+            <div className="dashboard-round-card">
+              <span>Текущий раунд</span>
+              <strong>R{saveState.season.currentRound}</strong>
+              <p>
+                {completedRounds}/{saveState.season.totalRounds} раундов завершено
+              </p>
+            </div>
+            <div className="dashboard-action-stack">
               <button
-                className="hero-home-link schedule-action-button"
+                className="hero-home-link schedule-action-button schedule-action-button-primary"
                 type="button"
-                disabled={isStartingNextSeason || isSimulating || isSimulatingSeason}
+                disabled={!canSimulateSeason || isSimulating || isSimulatingSeason}
                 onClick={() => {
-                  void handleStartNextSeason();
+                  void handleSimulateCurrentRound();
                 }}
               >
-                {isStartingNextSeason ? 'Создаём новый сезон...' : 'Перейти к следующему сезону'}
+                {isSimulating ? 'Симулируем раунд...' : 'Симулировать текущий раунд'}
               </button>
-            ) : null}
-            {isDevAdminMode ? (
               <button
                 className="ghost-button schedule-action-button"
                 type="button"
-                disabled={
-                  isDeletingSave || isSimulating || isSimulatingSeason || isStartingNextSeason
-                }
+                disabled={!canSimulateSeason || isSimulatingSeason || isSimulating}
                 onClick={() => {
-                  void handleDeleteSave();
+                  void handleSimulateWholeSeason();
                 }}
               >
-                {isDeletingSave ? 'Удаляем сохранение...' : 'Удалить сохранение'}
+                {isSimulatingSeason ? 'Симулируем сезон...' : 'Быстрая симуляция сезона'}
               </button>
-            ) : null}
-            <div className="team-badge standings-badge">
-              <span>Current Round</span>
-              <strong>R{saveState.season.currentRound}</strong>
+              {canStartNextSeason ? (
+                <button
+                  className="hero-home-link schedule-action-button"
+                  type="button"
+                  disabled={isStartingNextSeason || isSimulating || isSimulatingSeason}
+                  onClick={() => {
+                    void handleStartNextSeason();
+                  }}
+                >
+                  {isStartingNextSeason ? 'Создаём новый сезон...' : 'Перейти к следующему сезону'}
+                </button>
+              ) : null}
+              {isDevAdminMode ? (
+                <button
+                  className="ghost-button schedule-action-button schedule-action-button-danger"
+                  type="button"
+                  disabled={
+                    isDeletingSave || isSimulating || isSimulatingSeason || isStartingNextSeason
+                  }
+                  onClick={() => {
+                    void handleDeleteSave();
+                  }}
+                >
+                  {isDeletingSave ? 'Удаляем сохранение...' : 'Удалить сохранение'}
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -719,7 +724,7 @@ export function SeasonPage() {
         ) : null}
 
         <div className="dashboard-summary-grid">
-          <article className="summary-card summary-card-accent">
+          <article className="summary-card summary-card-accent summary-card-hero">
             <span>Selected team</span>
             <strong>{saveState.save.teamName}</strong>
             <p>{saveState.standings.items.length} клубов в лиге · текущий save активен локально</p>

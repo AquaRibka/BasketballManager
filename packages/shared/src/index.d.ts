@@ -6,6 +6,15 @@ export const OVERALL_V1_MAX: number;
 export const PLAYER_POSITIONS: readonly ['PG', 'SG', 'SF', 'PF', 'C'];
 export const PLAYER_DOMINANT_HANDS: readonly ['LEFT', 'RIGHT', 'AMBIDEXTROUS'];
 export const PLAYER_BODY_TYPES: readonly ['SLIM', 'ATHLETIC', 'STRONG', 'HEAVY'];
+export const PLAYER_DEVELOPMENT_FOCUS: readonly [
+  'BALANCED',
+  'SCORING',
+  'PLAYMAKING',
+  'DEFENSE',
+  'ATHLETICISM',
+  'REBOUNDING',
+];
+export const PLAYER_CAREER_STATUSES: readonly ['ACTIVE', 'FORMER', 'FREE_AGENT'];
 export const PLAYER_INJURY_SEVERITIES: readonly ['MINOR', 'MODERATE', 'MAJOR', 'SEVERE'];
 export const PLAYER_INJURY_STATUSES: readonly ['ACTIVE', 'RECOVERING', 'RECOVERED'];
 export const MATCH_STATUSES: readonly ['SCHEDULED', 'COMPLETED'];
@@ -97,6 +106,14 @@ export const SIMULATION_CONTRACT_VERSION: 'v1';
 export type PlayerPosition = 'PG' | 'SG' | 'SF' | 'PF' | 'C';
 export type PlayerDominantHand = 'LEFT' | 'RIGHT' | 'AMBIDEXTROUS';
 export type PlayerBodyType = 'SLIM' | 'ATHLETIC' | 'STRONG' | 'HEAVY';
+export type PlayerDevelopmentFocus =
+  | 'BALANCED'
+  | 'SCORING'
+  | 'PLAYMAKING'
+  | 'DEFENSE'
+  | 'ATHLETICISM'
+  | 'REBOUNDING';
+export type PlayerCareerStatus = 'ACTIVE' | 'FORMER' | 'FREE_AGENT';
 export type PlayerInjurySeverity = 'MINOR' | 'MODERATE' | 'MAJOR' | 'SEVERE';
 export type PlayerInjuryStatus = 'ACTIVE' | 'RECOVERING' | 'RECOVERED';
 export type MatchStatus = 'SCHEDULED' | 'COMPLETED';
@@ -177,6 +194,48 @@ export interface PlayerSeasonStatLine {
   reboundRate?: number;
   plusMinus?: number;
   efficiencyRating?: number;
+}
+
+export interface PlayerSeasonStatEntryShape extends PlayerSeasonStatLine {
+  id: string;
+  season: string;
+  league: string;
+  team: PlayerTeamSummaryShape | null;
+}
+
+export interface PlayerCareerTotalsShape {
+  seasonsCount: number;
+  gamesPlayed: number;
+  gamesStarted: number;
+  totalMinutes: number;
+  totalPoints: number;
+  totalRebounds: number;
+  totalAssists: number;
+  totalSteals: number;
+  totalBlocks: number;
+  totalTurnovers: number;
+  totalFouls: number;
+  averageMinutesPerGame: number;
+  averagePointsPerGame: number;
+  averageReboundsPerGame: number;
+  averageAssistsPerGame: number;
+  averageStealsPerGame: number;
+  averageBlocksPerGame: number;
+  averageTurnoversPerGame: number;
+  averageFoulsPerGame: number;
+  fgPct: number;
+  threePct: number;
+  ftPct: number;
+  efficiencyRating: number;
+}
+
+export interface PlayerAwardShape {
+  id: string;
+  season: string;
+  awardType: string;
+  league: string;
+  description: string | null;
+  team: PlayerTeamSummaryShape | null;
 }
 
 export interface ApiValidationIssue {
@@ -302,6 +361,19 @@ export interface PlayerHealthDetailsShape {
   injuryHistory: PlayerInjuryHistoryEntryShape[];
 }
 
+export interface PlayerCareerHistoryEntryShape {
+  id: string;
+  season: string;
+  league: string;
+  role: string;
+  jerseyNumber: number | null;
+  status: PlayerCareerStatus;
+  transferDate: string | null;
+  transferReason: string | null;
+  achievements: string[];
+  team: PlayerTeamSummaryShape | null;
+}
+
 export interface PlayerTacticalSummaryShape {
   basketballIQ: number;
   shotSelection: number;
@@ -319,7 +391,13 @@ export interface PlayerTacticalSummaryShape {
 
 export interface PlayerHiddenSummaryShape {
   potential: number;
+  potentialAbility: number;
   currentAbility: number;
+  growthRate: number;
+  developmentFocus: PlayerDevelopmentFocus;
+  peakStartAge: number;
+  peakEndAge: number;
+  declineStartAge: number;
   professionalism: number;
   loyalty: number;
   consistency: number;
@@ -361,6 +439,10 @@ export interface PlayerTeamSummaryShape {
 
 export interface PlayerSummaryShape extends TeamPlayerShape {
   team?: PlayerTeamSummaryShape | null;
+  careerHistory?: PlayerCareerHistoryEntryShape[];
+  seasonStats?: PlayerSeasonStatEntryShape[];
+  careerTotals?: PlayerCareerTotalsShape | null;
+  awards?: PlayerAwardShape[];
 }
 
 export interface TeamDetailsShape extends TeamSummaryShape {

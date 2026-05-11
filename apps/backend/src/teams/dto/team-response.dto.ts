@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type {
   PlayerBodyType,
+  PlayerDevelopmentFocus,
   PlayerDominantHand,
   PlayerHealthSummaryShape,
   PlayerHiddenSummaryShape,
@@ -14,6 +15,7 @@ import type {
 } from '@basketball-manager/shared';
 import {
   PLAYER_BODY_TYPES,
+  PLAYER_DEVELOPMENT_FOCUS,
   PLAYER_DOMINANT_HANDS,
   PLAYER_POSITIONS,
 } from '@basketball-manager/shared';
@@ -160,8 +162,26 @@ export class TeamPlayerHiddenProfileDto implements PlayerHiddenSummaryShape {
   @ApiProperty({ example: 91, minimum: 1, maximum: 100 })
   potential!: number;
 
+  @ApiProperty({ example: 91, minimum: 1, maximum: 100 })
+  potentialAbility!: number;
+
   @ApiProperty({ example: 82, minimum: 1, maximum: 100 })
   currentAbility!: number;
+
+  @ApiProperty({ example: 84, minimum: 1, maximum: 100 })
+  growthRate!: number;
+
+  @ApiProperty({ enum: PLAYER_DEVELOPMENT_FOCUS, example: 'BALANCED' })
+  developmentFocus!: PlayerDevelopmentFocus;
+
+  @ApiProperty({ example: 23, minimum: 16, maximum: 40 })
+  peakStartAge!: number;
+
+  @ApiProperty({ example: 28, minimum: 16, maximum: 40 })
+  peakEndAge!: number;
+
+  @ApiProperty({ example: 31, minimum: 16, maximum: 45 })
+  declineStartAge!: number;
 
   @ApiProperty({ example: 84, minimum: 1, maximum: 100 })
   professionalism!: number;
