@@ -6,8 +6,6 @@ import {
   type PlayerPosition,
 } from '@basketball-manager/shared';
 
-const PLAYER_OVERALL_MIN = 1;
-const PLAYER_OVERALL_MAX = 100;
 export const PLAYER_OVERALL_POSITIONS = PLAYER_POSITIONS;
 
 export type PlayerOverallPosition = PlayerPosition;
