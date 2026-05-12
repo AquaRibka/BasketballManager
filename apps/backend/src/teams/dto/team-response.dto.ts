@@ -1,12 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type {
+  PlayerAudienceSentiment,
   PlayerBodyType,
   PlayerDevelopmentFocus,
   PlayerDominantHand,
   PlayerHealthSummaryShape,
   PlayerHiddenSummaryShape,
+  PlayerMediaStatus,
   PlayerPhysicalSummaryShape,
   PlayerPsychologySummaryShape,
+  PlayerSocialProfile,
+  PlayerSocialPlatform,
   PlayerTacticalSummaryShape,
   TeamDetailsShape,
   TeamPlayerShape,
@@ -14,10 +18,13 @@ import type {
   TeamSummaryShape,
 } from '@basketball-manager/shared';
 import {
+  PLAYER_AUDIENCE_SENTIMENTS,
   PLAYER_BODY_TYPES,
   PLAYER_DEVELOPMENT_FOCUS,
   PLAYER_DOMINANT_HANDS,
+  PLAYER_MEDIA_STATUSES,
   PLAYER_POSITIONS,
+  PLAYER_SOCIAL_PLATFORMS,
 } from '@basketball-manager/shared';
 import { PlayerPosition } from '@prisma/client';
 
@@ -158,6 +165,41 @@ export class TeamPlayerTacticalProfileDto implements PlayerTacticalSummaryShape 
   discipline!: number;
 }
 
+export class TeamPlayerSocialProfileDto implements PlayerSocialProfile {
+  @ApiProperty({ enum: PLAYER_SOCIAL_PLATFORMS, example: 'INSTAGRAM' })
+  platform!: PlayerSocialPlatform;
+
+  @ApiProperty({ example: '@ilya_melnikov' })
+  nickname!: string;
+
+  @ApiProperty({ example: 58200, minimum: 0 })
+  followersCount!: number;
+
+  @ApiProperty({ example: 1800 })
+  followerGrowthWeekly!: number;
+
+  @ApiProperty({ example: 5.2, minimum: 0, maximum: 100 })
+  engagementRate!: number;
+
+  @ApiProperty({ enum: PLAYER_AUDIENCE_SENTIMENTS, example: 'POSITIVE' })
+  audienceSentiment!: PlayerAudienceSentiment;
+
+  @ApiProperty({ enum: PLAYER_MEDIA_STATUSES, example: 'LOCAL_BUZZ' })
+  mediaStatus!: PlayerMediaStatus;
+
+  @ApiProperty({ example: 71, minimum: 1, maximum: 100 })
+  hypeScore!: number;
+
+  @ApiProperty({ example: 19, minimum: 1, maximum: 100 })
+  controversyScore!: number;
+
+  @ApiProperty({ example: 73, minimum: 1, maximum: 100 })
+  marketabilityScore!: number;
+
+  @ApiProperty({ example: '2026-05-12T09:30:00.000Z' })
+  lastUpdatedAt!: string;
+}
+
 export class TeamPlayerHiddenProfileDto implements PlayerHiddenSummaryShape {
   @ApiProperty({ example: 91, minimum: 1, maximum: 100 })
   potential!: number;
@@ -268,6 +310,9 @@ export class TeamPlayerDto implements TeamPlayerShape {
 
   @ApiPropertyOptional({ type: TeamPlayerTacticalProfileDto, nullable: true })
   tacticalProfile!: TeamPlayerTacticalProfileDto | null;
+
+  @ApiPropertyOptional({ type: TeamPlayerSocialProfileDto, nullable: true })
+  socialProfile!: TeamPlayerSocialProfileDto | null;
 
   @ApiPropertyOptional({ example: 'cmon3wd920000k7sbuepwfi6r', nullable: true })
   teamId!: string | null;

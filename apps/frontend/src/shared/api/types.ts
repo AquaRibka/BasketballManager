@@ -18,6 +18,7 @@ import type {
   PlayerHiddenSummaryShape,
   PlayerPhysicalSummaryShape,
   PlayerSeasonStatEntryShape,
+  PlayerSocialDetailsShape,
   PlayerSummaryShape,
   SeasonFullSimulationResponseShape,
   SeasonNextRoundResponseShape,
@@ -57,6 +58,7 @@ export type PlayerPhysicalSummary = PlayerPhysicalSummaryShape;
 export type PlayerHealthSummary = PlayerHealthSummaryShape;
 export type PlayerHiddenSummary = PlayerHiddenSummaryShape;
 export type PlayerHealthDetails = PlayerHealthDetailsShape;
+export type PlayerSocialDetails = PlayerSocialDetailsShape;
 export type PlayerCareerHistoryEntry = PlayerCareerHistoryEntryShape;
 export type PlayerSeasonStatEntry = PlayerSeasonStatEntryShape;
 export type PlayerCareerTotals = PlayerCareerTotalsShape;

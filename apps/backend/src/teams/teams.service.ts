@@ -4,7 +4,12 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import type {
+  PlayerAudienceSentiment,
+  PlayerMediaStatus,
+  PlayerSocialPlatform,
+  Prisma,
+} from '@prisma/client';
 import { VTB_LEAGUE_SHORT_NAMES } from '../leagues/vtb-league';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTeamDto } from './dto/create-team.dto';
@@ -95,6 +100,21 @@ export class TeamsService {
                 discipline: true,
               },
             },
+            socialProfile: {
+              select: {
+                platform: true,
+                nickname: true,
+                followersCount: true,
+                followerGrowthWeekly: true,
+                engagementRate: true,
+                audienceSentiment: true,
+                mediaStatus: true,
+                hypeScore: true,
+                controversyScore: true,
+                marketabilityScore: true,
+                lastUpdatedAt: true,
+              },
+            },
           },
           orderBy: [{ overall: 'desc' }, { name: 'asc' }],
         },
@@ -178,6 +198,21 @@ export class TeamsService {
             pickAndRollDefense: true,
             helpDefense: true,
             discipline: true,
+          },
+        },
+        socialProfile: {
+          select: {
+            platform: true,
+            nickname: true,
+            followersCount: true,
+            followerGrowthWeekly: true,
+            engagementRate: true,
+            audienceSentiment: true,
+            mediaStatus: true,
+            hypeScore: true,
+            controversyScore: true,
+            marketabilityScore: true,
+            lastUpdatedAt: true,
           },
         },
       },
@@ -340,6 +375,19 @@ export class TeamsService {
       helpDefense: number;
       discipline: number;
     } | null;
+    socialProfile: {
+      platform: PlayerSocialPlatform;
+      nickname: string;
+      followersCount: number;
+      followerGrowthWeekly: number;
+      engagementRate: number;
+      audienceSentiment: PlayerAudienceSentiment;
+      mediaStatus: PlayerMediaStatus;
+      hypeScore: number;
+      controversyScore: number;
+      marketabilityScore: number;
+      lastUpdatedAt: Date;
+    } | null;
   }) {
     return {
       ...player,
@@ -373,6 +421,21 @@ export class TeamsService {
             pickAndRollDefense: player.tacticalAttributes.pickAndRollDefense,
             helpDefense: player.tacticalAttributes.helpDefense,
             discipline: player.tacticalAttributes.discipline,
+          }
+        : null,
+      socialProfile: player.socialProfile
+        ? {
+            platform: player.socialProfile.platform,
+            nickname: player.socialProfile.nickname,
+            followersCount: player.socialProfile.followersCount,
+            followerGrowthWeekly: player.socialProfile.followerGrowthWeekly,
+            engagementRate: player.socialProfile.engagementRate,
+            audienceSentiment: player.socialProfile.audienceSentiment,
+            mediaStatus: player.socialProfile.mediaStatus,
+            hypeScore: player.socialProfile.hypeScore,
+            controversyScore: player.socialProfile.controversyScore,
+            marketabilityScore: player.socialProfile.marketabilityScore,
+            lastUpdatedAt: player.socialProfile.lastUpdatedAt.toISOString(),
           }
         : null,
     };

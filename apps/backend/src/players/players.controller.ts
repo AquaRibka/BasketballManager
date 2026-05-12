@@ -16,6 +16,7 @@ import {
   PlayerHealthDetailsResponseDto,
   PlayerListResponseDto,
   PlayerResponseDto,
+  PlayerSocialDetailsResponseDto,
 } from './dto/player-response.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
 import { PlayersService } from './players.service';
@@ -50,6 +51,16 @@ export class PlayersController {
   @ApiNotFoundResponse({ description: 'Player not found' })
   getPlayerHealthById(@Param() params: CuidParamDto) {
     return this.playersService.getPlayerHealthById(params.id);
+  }
+
+  @Get(':id/social')
+  @ApiOperation({ summary: 'Get player social profile' })
+  @ApiParam({ name: 'id', description: 'Player cuid', example: 'cmon3yv4y0003qfsbfdn5nihz' })
+  @ApiOkResponse({ type: PlayerSocialDetailsResponseDto })
+  @ApiBadRequestResponse({ description: 'The provided player id is invalid' })
+  @ApiNotFoundResponse({ description: 'Player not found' })
+  getPlayerSocialById(@Param() params: CuidParamDto) {
+    return this.playersService.getPlayerSocialProfileById(params.id);
   }
 
   @Post()

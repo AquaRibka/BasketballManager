@@ -15,6 +15,15 @@ export const PLAYER_DEVELOPMENT_FOCUS = [
   'REBOUNDING',
 ];
 export const PLAYER_CAREER_STATUSES = ['ACTIVE', 'FORMER', 'FREE_AGENT'];
+export const PLAYER_SOCIAL_PLATFORMS = ['INSTAGRAM', 'TIKTOK', 'X', 'YOUTUBE', 'TELEGRAM', 'VK'];
+export const PLAYER_AUDIENCE_SENTIMENTS = ['NEGATIVE', 'MIXED', 'POSITIVE', 'SUPPORTIVE'];
+export const PLAYER_MEDIA_STATUSES = [
+  'LOW_PROFILE',
+  'LOCAL_BUZZ',
+  'NATIONAL_NAME',
+  'LEAGUE_STAR',
+  'ICON',
+];
 export const PLAYER_INJURY_SEVERITIES = ['MINOR', 'MODERATE', 'MAJOR', 'SEVERE'];
 export const PLAYER_INJURY_STATUSES = ['ACTIVE', 'RECOVERING', 'RECOVERED'];
 export const MATCH_STATUSES = ['SCHEDULED', 'COMPLETED'];
@@ -38,17 +47,21 @@ export const PLAYER_ATTRIBUTE_GROUPS = [
   'health',
   'potential',
   'reputation',
+  'social',
 ];
 
 export const PLAYER_SOCIAL_PROFILE_FIELDS = [
-  'socialMediaPopularity',
-  'publicImage',
-  'controversyLevel',
-  'brandValue',
-  'communityPresence',
-  'pressHandling',
-  'fanAppeal',
-  'starPower',
+  'platform',
+  'nickname',
+  'followersCount',
+  'followerGrowthWeekly',
+  'engagementRate',
+  'audienceSentiment',
+  'mediaStatus',
+  'hypeScore',
+  'controversyScore',
+  'marketabilityScore',
+  'lastUpdatedAt',
 ];
 
 export const PLAYER_SEASON_STAT_FIELDS = [

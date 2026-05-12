@@ -1,5 +1,12 @@
 import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
-import type { PlayerCareerStatus, PlayerDevelopmentFocus, Prisma } from '@prisma/client';
+import type {
+  PlayerAudienceSentiment,
+  PlayerCareerStatus,
+  PlayerDevelopmentFocus,
+  PlayerMediaStatus,
+  PlayerSocialPlatform,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
@@ -71,6 +78,21 @@ export class PlayersService {
             pickAndRollDefense: true,
             helpDefense: true,
             discipline: true,
+          },
+        },
+        socialProfile: {
+          select: {
+            platform: true,
+            nickname: true,
+            followersCount: true,
+            followerGrowthWeekly: true,
+            engagementRate: true,
+            audienceSentiment: true,
+            mediaStatus: true,
+            hypeScore: true,
+            controversyScore: true,
+            marketabilityScore: true,
+            lastUpdatedAt: true,
           },
         },
         team: {
@@ -151,6 +173,21 @@ export class PlayersService {
             pickAndRollDefense: true,
             helpDefense: true,
             discipline: true,
+          },
+        },
+        socialProfile: {
+          select: {
+            platform: true,
+            nickname: true,
+            followersCount: true,
+            followerGrowthWeekly: true,
+            engagementRate: true,
+            audienceSentiment: true,
+            mediaStatus: true,
+            hypeScore: true,
+            controversyScore: true,
+            marketabilityScore: true,
+            lastUpdatedAt: true,
           },
         },
         team: {
@@ -290,6 +327,55 @@ export class PlayersService {
     };
   }
 
+  async getPlayerSocialProfileById(id: string) {
+    const player = await this.prisma.player.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        socialProfile: {
+          select: {
+            platform: true,
+            nickname: true,
+            followersCount: true,
+            followerGrowthWeekly: true,
+            engagementRate: true,
+            audienceSentiment: true,
+            mediaStatus: true,
+            hypeScore: true,
+            controversyScore: true,
+            marketabilityScore: true,
+            lastUpdatedAt: true,
+          },
+        },
+      },
+    });
+
+    if (!player) {
+      throw new NotFoundException('Player not found');
+    }
+
+    return {
+      playerId: player.id,
+      playerName: player.name,
+      socialProfile: player.socialProfile
+        ? {
+            platform: player.socialProfile.platform,
+            nickname: player.socialProfile.nickname,
+            followersCount: player.socialProfile.followersCount,
+            followerGrowthWeekly: player.socialProfile.followerGrowthWeekly,
+            engagementRate: player.socialProfile.engagementRate,
+            audienceSentiment: player.socialProfile.audienceSentiment,
+            mediaStatus: player.socialProfile.mediaStatus,
+            hypeScore: player.socialProfile.hypeScore,
+            controversyScore: player.socialProfile.controversyScore,
+            marketabilityScore: player.socialProfile.marketabilityScore,
+            lastUpdatedAt: player.socialProfile.lastUpdatedAt.toISOString(),
+          }
+        : null,
+    };
+  }
+
   async getPlayerHiddenProfileById(id: string) {
     const player = await this.prisma.player.findUnique({
       where: { id },
@@ -419,6 +505,21 @@ export class PlayersService {
                 discipline: true,
               },
             },
+            socialProfile: {
+              select: {
+                platform: true,
+                nickname: true,
+                followersCount: true,
+                followerGrowthWeekly: true,
+                engagementRate: true,
+                audienceSentiment: true,
+                mediaStatus: true,
+                hypeScore: true,
+                controversyScore: true,
+                marketabilityScore: true,
+                lastUpdatedAt: true,
+              },
+            },
             team: {
               select: {
                 id: true,
@@ -533,6 +634,21 @@ export class PlayersService {
                 pickAndRollDefense: true,
                 helpDefense: true,
                 discipline: true,
+              },
+            },
+            socialProfile: {
+              select: {
+                platform: true,
+                nickname: true,
+                followersCount: true,
+                followerGrowthWeekly: true,
+                engagementRate: true,
+                audienceSentiment: true,
+                mediaStatus: true,
+                hypeScore: true,
+                controversyScore: true,
+                marketabilityScore: true,
+                lastUpdatedAt: true,
               },
             },
             team: {
@@ -663,6 +779,9 @@ export class PlayersService {
       reputationProfile: {
         create: this.buildReputationProfileCreateInput(overall),
       },
+      socialProfile: {
+        create: this.buildSocialProfileCreateInput(createPlayerDto.name, overall),
+      },
       tacticalAttributes: {
         create: this.buildTacticalProfileCreateInput(),
       },
@@ -673,6 +792,7 @@ export class PlayersService {
     updatePlayerDto: UpdatePlayerDto,
     overall: number,
     existingPlayer: {
+      name: string;
       age: number;
       athleticism: number;
       defense: number;
@@ -688,9 +808,11 @@ export class PlayersService {
     const nextPosition = updatePlayerDto.position ?? existingPlayer.position;
     const nextAge = updatePlayerDto.age ?? existingPlayer.age;
     const nextPotential = updatePlayerDto.potential ?? existingPlayer.potential;
+    const nextName =
+      typeof updatePlayerDto.name === 'string' ? updatePlayerDto.name.trim() : existingPlayer.name;
 
     if (typeof updatePlayerDto.name === 'string') {
-      data.name = updatePlayerDto.name.trim();
+      data.name = nextName;
     }
 
     if (typeof updatePlayerDto.age === 'number') {
@@ -749,6 +871,12 @@ export class PlayersService {
       upsert: {
         create: this.buildReputationProfileCreateInput(overall),
         update: this.buildReputationProfileUpdateInput(overall),
+      },
+    };
+    data.socialProfile = {
+      upsert: {
+        create: this.buildSocialProfileCreateInput(nextName, overall),
+        update: this.buildSocialProfileUpdateInput(nextName, overall),
       },
     };
 
@@ -984,6 +1112,101 @@ export class PlayersService {
       foulDiscipline: 73,
       transitionInstincts: 71,
     };
+  }
+
+  private buildSocialProfileCreateInput(
+    playerName: string,
+    overall: number,
+  ): Prisma.PlayerSocialProfileCreateWithoutPlayerInput {
+    const nickname = this.buildSocialNickname(playerName);
+    const followersCount = Math.max(
+      1200,
+      Math.round(overall * overall * 38 + Math.max(0, overall - 70) * 4200),
+    );
+
+    return {
+      platform: this.resolveSocialPlatform(overall),
+      nickname,
+      followersCount,
+      followerGrowthWeekly: Math.round(followersCount * 0.018),
+      engagementRate: this.roundStat(Math.min(100, 2.4 + Math.max(0, overall - 60) * 0.09), 1),
+      audienceSentiment: overall >= 82 ? 'SUPPORTIVE' : overall >= 72 ? 'POSITIVE' : 'MIXED',
+      mediaStatus: this.resolveMediaStatus(overall),
+      hypeScore: this.clampAttribute(Math.round(overall * 0.86)),
+      controversyScore: this.clampAttribute(Math.round(18 + Math.max(0, 78 - overall) * 0.45)),
+      marketabilityScore: this.clampAttribute(Math.round(overall * 0.82)),
+      lastUpdatedAt: new Date(),
+    };
+  }
+
+  private buildSocialProfileUpdateInput(
+    nextName: string,
+    overall: number,
+  ): Prisma.PlayerSocialProfileUpdateWithoutPlayerInput {
+    return {
+      platform: this.resolveSocialPlatform(overall),
+      nickname: this.buildSocialNickname(nextName),
+      followersCount: Math.max(
+        1200,
+        Math.round(overall * overall * 38 + Math.max(0, overall - 70) * 4200),
+      ),
+      followerGrowthWeekly: Math.round(
+        Math.max(
+          1200,
+          overall * overall * 38 + Math.max(0, overall - 70) * 4200,
+        ) * 0.018,
+      ),
+      engagementRate: this.roundStat(Math.min(100, 2.4 + Math.max(0, overall - 60) * 0.09), 1),
+      audienceSentiment: overall >= 82 ? 'SUPPORTIVE' : overall >= 72 ? 'POSITIVE' : 'MIXED',
+      mediaStatus: this.resolveMediaStatus(overall),
+      hypeScore: this.clampAttribute(Math.round(overall * 0.86)),
+      controversyScore: this.clampAttribute(Math.round(18 + Math.max(0, 78 - overall) * 0.45)),
+      marketabilityScore: this.clampAttribute(Math.round(overall * 0.82)),
+      lastUpdatedAt: new Date(),
+    };
+  }
+
+  private buildSocialNickname(playerName: string) {
+    const slug = playerName
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 24);
+
+    return `@${slug || 'player_profile'}`;
+  }
+
+  private resolveSocialPlatform(overall: number): PlayerSocialPlatform {
+    if (overall >= 85) {
+      return 'INSTAGRAM';
+    }
+
+    if (overall >= 78) {
+      return 'TELEGRAM';
+    }
+
+    return 'VK';
+  }
+
+  private resolveMediaStatus(overall: number): PlayerMediaStatus {
+    if (overall >= 90) {
+      return 'ICON';
+    }
+
+    if (overall >= 84) {
+      return 'LEAGUE_STAR';
+    }
+
+    if (overall >= 76) {
+      return 'NATIONAL_NAME';
+    }
+
+    if (overall >= 68) {
+      return 'LOCAL_BUZZ';
+    }
+
+    return 'LOW_PROFILE';
   }
 
   private buildPhysicalProfileCreateInput(input: {
@@ -1430,6 +1653,19 @@ export class PlayersService {
       helpDefense: number;
       discipline: number;
     } | null;
+    socialProfile: {
+      platform: PlayerSocialPlatform;
+      nickname: string;
+      followersCount: number;
+      followerGrowthWeekly: number;
+      engagementRate: number;
+      audienceSentiment: PlayerAudienceSentiment;
+      mediaStatus: PlayerMediaStatus;
+      hypeScore: number;
+      controversyScore: number;
+      marketabilityScore: number;
+      lastUpdatedAt: Date;
+    } | null;
     team?: {
       id: string;
       name: string;
@@ -1561,6 +1797,21 @@ export class PlayersService {
             pickAndRollDefense: player.tacticalAttributes.pickAndRollDefense,
             helpDefense: player.tacticalAttributes.helpDefense,
             discipline: player.tacticalAttributes.discipline,
+          }
+        : null,
+      socialProfile: player.socialProfile
+        ? {
+            platform: player.socialProfile.platform,
+            nickname: player.socialProfile.nickname,
+            followersCount: player.socialProfile.followersCount,
+            followerGrowthWeekly: player.socialProfile.followerGrowthWeekly,
+            engagementRate: player.socialProfile.engagementRate,
+            audienceSentiment: player.socialProfile.audienceSentiment,
+            mediaStatus: player.socialProfile.mediaStatus,
+            hypeScore: player.socialProfile.hypeScore,
+            controversyScore: player.socialProfile.controversyScore,
+            marketabilityScore: player.socialProfile.marketabilityScore,
+            lastUpdatedAt: player.socialProfile.lastUpdatedAt.toISOString(),
           }
         : null,
     };

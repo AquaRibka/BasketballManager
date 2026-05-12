@@ -55,6 +55,30 @@ enum PlayerCareerStatus {
   FREE_AGENT
 }
 
+enum PlayerSocialPlatform {
+  INSTAGRAM
+  TIKTOK
+  X
+  YOUTUBE
+  TELEGRAM
+  VK
+}
+
+enum PlayerAudienceSentiment {
+  NEGATIVE
+  MIXED
+  POSITIVE
+  SUPPORTIVE
+}
+
+enum PlayerMediaStatus {
+  LOW_PROFILE
+  LOCAL_BUZZ
+  NATIONAL_NAME
+  LEAGUE_STAR
+  ICON
+}
+
 enum MatchStatus {
   SCHEDULED
   COMPLETED
@@ -130,6 +154,7 @@ model Player {
   healthProfile       PlayerHealthProfile?
   potentialProfile    PlayerPotentialProfile?
   reputationProfile   PlayerReputationProfile?
+  socialProfile       PlayerSocialProfile?
   careerHistory       PlayerCareerHistory[]
   seasonStats         PlayerSeasonStat[]
   awards              PlayerAward[]
@@ -316,6 +341,25 @@ model PlayerPotentialProfile {
   readiness        Int
   createdAt        DateTime               @default(now())
   updatedAt        DateTime               @updatedAt
+}
+
+model PlayerSocialProfile {
+  id                   String                  @id @default(cuid())
+  playerId             String                  @unique
+  player               Player                  @relation(fields: [playerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  platform             PlayerSocialPlatform
+  nickname             String                  @db.VarChar(80)
+  followersCount       Int                     @default(0)
+  followerGrowthWeekly Int                     @default(0)
+  engagementRate       Float                   @default(0)
+  audienceSentiment    PlayerAudienceSentiment @default(MIXED)
+  mediaStatus          PlayerMediaStatus       @default(LOW_PROFILE)
+  hypeScore            Int                     @default(50)
+  controversyScore     Int                     @default(20)
+  marketabilityScore   Int                     @default(50)
+  lastUpdatedAt        DateTime                @default(now())
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
 }
 
 model PlayerCareerHistory {

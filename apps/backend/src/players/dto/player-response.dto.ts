@@ -1,14 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   PLAYER_BODY_TYPES,
+  PLAYER_AUDIENCE_SENTIMENTS,
   PLAYER_CAREER_STATUSES,
   PLAYER_DEVELOPMENT_FOCUS,
   PLAYER_DOMINANT_HANDS,
   PLAYER_INJURY_SEVERITIES,
   PLAYER_INJURY_STATUSES,
+  PLAYER_MEDIA_STATUSES,
   PLAYER_POSITIONS,
+  PLAYER_SOCIAL_PLATFORMS,
 } from '@basketball-manager/shared';
 import type {
+  PlayerAudienceSentiment,
   PlayerAwardShape,
   PlayerBodyType,
   PlayerCareerHistoryEntryShape,
@@ -22,9 +26,13 @@ import type {
   PlayerInjuryHistoryEntryShape,
   PlayerInjurySeverity,
   PlayerInjuryStatus,
+  PlayerMediaStatus,
   PlayerPhysicalSummaryShape,
   PlayerPsychologySummaryShape,
   PlayerSeasonStatEntryShape,
+  PlayerSocialDetailsShape,
+  PlayerSocialProfile,
+  PlayerSocialPlatform,
   PlayerSummaryShape,
   PlayerTacticalSummaryShape,
   PlayerTeamSummaryShape,
@@ -219,6 +227,41 @@ export class PlayerCareerTotalsDto implements PlayerCareerTotalsShape {
 
   @ApiProperty({ example: 17.6, minimum: 0 })
   efficiencyRating!: number;
+}
+
+export class PlayerSocialProfileDto implements PlayerSocialProfile {
+  @ApiProperty({ enum: PLAYER_SOCIAL_PLATFORMS, example: 'INSTAGRAM' })
+  platform!: PlayerSocialPlatform;
+
+  @ApiProperty({ example: '@aleks_player' })
+  nickname!: string;
+
+  @ApiProperty({ example: 184000, minimum: 0 })
+  followersCount!: number;
+
+  @ApiProperty({ example: 4200 })
+  followerGrowthWeekly!: number;
+
+  @ApiProperty({ example: 6.8, minimum: 0, maximum: 100 })
+  engagementRate!: number;
+
+  @ApiProperty({ enum: PLAYER_AUDIENCE_SENTIMENTS, example: 'POSITIVE' })
+  audienceSentiment!: PlayerAudienceSentiment;
+
+  @ApiProperty({ enum: PLAYER_MEDIA_STATUSES, example: 'NATIONAL_NAME' })
+  mediaStatus!: PlayerMediaStatus;
+
+  @ApiProperty({ example: 78, minimum: 1, maximum: 100 })
+  hypeScore!: number;
+
+  @ApiProperty({ example: 24, minimum: 1, maximum: 100 })
+  controversyScore!: number;
+
+  @ApiProperty({ example: 81, minimum: 1, maximum: 100 })
+  marketabilityScore!: number;
+
+  @ApiProperty({ example: '2026-05-12T09:30:00.000Z' })
+  lastUpdatedAt!: string;
 }
 
 export class PlayerPhysicalProfileDto implements PlayerPhysicalSummaryShape {
@@ -469,6 +512,9 @@ export class PlayerResponseDto implements PlayerSummaryShape {
   @ApiPropertyOptional({ type: PlayerTacticalProfileDto, nullable: true })
   tacticalProfile!: PlayerTacticalProfileDto | null;
 
+  @ApiPropertyOptional({ type: PlayerSocialProfileDto, nullable: true })
+  socialProfile!: PlayerSocialProfileDto | null;
+
   @ApiPropertyOptional({ example: 'cmon3wd920000k7sbuepwfi6r', nullable: true })
   teamId!: string | null;
 
@@ -557,4 +603,15 @@ export class PlayerHealthDetailsResponseDto implements PlayerHealthDetailsShape 
 
   @ApiProperty({ type: [PlayerInjuryHistoryEntryDto] })
   injuryHistory!: PlayerInjuryHistoryEntryDto[];
+}
+
+export class PlayerSocialDetailsResponseDto implements PlayerSocialDetailsShape {
+  @ApiProperty({ example: 'cmon3yv4y0003qfsbfdn5nihz' })
+  playerId!: string;
+
+  @ApiProperty({ example: 'Ilya Melnikov' })
+  playerName!: string;
+
+  @ApiPropertyOptional({ type: PlayerSocialProfileDto, nullable: true })
+  socialProfile!: PlayerSocialProfileDto | null;
 }

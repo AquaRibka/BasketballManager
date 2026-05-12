@@ -15,6 +15,27 @@ export const PLAYER_DEVELOPMENT_FOCUS: readonly [
   'REBOUNDING',
 ];
 export const PLAYER_CAREER_STATUSES: readonly ['ACTIVE', 'FORMER', 'FREE_AGENT'];
+export const PLAYER_SOCIAL_PLATFORMS: readonly [
+  'INSTAGRAM',
+  'TIKTOK',
+  'X',
+  'YOUTUBE',
+  'TELEGRAM',
+  'VK',
+];
+export const PLAYER_AUDIENCE_SENTIMENTS: readonly [
+  'NEGATIVE',
+  'MIXED',
+  'POSITIVE',
+  'SUPPORTIVE',
+];
+export const PLAYER_MEDIA_STATUSES: readonly [
+  'LOW_PROFILE',
+  'LOCAL_BUZZ',
+  'NATIONAL_NAME',
+  'LEAGUE_STAR',
+  'ICON',
+];
 export const PLAYER_INJURY_SEVERITIES: readonly ['MINOR', 'MODERATE', 'MAJOR', 'SEVERE'];
 export const PLAYER_INJURY_STATUSES: readonly ['ACTIVE', 'RECOVERING', 'RECOVERED'];
 export const MATCH_STATUSES: readonly ['SCHEDULED', 'COMPLETED'];
@@ -37,16 +58,20 @@ export const PLAYER_ATTRIBUTE_GROUPS: readonly [
   'health',
   'potential',
   'reputation',
+  'social',
 ];
 export const PLAYER_SOCIAL_PROFILE_FIELDS: readonly [
-  'socialMediaPopularity',
-  'publicImage',
-  'controversyLevel',
-  'brandValue',
-  'communityPresence',
-  'pressHandling',
-  'fanAppeal',
-  'starPower',
+  'platform',
+  'nickname',
+  'followersCount',
+  'followerGrowthWeekly',
+  'engagementRate',
+  'audienceSentiment',
+  'mediaStatus',
+  'hypeScore',
+  'controversyScore',
+  'marketabilityScore',
+  'lastUpdatedAt',
 ];
 export const PLAYER_SEASON_STAT_FIELDS: readonly [
   'gamesPlayed',
@@ -114,6 +139,20 @@ export type PlayerDevelopmentFocus =
   | 'ATHLETICISM'
   | 'REBOUNDING';
 export type PlayerCareerStatus = 'ACTIVE' | 'FORMER' | 'FREE_AGENT';
+export type PlayerSocialPlatform =
+  | 'INSTAGRAM'
+  | 'TIKTOK'
+  | 'X'
+  | 'YOUTUBE'
+  | 'TELEGRAM'
+  | 'VK';
+export type PlayerAudienceSentiment = 'NEGATIVE' | 'MIXED' | 'POSITIVE' | 'SUPPORTIVE';
+export type PlayerMediaStatus =
+  | 'LOW_PROFILE'
+  | 'LOCAL_BUZZ'
+  | 'NATIONAL_NAME'
+  | 'LEAGUE_STAR'
+  | 'ICON';
 export type PlayerInjurySeverity = 'MINOR' | 'MODERATE' | 'MAJOR' | 'SEVERE';
 export type PlayerInjuryStatus = 'ACTIVE' | 'RECOVERING' | 'RECOVERED';
 export type MatchStatus = 'SCHEDULED' | 'COMPLETED';
@@ -134,16 +173,20 @@ export type PlayerAttributeGroup =
   | 'hidden'
   | 'health'
   | 'potential'
-  | 'reputation';
+  | 'reputation'
+  | 'social';
 export type PlayerSocialProfileField =
-  | 'socialMediaPopularity'
-  | 'publicImage'
-  | 'controversyLevel'
-  | 'brandValue'
-  | 'communityPresence'
-  | 'pressHandling'
-  | 'fanAppeal'
-  | 'starPower';
+  | 'platform'
+  | 'nickname'
+  | 'followersCount'
+  | 'followerGrowthWeekly'
+  | 'engagementRate'
+  | 'audienceSentiment'
+  | 'mediaStatus'
+  | 'hypeScore'
+  | 'controversyScore'
+  | 'marketabilityScore'
+  | 'lastUpdatedAt';
 export type PlayerSeasonStatField =
   | 'gamesPlayed'
   | 'gamesStarted'
@@ -165,14 +208,17 @@ export type PlayerSeasonStatField =
   | 'efficiencyRating';
 
 export interface PlayerSocialProfile {
-  socialMediaPopularity: number;
-  publicImage: number;
-  controversyLevel: number;
-  brandValue: number;
-  communityPresence: number;
-  pressHandling: number;
-  fanAppeal: number;
-  starPower: number;
+  platform: PlayerSocialPlatform;
+  nickname: string;
+  followersCount: number;
+  followerGrowthWeekly: number;
+  engagementRate: number;
+  audienceSentiment: PlayerAudienceSentiment;
+  mediaStatus: PlayerMediaStatus;
+  hypeScore: number;
+  controversyScore: number;
+  marketabilityScore: number;
+  lastUpdatedAt: string;
 }
 
 export interface PlayerSeasonStatLine {
@@ -296,6 +342,7 @@ export interface TeamPlayerShape {
   healthProfile: PlayerHealthSummaryShape | null;
   psychologyProfile: PlayerPsychologySummaryShape | null;
   tacticalProfile: PlayerTacticalSummaryShape | null;
+  socialProfile: PlayerSocialProfile | null;
   teamId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -359,6 +406,12 @@ export interface PlayerHealthDetailsShape {
   playerName: string;
   healthProfile: PlayerHealthSummaryShape | null;
   injuryHistory: PlayerInjuryHistoryEntryShape[];
+}
+
+export interface PlayerSocialDetailsShape {
+  playerId: string;
+  playerName: string;
+  socialProfile: PlayerSocialProfile | null;
 }
 
 export interface PlayerCareerHistoryEntryShape {

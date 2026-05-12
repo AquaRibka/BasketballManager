@@ -748,6 +748,60 @@ async function seed() {
               agentInfluence: clamp(52 + Math.round(player.overall / 10), 1, 100),
             },
           },
+          socialProfile: {
+            create: {
+              platform: player.overall >= 85 ? 'INSTAGRAM' : player.overall >= 78 ? 'TELEGRAM' : 'VK',
+              nickname: (() => {
+                const slug = player.name
+                  .trim()
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, '_')
+                  .replace(/^_+|_+$/g, '')
+                  .slice(0, 24);
+
+                return `@${slug || 'player_profile'}`;
+              })(),
+              followersCount: Math.max(
+                1200,
+                Math.round(
+                  player.overall * player.overall * 38 +
+                    Math.max(0, player.overall - 70) * 4200,
+                ),
+              ),
+              followerGrowthWeekly: Math.round(
+                Math.max(
+                  1200,
+                  player.overall * player.overall * 38 +
+                    Math.max(0, player.overall - 70) * 4200,
+                ) * 0.018,
+              ),
+              engagementRate: clamp(
+                Number((2.4 + Math.max(0, player.overall - 60) * 0.09).toFixed(1)),
+                0,
+                100,
+              ),
+              audienceSentiment:
+                player.overall >= 82 ? 'SUPPORTIVE' : player.overall >= 72 ? 'POSITIVE' : 'MIXED',
+              mediaStatus:
+                player.overall >= 90
+                  ? 'ICON'
+                  : player.overall >= 84
+                    ? 'LEAGUE_STAR'
+                    : player.overall >= 76
+                      ? 'NATIONAL_NAME'
+                      : player.overall >= 68
+                        ? 'LOCAL_BUZZ'
+                        : 'LOW_PROFILE',
+              hypeScore: clamp(Math.round(player.overall * 0.86), 1, 100),
+              controversyScore: clamp(
+                Math.round(18 + Math.max(0, 78 - player.overall) * 0.45),
+                1,
+                100,
+              ),
+              marketabilityScore: clamp(Math.round(player.overall * 0.82), 1, 100),
+              lastUpdatedAt: new Date(),
+            },
+          },
           careerHistory: {
             create: {
               seasonLabel: getCurrentSeasonLabel(),
