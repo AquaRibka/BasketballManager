@@ -39,9 +39,10 @@ select {
 }
 
 .app-shell {
-  width: min(1120px, calc(100% - 32px));
+  width: min(1680px, calc(100% - 32px));
+  max-width: 100%;
   margin: 0 auto;
-  padding: 48px 0 72px;
+  padding: 28px 0 56px;
 }
 
 .hero {
@@ -459,6 +460,7 @@ select {
 .schedule-hero,
 .standings-hero,
 .schedule-hero-header,
+.schedule-insights-grid,
 .round-list,
 .round-group,
 .selected-match-card {
@@ -474,6 +476,19 @@ select {
 .schedule-action-button[disabled] {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.schedule-insights-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.schedule-insight-card {
+  min-height: 112px;
+}
+
+.schedule-insight-card p {
+  margin: 6px 0 0;
+  color: rgba(247, 245, 239, 0.68);
 }
 
 .match-detail-heading {
@@ -658,6 +673,12 @@ select {
   max-width: 100%;
 }
 
+.match-card-meta {
+  color: rgba(247, 245, 239, 0.6);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
 .selected-match-card {
   padding: 22px;
   border-radius: 22px;
@@ -730,10 +751,26 @@ select {
   min-width: 132px;
 }
 
+.standings-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.standings-insight-card {
+  min-height: 112px;
+}
+
+.standings-insight-card p {
+  margin: 6px 0 0;
+  color: rgba(247, 245, 239, 0.68);
+}
+
 .standings-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 720px;
+  min-width: 980px;
 }
 
 .standings-table th,
@@ -1211,6 +1248,284 @@ select {
   background: linear-gradient(90deg, #ff4ab4 0%, #8b5dff 55%, #42d4ff 100%);
 }
 
+.season-fm-screen {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(104, 86, 255, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01)),
+    rgba(8, 10, 18, 0.96);
+  box-shadow: inset 0 0 0 1px rgba(255, 74, 180, 0.05);
+}
+
+.season-fm-screen-header {
+  display: grid;
+  gap: 12px;
+}
+
+.season-fm-screen-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.95fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.season-fm-identity {
+  display: grid;
+  gap: 8px;
+}
+
+.season-fm-identity h2 {
+  margin: 0;
+  font-size: 1.9rem;
+  line-height: 1.05;
+}
+
+.season-fm-identity .section-copy {
+  margin: 0;
+  color: rgba(247, 245, 239, 0.72);
+}
+
+.season-fm-rating-stack {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.season-fm-meta-table {
+  border-radius: 12px;
+}
+
+.season-fm-meta-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.season-fm-toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.season-fm-toolbar .schedule-action-button {
+  min-height: 46px;
+}
+
+.season-fm-layout {
+  display: grid;
+  grid-template-columns: minmax(420px, 1.2fr) minmax(280px, 0.85fr) minmax(280px, 0.85fr);
+  grid-template-areas:
+    'selected next next'
+    'snapshot trend trend'
+    'progress progress progress';
+  gap: 14px;
+  align-items: start;
+}
+
+.season-fm-panel {
+  gap: 10px;
+  min-height: 100%;
+}
+
+.season-fm-panel-selected {
+  grid-area: selected;
+}
+
+.season-fm-panel-snapshot {
+  grid-area: snapshot;
+}
+
+.dashboard-next-match {
+  grid-area: next;
+}
+
+.season-position-panel {
+  grid-area: trend;
+}
+
+.season-fm-panel-wide {
+  grid-area: progress;
+}
+
+.season-fm-panel > .section-kicker {
+  margin-bottom: 0;
+}
+
+.season-fm-panel > h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.season-fm-panel .dashboard-panel-lead {
+  gap: 3px;
+  padding-bottom: 8px;
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.season-fm-panel .dashboard-panel-lead strong {
+  font-size: 0.98rem;
+}
+
+.season-fm-highlight-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.season-fm-highlight-card {
+  display: grid;
+  gap: 4px;
+  min-height: 74px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(11, 13, 24, 0.98);
+}
+
+.season-fm-highlight-card span {
+  color: rgba(247, 245, 239, 0.64);
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.season-fm-highlight-card strong {
+  font-size: 1.02rem;
+  line-height: 1.15;
+}
+
+.season-fm-table {
+  border-radius: 10px;
+}
+
+.season-fm-row {
+  grid-template-columns: minmax(128px, 1fr) minmax(92px, auto) minmax(128px, 1fr) minmax(92px, auto);
+}
+
+.season-fm-row span,
+.season-fm-row strong {
+  min-height: 30px;
+}
+
+.season-fm-row strong {
+  font-size: 0.88rem;
+}
+
+.season-fm-panel .next-match-banner {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border-color: rgba(104, 86, 255, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+    rgba(11, 13, 24, 0.98);
+}
+
+.season-fm-panel .next-match-banner strong {
+  margin-top: 4px;
+}
+
+.season-fm-panel .next-match-banner em {
+  font-size: 0.78rem;
+}
+
+.season-fm-panel .progress-stack {
+  gap: 10px;
+}
+
+.season-fm-panel .progress-block {
+  gap: 8px;
+}
+
+.season-fm-panel .progress-track {
+  height: 8px;
+}
+
+.season-position-chart-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(11, 13, 24, 0.98);
+}
+
+.season-position-chart-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.season-position-chart-header span {
+  color: rgba(247, 245, 239, 0.64);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.season-position-chart-header strong {
+  font-size: 0.9rem;
+}
+
+.season-position-chart {
+  width: 100%;
+  height: 170px;
+  overflow: visible;
+}
+
+.season-position-chart line {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+}
+
+.season-position-chart path {
+  fill: none;
+  stroke: #ff4ab4;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.season-position-chart-area {
+  fill: url(#season-position-chart-gradient);
+  stroke: none !important;
+}
+
+.season-position-chart-point {
+  fill: #42d4ff;
+  stroke: rgba(8, 10, 18, 0.96);
+  stroke-width: 2;
+}
+
+.season-position-chart-point.is-current {
+  fill: #ff4ab4;
+  stroke: #ffd3ad;
+  stroke-width: 2;
+}
+
+.season-position-chart text {
+  fill: rgba(247, 245, 239, 0.6);
+  font-size: 10px;
+  text-anchor: middle;
+}
+
+.season-position-chart-axis-label {
+  text-anchor: start;
+}
+
+.season-position-chart-round-label {
+  fill: rgba(247, 245, 239, 0.42);
+}
+
+.season-position-chart-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(247, 245, 239, 0.64);
+  font-size: 0.8rem;
+}
+
 .season-dashboard-hero,
 .dashboard-create-header,
 .dashboard-card,
@@ -1370,15 +1685,16 @@ select {
 .dashboard-grid,
 .dashboard-summary-grid {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .dashboard-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
 }
 
 .dashboard-summary-grid {
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .summary-card.summary-card-accent,
@@ -1391,9 +1707,28 @@ select {
 .summary-card p,
 .next-match-banner span,
 .dashboard-metric span,
+.dashboard-stat-row span,
+.dashboard-panel-lead span,
 .progress-copy span {
   margin: 0;
   color: rgba(247, 245, 239, 0.68);
+}
+
+.summary-card {
+  padding: 16px 18px;
+  border-radius: 18px;
+}
+
+.summary-card strong {
+  margin-top: 6px;
+  font-size: 1.35rem;
+  line-height: 1.05;
+}
+
+.summary-card p {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  line-height: 1.35;
 }
 
 .dashboard-metric-list {
@@ -1412,17 +1747,125 @@ select {
 }
 
 .dashboard-metric strong,
+.dashboard-stat-row strong,
+.dashboard-panel-lead strong,
 .progress-copy strong,
 .next-match-banner strong {
   display: block;
   margin-top: 8px;
 }
 
+.dashboard-card {
+  gap: 12px;
+  min-height: 100%;
+  padding: 24px;
+  border-radius: 20px;
+}
+
+.dashboard-card > h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.dashboard-panel-lead {
+  display: grid;
+  gap: 4px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-panel-lead strong {
+  margin-top: 0;
+  font-size: 1.15rem;
+  line-height: 1.15;
+}
+
+.dashboard-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-stat-grid-compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dashboard-stat-row {
+  display: grid;
+  gap: 3px;
+  align-content: start;
+  min-height: 64px;
+  padding: 10px 12px;
+  background: rgba(21, 24, 36, 0.98);
+}
+
+.dashboard-stat-row strong {
+  margin-top: 0;
+  font-size: 0.98rem;
+  line-height: 1.2;
+}
+
+.dashboard-stat-row span,
+.next-match-banner span,
+.progress-copy span,
+.summary-card span {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .next-match-banner {
-  padding: 18px 20px;
-  border-radius: 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
   border: 1px solid rgba(255, 176, 103, 0.28);
   background: linear-gradient(145deg, rgba(255, 176, 103, 0.16), rgba(255, 176, 103, 0.05));
+}
+
+.next-match-banner div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.next-match-banner em {
+  flex: 0 0 auto;
+  align-self: center;
+  font-style: normal;
+  color: rgba(247, 245, 239, 0.78);
+  font-size: 0.84rem;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dashboard-selected-team,
+.dashboard-next-match,
+.dashboard-standing,
+.dashboard-progress {
+  align-content: start;
+}
+
+.dashboard-next-match .dashboard-stat-grid,
+.dashboard-progress .dashboard-stat-grid {
+  margin-top: auto;
+}
+
+.dashboard-progress .progress-stack {
+  gap: 12px;
+}
+
+.dashboard-progress .progress-block {
+  gap: 8px;
 }
 
 .progress-track {
@@ -1476,7 +1919,18 @@ select {
     width: 100%;
   }
 
-  .dashboard-hero-header {
+  .dashboard-hero-header,
+  .season-fm-screen-top {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-summary-grid,
+  .season-fm-header-table,
+  .season-fm-toolbar,
+  .season-fm-layout,
+  .season-fm-meta-row,
+  .season-fm-rating-stack,
+  .season-fm-highlight-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1521,6 +1975,8 @@ select {
   }
 
   .dashboard-grid,
+  .dashboard-stat-grid,
+  .dashboard-stat-grid-compact,
   .dashboard-metric-list,
   .dashboard-metric-list.compact,
   .team-summary-grid,

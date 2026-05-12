@@ -40,8 +40,28 @@ function formatPointsPair(row: SeasonStandingRow) {
   return `${row.pointsFor}/${row.pointsAgainst}`;
 }
 
+function formatPerGame(value: number, gamesPlayed: number) {
+  if (gamesPlayed <= 0) {
+    return '0.0';
+  }
+
+  return (value / gamesPlayed).toFixed(1);
+}
+
 function formatPointDiff(value: number) {
   return value > 0 ? `+${value}` : String(value);
+}
+
+function getZoneLabel(position: number, totalTeams: number) {
+  if (position <= 4) {
+    return 'Топ-4';
+  }
+
+  if (position <= Math.min(8, totalTeams)) {
+    return 'Плей-офф';
+  }
+
+  return 'Ниже зоны';
 }
 
 function getSeasonStatusLabel(status: SeasonStatus) {
@@ -161,6 +181,31 @@ export function StandingsPage() {
     [state],
   );
 
+  const standingsInsights = useMemo(() => {
+    if (state.status !== 'success' || state.standings.items.length === 0) {
+      return null;
+    }
+
+    const items = state.standings.items;
+    const bestAttack = [...items].sort(
+      (left, right) =>
+        right.pointsFor / Math.max(right.gamesPlayed, 1) -
+        left.pointsFor / Math.max(left.gamesPlayed, 1),
+    )[0];
+    const bestDefense = [...items].sort(
+      (left, right) =>
+        left.pointsAgainst / Math.max(left.gamesPlayed, 1) -
+        right.pointsAgainst / Math.max(right.gamesPlayed, 1),
+    )[0];
+    const hottestTeam = [...items].sort((left, right) => right.pointDiff - left.pointDiff)[0];
+
+    return {
+      bestAttack,
+      bestDefense,
+      hottestTeam,
+    };
+  }, [state]);
+
   if (state.status === 'loading') {
     return (
       <StatePanel
@@ -249,6 +294,38 @@ export function StandingsPage() {
           </p>
         </div>
 
+        {standingsInsights ? (
+          <div className="standings-insights-grid">
+            <article className="summary-card standings-insight-card">
+              <span>Лучшая атака</span>
+              <strong>{standingsInsights.bestAttack.shortName}</strong>
+              <p>
+                {formatPerGame(
+                  standingsInsights.bestAttack.pointsFor,
+                  standingsInsights.bestAttack.gamesPlayed,
+                )}{' '}
+                очка за матч
+              </p>
+            </article>
+            <article className="summary-card standings-insight-card">
+              <span>Лучшая защита</span>
+              <strong>{standingsInsights.bestDefense.shortName}</strong>
+              <p>
+                {formatPerGame(
+                  standingsInsights.bestDefense.pointsAgainst,
+                  standingsInsights.bestDefense.gamesPlayed,
+                )}{' '}
+                пропущено за матч
+              </p>
+            </article>
+            <article className="summary-card standings-insight-card">
+              <span>Лучшая разница</span>
+              <strong>{standingsInsights.hottestTeam.shortName}</strong>
+              <p>{formatPointDiff(standingsInsights.hottestTeam.pointDiff)} суммарно по сезону</p>
+            </article>
+          </div>
+        ) : null}
+
         {state.standings.items.length === 0 ? (
           <StateNotice
             title="Таблица пока пуста"
@@ -263,10 +340,14 @@ export function StandingsPage() {
                 <tr>
                   <th>Pos</th>
                   <th>Team</th>
+                  <th>Zone</th>
+                  <th>GP</th>
                   <th>W-L</th>
                   <th>Win%</th>
-                  <th>PF/PA</th>
+                  <th>Off</th>
+                  <th>Def</th>
                   <th>Diff</th>
+                  <th>Gap</th>
                 </tr>
               </thead>
               <tbody>
@@ -279,9 +360,12 @@ export function StandingsPage() {
                         <span>{row.teamName}</span>
                       </div>
                     </td>
+                    <td>{getZoneLabel(row.position, state.standings.items.length)}</td>
+                    <td>{row.gamesPlayed}</td>
                     <td>{formatRecord(row)}</td>
                     <td>{formatWinRate(row.winPercentage)}</td>
-                    <td>{formatPointsPair(row)}</td>
+                    <td>{formatPerGame(row.pointsFor, row.gamesPlayed)}</td>
+                    <td>{formatPerGame(row.pointsAgainst, row.gamesPlayed)}</td>
                     <td
                       className={
                         row.pointDiff > 0
@@ -293,6 +377,7 @@ export function StandingsPage() {
                     >
                       {formatPointDiff(row.pointDiff)}
                     </td>
+                    <td>{leader ? `${row.position - leader.position} поз.` : '-'}</td>
                   </tr>
                 ))}
               </tbody>

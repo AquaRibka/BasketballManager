@@ -87,6 +87,10 @@ function getMatchScore(match: MatchSummary) {
   return `${match.homeScore}:${match.awayScore}`;
 }
 
+function countCompletedMatches(matches: MatchSummary[]) {
+  return matches.filter((match) => match.status === 'COMPLETED').length;
+}
+
 export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
   const [state, setState] = useState<PageState>({ status: 'loading' });
   const [requestKey, setRequestKey] = useState(0);
@@ -215,6 +219,28 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
       state.status === 'success' ? state.schedule.rounds.flatMap((round) => round.matches) : [],
     [state],
   );
+
+  const scheduleInsights = useMemo(() => {
+    if (state.status !== 'success') {
+      return null;
+    }
+
+    const completedMatches = countCompletedMatches(allMatches);
+    const scheduledMatches = allMatches.length - completedMatches;
+    const completedRounds = state.schedule.rounds.filter(
+      (round) => round.status === 'COMPLETED',
+    ).length;
+    const currentRoundCompleted = currentRoundGroup
+      ? countCompletedMatches(currentRoundGroup.matches)
+      : 0;
+
+    return {
+      completedMatches,
+      scheduledMatches,
+      completedRounds,
+      currentRoundCompleted,
+    };
+  }, [allMatches, currentRoundGroup, state]);
 
   useEffect(() => {
     if (matchId) {
@@ -502,6 +528,18 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
             <span>Матчей в календаре</span>
             <strong>{state.schedule.totalMatches}</strong>
           </article>
+          <article className="summary-card">
+            <span>Сыграно матчей</span>
+            <strong>{scheduleInsights?.completedMatches ?? 0}</strong>
+          </article>
+          <article className="summary-card">
+            <span>Текущий раунд</span>
+            <strong>
+              {currentRoundGroup
+                ? `${scheduleInsights?.currentRoundCompleted ?? 0}/${currentRoundGroup.matches.length}`
+                : 'N/A'}
+            </strong>
+          </article>
         </div>
       </section>
 
@@ -514,9 +552,34 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
           </p>
         </div>
 
+        {scheduleInsights ? (
+          <div className="schedule-insights-grid">
+            <article className="summary-card schedule-insight-card">
+              <span>Завершено туров</span>
+              <strong>{scheduleInsights.completedRounds}</strong>
+              <p>из {state.schedule.totalRounds} раундов сезона</p>
+            </article>
+            <article className="summary-card schedule-insight-card">
+              <span>Осталось матчей</span>
+              <strong>{scheduleInsights.scheduledMatches}</strong>
+              <p>еще ждут симуляции</p>
+            </article>
+            <article className="summary-card schedule-insight-card">
+              <span>Прогресс сезона</span>
+              <strong>
+                {state.schedule.totalMatches === 0
+                  ? '0%'
+                  : `${Math.round((scheduleInsights.completedMatches / state.schedule.totalMatches) * 100)}%`}
+              </strong>
+              <p>календаря уже сыграно</p>
+            </article>
+          </div>
+        ) : null}
+
         <div className="round-list">
           {state.schedule.rounds.map((round) => {
             const isCurrentRound = round.round === state.season.currentRound;
+            const roundCompletedMatches = countCompletedMatches(round.matches);
 
             return (
               <section
@@ -526,7 +589,10 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
                 <div className="round-header">
                   <div>
                     <h3>Раунд {round.round}</h3>
-                    <p>{getRoundStatusLabel(round.status)}</p>
+                    <p>
+                      {getRoundStatusLabel(round.status)} · {roundCompletedMatches}/
+                      {round.matches.length} матчей
+                    </p>
                   </div>
                   <span className={`round-status-badge status-${round.status.toLowerCase()}`}>
                     {round.status}
@@ -566,6 +632,15 @@ export function CalendarPage({ matchId, onNavigate }: CalendarPageProps) {
                           <div className="match-card-footer">
                             <span className={`match-status status-${match.status.toLowerCase()}`}>
                               {getMatchStatusLabel(match.status)}
+                            </span>
+                            <span className="match-card-meta">
+                              {match.winnerTeamId
+                                ? `W: ${
+                                    match.winnerTeamId === match.homeTeam.id
+                                      ? match.homeTeam.shortName
+                                      : match.awayTeam.shortName
+                                  }`
+                                : `R${round.round}`}
                             </span>
                           </div>
                         </button>
