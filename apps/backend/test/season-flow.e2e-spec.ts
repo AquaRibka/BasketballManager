@@ -6,6 +6,7 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { ApiExceptionFilter } from '../src/common/errors/api-exception.filter';
 import { createApiValidationPipe } from '../src/common/pipes/create-api-validation-pipe';
+import { PlayerRatingsSyncService } from '../src/players/player-ratings-sync.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 
 type TeamRecord = ReturnType<typeof createTeamRecord>;
@@ -254,8 +255,8 @@ describe('Season Flow Integration', () => {
 
     const prismaMock: Record<string, unknown> = {};
 
-    prismaMock.$transaction = jest.fn(
-      async (callback: (tx: Record<string, unknown>) => unknown) => callback(prismaMock),
+    prismaMock.$transaction = jest.fn(async (callback: (tx: Record<string, unknown>) => unknown) =>
+      callback(prismaMock),
     );
     prismaMock.team = {
       findMany: jest.fn(({ orderBy, select } = {}) => {
@@ -532,6 +533,8 @@ describe('Season Flow Integration', () => {
     })
       .overrideProvider(PrismaService)
       .useValue(prismaMock)
+      .overrideProvider(PlayerRatingsSyncService)
+      .useValue({ onModuleInit: jest.fn() })
       .compile();
 
     app = moduleRef.createNestApplication();
@@ -556,7 +559,9 @@ describe('Season Flow Integration', () => {
 
     const seasonId = createSeasonResponse.body.id as string;
 
-    const scheduleResponse = await request(app.getHttpServer()).get(`/seasons/${seasonId}/schedule`);
+    const scheduleResponse = await request(app.getHttpServer()).get(
+      `/seasons/${seasonId}/schedule`,
+    );
 
     expect(scheduleResponse.status).toBe(200);
     expect(scheduleResponse.body.seasonId).toBe(seasonId);

@@ -540,9 +540,13 @@ export class PlayerResponseDto implements PlayerSummaryShape {
   awards?: PlayerAwardDto[];
 }
 
+export class PlayerCompactResponseDto extends PlayerResponseDto {}
+
+export class PlayerFullResponseDto extends PlayerResponseDto {}
+
 export class PlayerListResponseDto {
-  @ApiProperty({ type: [PlayerResponseDto] })
-  items!: PlayerResponseDto[];
+  @ApiProperty({ type: [PlayerCompactResponseDto] })
+  items!: PlayerCompactResponseDto[];
 
   @ApiProperty({ example: 88 })
   total!: number;

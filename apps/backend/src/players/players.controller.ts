@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBody,
@@ -13,11 +13,13 @@ import {
 import { CuidParamDto } from '../common/dto/cuid-param.dto';
 import { CreatePlayerDto } from './dto/create-player.dto';
 import {
+  PlayerCompactResponseDto,
+  PlayerFullResponseDto,
   PlayerHealthDetailsResponseDto,
   PlayerListResponseDto,
-  PlayerResponseDto,
   PlayerSocialDetailsResponseDto,
 } from './dto/player-response.dto';
+import { PlayerResponseQueryDto } from './dto/player-response-query.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
 import { PlayersService } from './players.service';
 
@@ -27,20 +29,27 @@ export class PlayersController {
   constructor(private readonly playersService: PlayersService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all players' })
+  @ApiOperation({ summary: 'Get all players. Use view=full for expanded public profiles' })
   @ApiOkResponse({ type: PlayerListResponseDto })
-  getPlayers() {
-    return this.playersService.getPlayers();
+  getPlayers(@Query() query: PlayerResponseQueryDto) {
+    return this.playersService.getPlayers(query.view ?? 'compact');
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a player by id' })
+  @ApiOperation({ summary: 'Get a player by id. Use view=compact for roster/list fields only' })
   @ApiParam({ name: 'id', description: 'Player cuid', example: 'cmon3yv4y0003qfsbfdn5nihz' })
-  @ApiOkResponse({ type: PlayerResponseDto })
+  @ApiOkResponse({
+    schema: {
+      oneOf: [
+        { $ref: '#/components/schemas/PlayerCompactResponseDto' },
+        { $ref: '#/components/schemas/PlayerFullResponseDto' },
+      ],
+    },
+  })
   @ApiBadRequestResponse({ description: 'The provided player id is invalid' })
   @ApiNotFoundResponse({ description: 'Player not found' })
-  getPlayerById(@Param() params: CuidParamDto) {
-    return this.playersService.getPlayerById(params.id);
+  getPlayerById(@Param() params: CuidParamDto, @Query() query: PlayerResponseQueryDto) {
+    return this.playersService.getPlayerById(params.id, query.view ?? 'full');
   }
 
   @Get(':id/health')
@@ -66,7 +75,7 @@ export class PlayersController {
   @Post()
   @ApiOperation({ summary: 'Create a player' })
   @ApiBody({ type: CreatePlayerDto })
-  @ApiCreatedResponse({ type: PlayerResponseDto })
+  @ApiCreatedResponse({ type: PlayerFullResponseDto })
   @ApiBadRequestResponse({ description: 'Payload validation failed' })
   @ApiNotFoundResponse({ description: 'Referenced team not found' })
   @ApiUnprocessableEntityResponse({
@@ -80,7 +89,7 @@ export class PlayersController {
   @ApiOperation({ summary: 'Update an existing player' })
   @ApiParam({ name: 'id', description: 'Player cuid', example: 'cmon3yv4y0003qfsbfdn5nihz' })
   @ApiBody({ type: UpdatePlayerDto })
-  @ApiOkResponse({ type: PlayerResponseDto })
+  @ApiOkResponse({ type: PlayerFullResponseDto })
   @ApiBadRequestResponse({ description: 'Payload validation failed' })
   @ApiNotFoundResponse({ description: 'Player or referenced team not found' })
   @ApiUnprocessableEntityResponse({

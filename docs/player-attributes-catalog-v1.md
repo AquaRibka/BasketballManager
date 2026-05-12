@@ -352,7 +352,233 @@
 
 ---
 
-## 14. Minimal Rollout Order
+## 14. Player Profile Response Structure
+
+Публичные endpoints `GET /players` и `GET /players/:id` возвращают расширенный профиль игрока без raw hidden-слоя.
+
+Поддерживаются два режима:
+
+- `view=compact` — список/ростер: основные поля, публичные профили, команда; без истории, статистики, наград и career totals.
+- `view=full` — полный публичный профиль: все compact-поля плюс career, stats, awards и careerTotals.
+
+По умолчанию:
+
+- `GET /players` использует `compact`;
+- `GET /players/:id` использует `full`.
+
+### 14.1 Basic
+
+Базовый блок описывает идентичность, позицию, команду и summary ratings.
+
+| Поле                 | Тип          | Возвращается | Назначение                                       |
+| -------------------- | ------------ | ------------ | ------------------------------------------------ |
+| `id`                 | string       | compact/full | ID игрока                                        |
+| `name`               | string       | compact/full | Отображаемое имя                                 |
+| `age`                | int          | compact/full | Возраст                                          |
+| `dateOfBirth`        | ISO/null     | compact/full | Дата рождения, если есть                         |
+| `position`           | enum         | compact/full | Основная позиция: `PG / SG / SF / PF / C`        |
+| `secondaryPositions` | enum[]       | compact/full | Вторичные позиции                                |
+| `dominantHand`       | enum/null    | compact/full | Рабочая рука, если известна                      |
+| `teamId`             | string/null  | compact/full | Текущая команда                                  |
+| `team`               | object/null  | compact/full | Краткая команда: `id`, `name`, `shortName`       |
+| `shooting`           | int          | compact/full | Umbrella-рейтинг броска                          |
+| `passing`            | int          | compact/full | Umbrella-рейтинг передач                         |
+| `defense`            | int          | compact/full | Umbrella-рейтинг защиты                          |
+| `rebounding`         | int          | compact/full | Umbrella-рейтинг подбора                         |
+| `athleticism`        | int          | compact/full | Umbrella-рейтинг атлетизма                       |
+| `overall`            | int          | compact/full | Производная текущая сила, считается из атрибутов |
+| `createdAt`          | ISO datetime | compact/full | Дата создания записи                             |
+| `updatedAt`          | ISO datetime | compact/full | Дата обновления записи                           |
+
+`overall` не должен приниматься клиентом как источник истины: даже если клиент присылает его при создании или обновлении, backend пересчитывает значение из позиции и базовых атрибутов.
+
+### 14.2 Anthropometrics
+
+В текущем API антропометрия лежит внутри `physicalProfile`, потому что часть физических полей используется вместе с телосложением.
+
+| Поле         | Тип       | Возвращается | Назначение                                   |
+| ------------ | --------- | ------------ | -------------------------------------------- |
+| `heightCm`   | int       | compact/full | Рост                                         |
+| `weightKg`   | int       | compact/full | Вес                                          |
+| `wingspanCm` | int/null  | compact/full | Размах рук                                   |
+| `bodyType`   | enum/null | compact/full | Тип тела: `SLIM / ATHLETIC / STRONG / HEAVY` |
+
+### 14.3 Attributes
+
+Публичный профиль атрибутов состоит из нескольких подблоков.
+
+#### `physicalProfile`
+
+| Поле            | Назначение     |
+| --------------- | -------------- |
+| `speed`         | Скорость       |
+| `acceleration`  | Первый шаг     |
+| `vertical`      | Прыжок         |
+| `strength`      | Сила           |
+| `endurance`     | Выносливость   |
+| `balance`       | Баланс         |
+| `agility`       | Маневренность  |
+| `coordination`  | Координация    |
+| `reaction`      | Реакция        |
+| `recovery`      | Восстановление |
+| `explosiveness` | Взрывная сила  |
+
+#### `healthProfile`
+
+| Поле                  | Назначение                    |
+| --------------------- | ----------------------------- |
+| `overallCondition`    | Текущее общее состояние       |
+| `fatigue`             | Усталость                     |
+| `postInjuryCondition` | Состояние после травм         |
+| `injuryRisk`          | Публичная оценка риска травмы |
+| `durability`          | Устойчивость к нагрузке       |
+| `recoveryRate`        | Скорость восстановления       |
+| `painTolerance`       | Переносимость боли            |
+| `medicalOutlook`      | Общий медицинский прогноз     |
+
+#### `psychologyProfile`
+
+Это публичная, безопасная проекция mental attributes. Она не содержит конфликтные и контрактные hidden-поля.
+
+| Поле             | Назначение    |
+| ---------------- | ------------- |
+| `selfControl`    | Самоконтроль  |
+| `concentration`  | Концентрация  |
+| `determination`  | Решимость     |
+| `leadership`     | Лидерство     |
+| `workEthic`      | Рабочая этика |
+| `aggressiveness` | Агрессивность |
+| `teamwork`       | Командность   |
+| `confidence`     | Уверенность   |
+
+#### `tacticalProfile`
+
+Это публичная, безопасная проекция tactical attributes.
+
+| Поле                 | Назначение             |
+| -------------------- | ---------------------- |
+| `basketballIQ`       | Баскетбольный IQ       |
+| `shotSelection`      | Выбор бросков          |
+| `courtVision`        | Видение площадки       |
+| `defenseReading`     | Чтение защиты          |
+| `offenseReading`     | Чтение нападения       |
+| `decisionMaking`     | Принятие решений       |
+| `offBallMovement`    | Движение без мяча      |
+| `spacing`            | Дисциплина spacing     |
+| `pickAndRollOffense` | Атака в PnR            |
+| `pickAndRollDefense` | Защита в PnR           |
+| `helpDefense`        | Помощь в защите        |
+| `discipline`         | Тактическая дисциплина |
+
+### 14.4 Career
+
+Блок карьеры возвращается только в `view=full`.
+
+| Поле            | Тип         | Назначение                              |
+| --------------- | ----------- | --------------------------------------- |
+| `careerHistory` | object[]    | Сезонные/командные этапы карьеры        |
+| `awards`        | object[]    | Индивидуальные награды                  |
+| `careerTotals`  | object/null | Агрегаты по всем доступным season stats |
+
+`careerHistory[]` содержит:
+
+| Поле             | Назначение                     |
+| ---------------- | ------------------------------ |
+| `id`             | ID записи                      |
+| `season`         | Сезон, например `2025/26`      |
+| `league`         | Лига                           |
+| `role`           | Роль в команде                 |
+| `jerseyNumber`   | Номер                          |
+| `status`         | `ACTIVE / FORMER / FREE_AGENT` |
+| `transferDate`   | Дата перехода или назначения   |
+| `transferReason` | Причина перехода               |
+| `achievements`   | Краткие достижения             |
+| `team`           | Команда для этого этапа        |
+
+### 14.5 Stats
+
+`seasonStats` возвращается только в `view=full`.
+
+| Поле               | Назначение                |
+| ------------------ | ------------------------- |
+| `id`               | ID записи статистики      |
+| `season`           | Сезон                     |
+| `league`           | Лига                      |
+| `team`             | Команда                   |
+| `gamesPlayed`      | Матчи                     |
+| `gamesStarted`     | Матчи в старте            |
+| `minutesPerGame`   | Минуты за игру            |
+| `pointsPerGame`    | Очки                      |
+| `reboundsPerGame`  | Подборы                   |
+| `assistsPerGame`   | Передачи                  |
+| `stealsPerGame`    | Перехваты                 |
+| `blocksPerGame`    | Блоки                     |
+| `turnoversPerGame` | Потери                    |
+| `foulsPerGame`     | Фолы                      |
+| `fgPct`            | Процент с игры            |
+| `threePct`         | Процент трехочковых       |
+| `ftPct`            | Процент штрафных          |
+| `efficiencyRating` | Композитная эффективность |
+
+`careerTotals` агрегирует эти же показатели на уровне всей доступной карьеры.
+
+### 14.6 SocialProfiles
+
+Концептуальный блок называется `socialProfiles`, потому что в будущем у игрока может быть несколько площадок. В текущем API поле одно: `socialProfile`.
+
+| Поле                   | Назначение                                                   |
+| ---------------------- | ------------------------------------------------------------ |
+| `platform`             | Площадка: `INSTAGRAM / TIKTOK / X / YOUTUBE / TELEGRAM / VK` |
+| `nickname`             | Публичный ник                                                |
+| `followersCount`       | Количество подписчиков                                       |
+| `followerGrowthWeekly` | Недельный прирост                                            |
+| `engagementRate`       | Вовлеченность                                                |
+| `audienceSentiment`    | Настроение аудитории                                         |
+| `mediaStatus`          | Медийный статус                                              |
+| `hypeScore`            | Текущий hype                                                 |
+| `controversyScore`     | Публично допустимый уровень controversy                      |
+| `marketabilityScore`   | Публичная оценка коммерческой привлекательности              |
+| `lastUpdatedAt`        | Время обновления social-сигналов                             |
+
+Отдельный endpoint `GET /players/:id/social` возвращает тот же public social profile в обертке:
+
+- `playerId`;
+- `playerName`;
+- `socialProfile`.
+
+### 14.7 Hidden Fields Not Returned To Regular Clients
+
+Обычный клиент не получает raw hidden-поля через `GET /players` и `GET /players/:id`.
+
+Точные hidden-значения доступны только через отдельный dev/admin endpoint `GET /dev/players/:id/hidden` и не должны использоваться обычным UI.
+
+| Hidden-поле/группа                                               | Почему скрыто                                                                                                    |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `hiddenAttributes.consistency`                                   | Прямая стабильность матч к матчу должна быть предметом скаутинга, а не точной публичной цифрой                   |
+| `hiddenAttributes.injuryProneness`                               | Точный риск травматичности ломает неопределенность медицинского и scouting-слоя                                  |
+| `hiddenAttributes.importantMatches`                              | Важные матчи должны проявляться через события, форму и отчеты, а не через raw rating                             |
+| `hiddenAttributes.wantsToLeave`                                  | Это внутренняя трансферная мотивация; прямой показ разрушает переговорный слой                                   |
+| `hiddenAttributes.ambition`                                      | Используется для развития и карьеры, но клиенту лучше видеть косвенные сигналы                                   |
+| `hiddenAttributes.adaptability`                                  | Влияет на адаптацию к роли/команде/стране, точное значение нужно для системной логики                            |
+| `hiddenAttributes.pressureHandling`                              | Должно проявляться через clutch/форму и scouting reports                                                         |
+| `hiddenAttributes.setbackResponse`                               | Внутренняя реакция на неудачи, травмы и потерю роли                                                              |
+| `mentalAttributes.professionalism`                               | Влияет на развитие, дисциплину и карьерную стабильность; в public response остается только безопасная психология |
+| `mentalAttributes.loyalty`                                       | Контрактно-трансферная мотивация, не должна быть точным публичным числом                                         |
+| `mentalAttributes.ego`                                           | Риск конфликтов роли и минут; прямой показ может сделать менеджмент слишком предсказуемым                        |
+| `potentialProfile.potentialAbility`                              | Истинный потолок игрока должен раскрываться через scouting/development, а не обычный профиль                     |
+| `potentialProfile.currentAbility`                                | Внутренняя нормализация текущей силы, публичный аналог — `overall`                                               |
+| `potentialProfile.growthRate`                                    | Темп развития должен быть скрытым драйвером прогресса                                                            |
+| `potentialProfile.learningAbility`                               | Эффективность тренировок не показывается напрямую                                                                |
+| `potentialProfile.peakStartAge`, `peakEndAge`, `declineStartAge` | Точное окно пика и спада должно оставаться прогнозом, а не известным фактом                                      |
+| `reputationProfile.hiddenReputation`                             | Внутренняя репутация для систем рынка/медиа                                                                      |
+| `reputationProfile.agentInfluence`                               | Сила агента влияет на переговоры и не должна быть публичным числом                                               |
+| `reputationProfile.mediaAppeal`                                  | Используется для медиа/рынка; public response показывает только безопасные social-сигналы                        |
+
+Причина такого разделения: public profile должен отвечать на вопрос "что менеджер знает об игроке", а hidden profile — "что система знает как источник истины". Это сохраняет смысл scouting, development, injuries, transfers и narrative uncertainty.
+
+---
+
+## 15. Minimal Rollout Order
 
 Чтобы не пытаться завести весь каталог за один раз, разумно двигаться слоями:
 

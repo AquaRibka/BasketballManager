@@ -6,7 +6,9 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { ApiExceptionFilter } from '../src/common/errors/api-exception.filter';
 import { createApiValidationPipe } from '../src/common/pipes/create-api-validation-pipe';
+import { PlayerRatingsSyncService } from '../src/players/player-ratings-sync.service';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { calculatePlayerOverall } from '../src/players/lib/player-overall';
 
 const TEAM_ID = 'cmolpef3i0000f3sbsx7ulstg';
 const PLAYER_ID = 'cmon3yv4y0003qfsbfdn5nihz';
@@ -175,6 +177,127 @@ describe('Team and Player API', () => {
       },
     ];
 
+    const buildPlayerRelations = (player: PlayerRecord) => ({
+      physicalProfile: {
+        heightCm: player.position === 'C' ? 211 : player.position === 'PG' ? 188 : 198,
+        weightKg: player.position === 'C' ? 112 : player.position === 'PG' ? 84 : 96,
+        wingspanCm: player.position === 'PG' ? 194 : 210,
+        bodyType: player.position === 'C' ? 'HEAVY' : 'ATHLETIC',
+        speed: player.athleticism,
+        acceleration: player.athleticism + 1,
+        vertical: player.athleticism - 1,
+        strength: Math.round((player.defense + player.rebounding) / 2),
+        endurance: player.athleticism,
+        balance: player.athleticism - 2,
+        agility: player.athleticism,
+        coordination: player.athleticism + 1,
+        reaction: player.athleticism + 2,
+        recovery: 78,
+        explosiveness: player.athleticism + 2,
+      },
+      healthProfile: {
+        overallCondition: 91,
+        fatigue: 14,
+        postInjuryCondition: 100,
+        injuryRisk: 22,
+        durability: 84,
+        recoveryRate: 82,
+        painTolerance: 76,
+        medicalOutlook: 80,
+      },
+      mentalAttributes: {
+        confidence: 82,
+        selfControl: 78,
+        concentration: 81,
+        determination: 84,
+        workEthic: 86,
+        leadership: 74,
+        aggressiveness: 65,
+        teamwork: 83,
+        professionalism: 80,
+        loyalty: 70,
+        ego: 54,
+      },
+      tacticalAttributes: {
+        basketballIQ: 83,
+        shotSelection: 79,
+        courtVision: player.passing,
+        defenseReading: player.defense,
+        offenseReading: 82,
+        decisionMaking: 81,
+        offBallMovement: 78,
+        spacing: 80,
+        pickAndRollOffense: 82,
+        pickAndRollDefense: 76,
+        helpDefense: 75,
+        discipline: 84,
+      },
+      socialProfile: {
+        platform: player.overall >= 78 ? 'TELEGRAM' : 'VK',
+        nickname: `@${player.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '_')
+          .replace(/^_|_$/g, '')}`,
+        followersCount: Math.max(1200, player.overall * player.overall * 38),
+        followerGrowthWeekly: Math.round(
+          Math.max(1200, player.overall * player.overall * 38) * 0.018,
+        ),
+        engagementRate: 4.8,
+        audienceSentiment: player.overall >= 72 ? 'POSITIVE' : 'MIXED',
+        mediaStatus: player.overall >= 76 ? 'NATIONAL_NAME' : 'LOCAL_BUZZ',
+        hypeScore: Math.round(player.overall * 0.86),
+        controversyScore: 20,
+        marketabilityScore: Math.round(player.overall * 0.82),
+        lastUpdatedAt: new Date('2026-05-02T12:30:00.000Z'),
+      },
+      seasonStats: [
+        {
+          id: `stat_${player.id}`,
+          seasonLabel: '2025/26',
+          league: 'VTB United League',
+          gamesPlayed: 28,
+          gamesStarted: 22,
+          minutesPerGame: 26.4,
+          pointsPerGame: player.position === 'PG' ? 14.2 : 11.6,
+          reboundsPerGame: player.position === 'C' ? 7.4 : 3.2,
+          assistsPerGame: player.position === 'PG' ? 6.1 : 2.4,
+          stealsPerGame: 1.1,
+          blocksPerGame: player.position === 'C' ? 1.2 : 0.3,
+          turnoversPerGame: 2.0,
+          foulsPerGame: 2.3,
+          fgPct: 47.5,
+          threePct: 36.2,
+          ftPct: 81.4,
+          efficiencyRating: 17.8,
+          team: null,
+        },
+      ],
+      awards: [
+        {
+          id: `award_${player.id}`,
+          seasonLabel: '2025/26',
+          awardType: 'TEAM_LEADER',
+          league: 'VTB United League',
+          description: 'Team leader in testing fixture',
+          team: null,
+        },
+      ],
+      careerHistory: [
+        {
+          id: `career_${player.id}`,
+          seasonLabel: '2025/26',
+          league: 'VTB United League',
+          role: 'Starter',
+          jerseyNumber: 7,
+          status: 'ACTIVE',
+          transferDate: new Date('2025-09-01T00:00:00.000Z'),
+          transferReason: 'Current season roster assignment',
+          achievements: ['Fixture starter'],
+          team: null,
+        },
+      ],
+    });
+
     const attachTeam = (player: PlayerRecord) => {
       const team = teams.find((candidate) => candidate.id === player.teamId);
 
@@ -190,6 +313,56 @@ describe('Team and Player API', () => {
       };
     };
 
+    const serializePlayer = (player: PlayerRecord, include?: any) => {
+      const withTeam = attachTeam(player);
+      const relations: any = buildPlayerRelations(player);
+      const team = withTeam.team;
+
+      if (relations.seasonStats[0]) {
+        relations.seasonStats[0].team = team;
+      }
+
+      if (relations.awards[0]) {
+        relations.awards[0].team = team;
+      }
+
+      if (relations.careerHistory[0]) {
+        relations.careerHistory[0].team = team;
+      }
+
+      return {
+        ...withTeam,
+        ...(include?.physicalProfile ? { physicalProfile: relations.physicalProfile } : {}),
+        ...(include?.healthProfile ? { healthProfile: relations.healthProfile } : {}),
+        ...(include?.mentalAttributes ? { mentalAttributes: relations.mentalAttributes } : {}),
+        ...(include?.tacticalAttributes
+          ? { tacticalAttributes: relations.tacticalAttributes }
+          : {}),
+        ...(include?.socialProfile ? { socialProfile: relations.socialProfile } : {}),
+        ...(include?.seasonStats ? { seasonStats: relations.seasonStats } : {}),
+        ...(include?.awards ? { awards: relations.awards } : {}),
+        ...(include?.careerHistory ? { careerHistory: relations.careerHistory } : {}),
+      };
+    };
+
+    const toPlayerScalars = (data: Record<string, unknown>) => {
+      const {
+        team,
+        physicalProfile,
+        healthProfile,
+        mentalAttributes,
+        hiddenAttributes,
+        potentialProfile,
+        reputationProfile,
+        socialProfile,
+        tacticalAttributes,
+        careerHistory,
+        ...scalars
+      } = data;
+
+      return scalars;
+    };
+
     const serializeMatch = (match: (typeof matches)[number], select?: any) => {
       const homeTeam = teams.find((team) => team.id === match.homeTeamId);
       const awayTeam = teams.find((team) => team.id === match.awayTeamId);
@@ -198,7 +371,9 @@ describe('Team and Player API', () => {
         throw new Error('Match references a missing team in test fixtures');
       }
 
-      const includeRating = Boolean(select?.homeTeam?.select?.rating || select?.awayTeam?.select?.rating);
+      const includeRating = Boolean(
+        select?.homeTeam?.select?.rating || select?.awayTeam?.select?.rating,
+      );
 
       return {
         ...match,
@@ -282,6 +457,35 @@ describe('Team and Player API', () => {
       $queryRaw: jest.fn(),
       $transaction: jest.fn(async (callback: (tx: any) => unknown) => callback(prismaMock)),
       team: {
+        findFirst: jest.fn(({ where, select } = {}) => {
+          const team = teams.find((candidate) => {
+            if (where?.id && candidate.id !== where.id) {
+              return false;
+            }
+
+            if (
+              where?.shortName &&
+              typeof where.shortName === 'string' &&
+              candidate.shortName !== where.shortName
+            ) {
+              return false;
+            }
+
+            return true;
+          });
+
+          if (!team) {
+            return null;
+          }
+
+          if (select) {
+            return Object.fromEntries(
+              Object.keys(select).map((key) => [key, team[key as keyof typeof team]]),
+            );
+          }
+
+          return team;
+        }),
         findMany: jest.fn(({ orderBy, select } = {}) => {
           const result = [...teams];
 
@@ -405,21 +609,35 @@ describe('Team and Player API', () => {
             );
           }
 
-          if (include?.team) {
-            return result.map(attachTeam);
+          if (include) {
+            return result.map((player) => serializePlayer(player, include));
           }
 
           return result;
         }),
-        findUnique: jest.fn(({ where, include }) => {
+        findUnique: jest.fn(({ where, include, select }) => {
           const player = players.find((candidate) => candidate.id === where.id);
 
           if (!player) {
             return null;
           }
 
-          if (include?.team) {
-            return attachTeam(player);
+          if (select) {
+            const serialized = serializePlayer(player, {
+              healthProfile: select.healthProfile,
+              mentalAttributes: select.mentalAttributes,
+              socialProfile: select.socialProfile,
+              tacticalAttributes: select.tacticalAttributes,
+              team: select.team,
+            });
+
+            return Object.fromEntries(
+              Object.keys(select).map((key) => [key, serialized[key as keyof typeof serialized]]),
+            );
+          }
+
+          if (include) {
+            return serializePlayer(player, include);
           }
 
           return player;
@@ -433,7 +651,7 @@ describe('Team and Player API', () => {
 
           const player = createPlayerRecord({
             id: `cplayercreate${String(playerCounter).padStart(12, '0')}`,
-            ...data,
+            ...toPlayerScalars(data),
             teamId: data.team?.connect?.id ?? null,
             createdAt: new Date('2026-05-02T11:00:00.000Z'),
             updatedAt: new Date('2026-05-02T11:00:00.000Z'),
@@ -441,7 +659,7 @@ describe('Team and Player API', () => {
 
           players = [...players, player];
 
-          return include?.team ? attachTeam(player) : player;
+          return include ? serializePlayer(player, include) : player;
         }),
         update: jest.fn(({ where, data, include }) => {
           const index = players.findIndex((player) => player.id === where.id);
@@ -470,15 +688,33 @@ describe('Team and Player API', () => {
 
           const updatedPlayer = {
             ...players[index],
-            ...data,
+            ...toPlayerScalars(data),
             teamId: nextTeamId ?? null,
             updatedAt: new Date('2026-05-02T11:05:00.000Z'),
           };
 
           players[index] = updatedPlayer;
 
-          return include?.team ? attachTeam(updatedPlayer) : updatedPlayer;
+          return include ? serializePlayer(updatedPlayer, include) : updatedPlayer;
         }),
+      },
+      playerCareerHistory: {
+        updateMany: jest.fn(() => ({ count: 1 })),
+        create: jest.fn(({ data }) => ({
+          id: `career_transfer_${playerCounter}`,
+          playerId: data.player?.connect?.id,
+          seasonLabel: data.seasonLabel,
+          league: data.league,
+          role: data.role,
+          jerseyNumber: data.jerseyNumber,
+          status: data.status,
+          transferDate: data.transferDate,
+          transferReason: data.transferReason,
+          achievements: data.achievements,
+          teamId: data.team?.connect?.id ?? null,
+          createdAt: new Date('2026-05-02T11:05:00.000Z'),
+          updatedAt: new Date('2026-05-02T11:05:00.000Z'),
+        })),
       },
       standing: {
         findMany: jest.fn(({ where, select } = {}) => {
@@ -573,7 +809,9 @@ describe('Team and Player API', () => {
           return createdStanding;
         }),
         deleteMany: jest.fn(({ where }) => {
-          const deletedCount = standings.filter((standing) => standing.seasonId === where.seasonId).length;
+          const deletedCount = standings.filter(
+            (standing) => standing.seasonId === where.seasonId,
+          ).length;
           standings = standings.filter((standing) => standing.seasonId !== where.seasonId);
           return { count: deletedCount };
         }),
@@ -725,7 +963,8 @@ describe('Team and Player API', () => {
             result = result.filter((match) =>
               where.OR.some(
                 (candidate: any) =>
-                  match.homeTeamId === candidate.homeTeamId || match.awayTeamId === candidate.awayTeamId,
+                  match.homeTeamId === candidate.homeTeamId ||
+                  match.awayTeamId === candidate.awayTeamId,
               ),
             );
           }
@@ -923,6 +1162,8 @@ describe('Team and Player API', () => {
     })
       .overrideProvider(PrismaService)
       .useValue(prismaMock)
+      .overrideProvider(PlayerRatingsSyncService)
+      .useValue({ onModuleInit: jest.fn() })
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -969,6 +1210,15 @@ describe('Team and Player API', () => {
   });
 
   it('creates a player successfully', async () => {
+    const expectedOverall = calculatePlayerOverall({
+      position: 'PG',
+      shooting: 81,
+      passing: 85,
+      defense: 74,
+      rebounding: 51,
+      athleticism: 83,
+    });
+
     const response = await request(app.getHttpServer()).post('/players').send({
       name: 'QA Guard',
       age: 23,
@@ -985,6 +1235,7 @@ describe('Team and Player API', () => {
 
     expect(response.status).toBe(201);
     expect(response.body.name).toBe('QA Guard');
+    expect(response.body.overall).toBe(expectedOverall);
     expect(response.body.teamId).toBe(TEAM_ID);
     expect(response.body.team).toEqual(
       expect.objectContaining({
@@ -992,11 +1243,32 @@ describe('Team and Player API', () => {
         shortName: 'BMN',
       }),
     );
+    expect(response.body.physicalProfile).toEqual(
+      expect.objectContaining({
+        heightCm: expect.any(Number),
+        speed: expect.any(Number),
+      }),
+    );
+    expect(response.body.psychologyProfile).toEqual(
+      expect.objectContaining({
+        confidence: expect.any(Number),
+        teamwork: expect.any(Number),
+      }),
+    );
+    expect(response.body.socialProfile).toEqual(
+      expect.objectContaining({
+        nickname: '@qa_guard',
+        followersCount: expect.any(Number),
+        mediaStatus: expect.any(String),
+      }),
+    );
+    expect(JSON.stringify(response.body)).not.toContain('hiddenAttributes');
+    expect(JSON.stringify(response.body)).not.toContain('hiddenProfile');
 
     const teamResponse = await request(app.getHttpServer()).get(`/teams/${TEAM_ID}`);
 
     expect(teamResponse.status).toBe(200);
-    expect(teamResponse.body.rating).toBe(81);
+    expect(teamResponse.body.rating).toBe(80);
   });
 
   it('lowers team rating when weak bench players are added', async () => {
@@ -1019,7 +1291,7 @@ describe('Team and Player API', () => {
     const teamResponse = await request(app.getHttpServer()).get(`/teams/${TEAM_ID}`);
 
     expect(teamResponse.status).toBe(200);
-    expect(teamResponse.body.rating).toBe(68);
+    expect(teamResponse.body.rating).toBe(69);
   });
 
   it('returns a player by id', async () => {
@@ -1028,12 +1300,125 @@ describe('Team and Player API', () => {
     expect(response.status).toBe(200);
     expect(response.body.id).toBe(PLAYER_ID);
     expect(response.body.name).toBe('Alex Carter');
+    expect(response.body.physicalProfile).toEqual(
+      expect.objectContaining({
+        heightCm: expect.any(Number),
+        weightKg: expect.any(Number),
+      }),
+    );
+    expect(response.body.seasonStats).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          season: '2025/26',
+          pointsPerGame: expect.any(Number),
+          efficiencyRating: expect.any(Number),
+        }),
+      ]),
+    );
+    expect(response.body.socialProfile).toEqual(
+      expect.objectContaining({
+        nickname: '@alex_carter',
+        followersCount: expect.any(Number),
+        hypeScore: expect.any(Number),
+      }),
+    );
+    expect(JSON.stringify(response.body)).not.toContain('hiddenAttributes');
+    expect(JSON.stringify(response.body)).not.toContain('hiddenProfile');
+    expect(JSON.stringify(response.body)).not.toContain('wantsToLeave');
     expect(response.body.team).toEqual(
       expect.objectContaining({
         id: TEAM_ID,
         shortName: 'BMN',
       }),
     );
+  });
+
+  it('returns compact and full public player profiles without hidden fields', async () => {
+    const compactResponse = await request(app.getHttpServer()).get('/players');
+    const fullResponse = await request(app.getHttpServer()).get('/players').query({ view: 'full' });
+    const detailCompactResponse = await request(app.getHttpServer())
+      .get(`/players/${PLAYER_ID}`)
+      .query({ view: 'compact' });
+
+    expect(compactResponse.status).toBe(200);
+    expect(fullResponse.status).toBe(200);
+    expect(detailCompactResponse.status).toBe(200);
+
+    const compactPlayer = compactResponse.body.items.find(
+      (player: { id: string }) => player.id === PLAYER_ID,
+    );
+    const fullPlayer = fullResponse.body.items.find(
+      (player: { id: string }) => player.id === PLAYER_ID,
+    );
+
+    expect(compactPlayer).toEqual(
+      expect.objectContaining({
+        id: PLAYER_ID,
+        physicalProfile: expect.any(Object),
+        psychologyProfile: expect.any(Object),
+        tacticalProfile: expect.any(Object),
+        socialProfile: expect.any(Object),
+      }),
+    );
+    expect(compactPlayer).not.toHaveProperty('seasonStats');
+    expect(compactPlayer).not.toHaveProperty('careerHistory');
+    expect(compactPlayer).not.toHaveProperty('awards');
+    expect(compactPlayer).not.toHaveProperty('mentalAttributes');
+    expect(compactPlayer).not.toHaveProperty('tacticalAttributes');
+
+    expect(fullPlayer.seasonStats).toEqual(expect.any(Array));
+    expect(fullPlayer.careerHistory).toEqual(expect.any(Array));
+    expect(fullPlayer.awards).toEqual(expect.any(Array));
+    expect(detailCompactResponse.body).not.toHaveProperty('seasonStats');
+
+    for (const payload of [compactResponse.body, fullResponse.body, detailCompactResponse.body]) {
+      const serialized = JSON.stringify(payload);
+      expect(serialized).not.toContain('hiddenAttributes');
+      expect(serialized).not.toContain('hiddenProfile');
+      expect(serialized).not.toContain('hiddenReputation');
+      expect(serialized).not.toContain('wantsToLeave');
+    }
+  });
+
+  it('returns a player social profile endpoint', async () => {
+    const response = await request(app.getHttpServer()).get(`/players/${PLAYER_ID}/social`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        playerId: PLAYER_ID,
+        playerName: 'Alex Carter',
+        socialProfile: expect.objectContaining({
+          nickname: '@alex_carter',
+          followersCount: expect.any(Number),
+          lastUpdatedAt: '2026-05-02T12:30:00.000Z',
+        }),
+      }),
+    );
+  });
+
+  it('calculates player overall from position weights', () => {
+    expect(
+      calculatePlayerOverall({
+        position: 'PG',
+        shooting: 81,
+        passing: 85,
+        defense: 74,
+        rebounding: 51,
+        athleticism: 83,
+      }),
+    ).toBe(80);
+
+    expect(
+      calculatePlayerOverall({
+        position: 'C',
+        shooting: 62,
+        passing: 58,
+        defense: 86,
+        rebounding: 90,
+        athleticism: 74,
+      }),
+    ).toBe(80);
   });
 
   it('recalculates team ratings when a player moves to another team', async () => {
@@ -1049,9 +1434,9 @@ describe('Team and Player API', () => {
     const nextTeamResponse = await request(app.getHttpServer()).get(`/teams/${OTHER_TEAM_ID}`);
 
     expect(previousTeamResponse.status).toBe(200);
-    expect(previousTeamResponse.body.rating).toBe(63);
+    expect(previousTeamResponse.body.rating).toBe(64);
     expect(nextTeamResponse.status).toBe(200);
-    expect(nextTeamResponse.body.rating).toBe(80);
+    expect(nextTeamResponse.body.rating).toBe(76);
   });
 
   it('returns matches filtered by season', async () => {
@@ -1250,8 +1635,8 @@ describe('Team and Player API', () => {
     const completeSeasonResponse = await request(app.getHttpServer())
       .patch(`/seasons/${TEST_SEASON_ID}/status`)
       .send({
-      status: 'COMPLETED',
-    });
+        status: 'COMPLETED',
+      });
 
     expect(completeSeasonResponse.status).toBe(200);
     expect(completeSeasonResponse.body.status).toBe('COMPLETED');
@@ -1282,15 +1667,19 @@ describe('Team and Player API', () => {
   });
 
   it('returns initial standings for all teams after season creation', async () => {
-    const response = await request(app.getHttpServer()).get(`/seasons/${createdSeasonId}/standings`);
+    const response = await request(app.getHttpServer()).get(
+      `/seasons/${createdSeasonId}/standings`,
+    );
 
     expect(response.status).toBe(200);
     expect(response.body.seasonId).toBe(createdSeasonId);
     expect(response.body.updatedAt).not.toBeNull();
     expect(response.body.items).toHaveLength(3);
-    expect(response.body.items.every((item: { wins: number; losses: number; pointDiff: number }) => {
-      return item.wins === 0 && item.losses === 0 && item.pointDiff === 0;
-    })).toBe(true);
+    expect(
+      response.body.items.every((item: { wins: number; losses: number; pointDiff: number }) => {
+        return item.wins === 0 && item.losses === 0 && item.pointDiff === 0;
+      }),
+    ).toBe(true);
   });
 
   it('returns a generated season schedule grouped by rounds right after season creation', async () => {
@@ -1345,7 +1734,9 @@ describe('Team and Player API', () => {
 
     for (const pairStats of pairCounts.values()) {
       expect(pairStats.total).toBe(4);
-      expect(Object.values(pairStats.homeByTeam).sort((left, right) => left - right)).toEqual([2, 2]);
+      expect(Object.values(pairStats.homeByTeam).sort((left, right) => left - right)).toEqual([
+        2, 2,
+      ]);
     }
   });
 
@@ -1392,7 +1783,9 @@ describe('Team and Player API', () => {
     expect(response.body.standingsUpdated).toBe(true);
     expect(response.body.seasonStatus).toBe('IN_PROGRESS');
     expect(response.body.finishedAt).toBeNull();
-    expect(response.body.matches.every((match: { status: string }) => match.status === 'COMPLETED')).toBe(true);
+    expect(
+      response.body.matches.every((match: { status: string }) => match.status === 'COMPLETED'),
+    ).toBe(true);
     expect(
       response.body.matches.every(
         (match: { homeScore: number | null; awayScore: number | null; playedAt: string | null }) =>
@@ -1498,7 +1891,9 @@ describe('Team and Player API', () => {
       });
 
     expect(resetCompletedSeasonResponse.status).toBe(409);
-    expect(resetCompletedSeasonResponse.body.message).toBe('Season status transition is not allowed');
+    expect(resetCompletedSeasonResponse.body.message).toBe(
+      'Season status transition is not allowed',
+    );
   });
 
   it('locks completed seasons from new match creation', async () => {
@@ -1523,7 +1918,9 @@ describe('Team and Player API', () => {
     expect(createSeasonResponse.status).toBe(201);
 
     const quickSimSeasonId = createSeasonResponse.body.id;
-    const response = await request(app.getHttpServer()).post(`/seasons/${quickSimSeasonId}/simulate`);
+    const response = await request(app.getHttpServer()).post(
+      `/seasons/${quickSimSeasonId}/simulate`,
+    );
 
     expect(response.status).toBe(200);
     expect(response.body.seasonId).toBe(quickSimSeasonId);
@@ -1559,9 +1956,7 @@ describe('Team and Player API', () => {
     expect(standingsResponse.body.isFinal).toBe(true);
     expect(standingsResponse.body.champion).toEqual(response.body.champion);
     expect(
-      standingsResponse.body.items.every(
-        (item: { gamesPlayed: number }) => item.gamesPlayed === 8,
-      ),
+      standingsResponse.body.items.every((item: { gamesPlayed: number }) => item.gamesPlayed === 8),
     ).toBe(true);
 
     const repeatResponse = await request(app.getHttpServer()).post(
@@ -1633,7 +2028,9 @@ describe('Team and Player API', () => {
           },
     );
 
-    const response = await request(app.getHttpServer()).get(`/seasons/${tieBreakSeasonId}/standings`);
+    const response = await request(app.getHttpServer()).get(
+      `/seasons/${tieBreakSeasonId}/standings`,
+    );
 
     expect(response.status).toBe(200);
     expect(response.body.items).toHaveLength(3);
@@ -1643,7 +2040,9 @@ describe('Team and Player API', () => {
       'Demo Wolves',
       'QA Lions',
     ]);
-    expect(response.body.items.map((item: { position: number }) => item.position)).toEqual([1, 2, 3]);
+    expect(response.body.items.map((item: { position: number }) => item.position)).toEqual([
+      1, 2, 3,
+    ]);
   });
 
   it('returns updated standings data after match simulation', async () => {
@@ -1651,9 +2050,11 @@ describe('Team and Player API', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.updatedAt).not.toBeNull();
-    expect(response.body.items.every((item: { pointsFor: number; pointsAgainst: number }) => {
-      return Number.isInteger(item.pointsFor) && Number.isInteger(item.pointsAgainst);
-    })).toBe(true);
+    expect(
+      response.body.items.every((item: { pointsFor: number; pointsAgainst: number }) => {
+        return Number.isInteger(item.pointsFor) && Number.isInteger(item.pointsAgainst);
+      }),
+    ).toBe(true);
   });
 
   it('creates a new career save with season, schedule and standings', async () => {
@@ -1847,6 +2248,23 @@ describe('Team and Player API', () => {
           field: 'position',
           messages: expect.arrayContaining([
             'position must be one of the following values: PG, SG, SF, PF, C',
+          ]),
+        }),
+      ]),
+    );
+  });
+
+  it('rejects invalid player response views', async () => {
+    const response = await request(app.getHttpServer()).get('/players').query({ view: 'private' });
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe('VALIDATION_ERROR');
+    expect(response.body.details.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'view',
+          messages: expect.arrayContaining([
+            'view must be one of the following values: compact, full',
           ]),
         }),
       ]),

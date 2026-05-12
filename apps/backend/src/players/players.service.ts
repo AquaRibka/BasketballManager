@@ -9,269 +9,193 @@ import type {
 } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePlayerDto } from './dto/create-player.dto';
+import type { PlayerResponseView } from './dto/player-response-query.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
 import { calculatePlayerOverall, type PlayerOverallInput } from './lib/player-overall';
 
 const DEFAULT_TEAM_RATING = 60;
+const PLAYER_PUBLIC_PROFILE_INCLUDE = {
+  physicalProfile: {
+    select: {
+      heightCm: true,
+      weightKg: true,
+      wingspanCm: true,
+      bodyType: true,
+      speed: true,
+      acceleration: true,
+      vertical: true,
+      strength: true,
+      endurance: true,
+      balance: true,
+      agility: true,
+      coordination: true,
+      reaction: true,
+      recovery: true,
+      explosiveness: true,
+    },
+  },
+  healthProfile: {
+    select: {
+      overallCondition: true,
+      fatigue: true,
+      postInjuryCondition: true,
+      injuryRisk: true,
+      durability: true,
+      recoveryRate: true,
+      painTolerance: true,
+      medicalOutlook: true,
+    },
+  },
+  mentalAttributes: {
+    select: {
+      confidence: true,
+      selfControl: true,
+      concentration: true,
+      determination: true,
+      workEthic: true,
+      leadership: true,
+      aggressiveness: true,
+      teamwork: true,
+    },
+  },
+  tacticalAttributes: {
+    select: {
+      basketballIQ: true,
+      shotSelection: true,
+      courtVision: true,
+      defenseReading: true,
+      offenseReading: true,
+      decisionMaking: true,
+      offBallMovement: true,
+      spacing: true,
+      pickAndRollOffense: true,
+      pickAndRollDefense: true,
+      helpDefense: true,
+      discipline: true,
+    },
+  },
+  socialProfile: {
+    select: {
+      platform: true,
+      nickname: true,
+      followersCount: true,
+      followerGrowthWeekly: true,
+      engagementRate: true,
+      audienceSentiment: true,
+      mediaStatus: true,
+      hypeScore: true,
+      controversyScore: true,
+      marketabilityScore: true,
+      lastUpdatedAt: true,
+    },
+  },
+  team: {
+    select: {
+      id: true,
+      name: true,
+      shortName: true,
+    },
+  },
+} satisfies Prisma.PlayerInclude;
+
+const PLAYER_FULL_PUBLIC_INCLUDE = {
+  ...PLAYER_PUBLIC_PROFILE_INCLUDE,
+  seasonStats: {
+    select: {
+      id: true,
+      seasonLabel: true,
+      league: true,
+      gamesPlayed: true,
+      gamesStarted: true,
+      minutesPerGame: true,
+      pointsPerGame: true,
+      reboundsPerGame: true,
+      assistsPerGame: true,
+      stealsPerGame: true,
+      blocksPerGame: true,
+      turnoversPerGame: true,
+      foulsPerGame: true,
+      fgPct: true,
+      threePct: true,
+      ftPct: true,
+      efficiencyRating: true,
+      team: {
+        select: {
+          id: true,
+          name: true,
+          shortName: true,
+        },
+      },
+    },
+    orderBy: [{ seasonLabel: 'desc' }, { createdAt: 'desc' }],
+  },
+  awards: {
+    select: {
+      id: true,
+      seasonLabel: true,
+      awardType: true,
+      league: true,
+      description: true,
+      team: {
+        select: {
+          id: true,
+          name: true,
+          shortName: true,
+        },
+      },
+    },
+    orderBy: [{ seasonLabel: 'desc' }, { createdAt: 'desc' }],
+  },
+  careerHistory: {
+    select: {
+      id: true,
+      seasonLabel: true,
+      league: true,
+      role: true,
+      jerseyNumber: true,
+      status: true,
+      transferDate: true,
+      transferReason: true,
+      achievements: true,
+      team: {
+        select: {
+          id: true,
+          name: true,
+          shortName: true,
+        },
+      },
+    },
+    orderBy: [{ transferDate: 'desc' }, { createdAt: 'desc' }],
+  },
+} satisfies Prisma.PlayerInclude;
 
 @Injectable()
 export class PlayersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getPlayers() {
+  async getPlayers(view: PlayerResponseView = 'compact') {
     const items = await this.prisma.player.findMany({
-      include: {
-        physicalProfile: {
-          select: {
-            heightCm: true,
-            weightKg: true,
-            wingspanCm: true,
-            bodyType: true,
-            speed: true,
-            acceleration: true,
-            vertical: true,
-            strength: true,
-            endurance: true,
-            balance: true,
-            agility: true,
-            coordination: true,
-            reaction: true,
-            recovery: true,
-            explosiveness: true,
-          },
-        },
-        healthProfile: {
-          select: {
-            overallCondition: true,
-            fatigue: true,
-            postInjuryCondition: true,
-            injuryRisk: true,
-            durability: true,
-            recoveryRate: true,
-            painTolerance: true,
-            medicalOutlook: true,
-          },
-        },
-        mentalAttributes: {
-          select: {
-            confidence: true,
-            selfControl: true,
-            concentration: true,
-            determination: true,
-            workEthic: true,
-            leadership: true,
-            aggressiveness: true,
-            teamwork: true,
-          },
-        },
-        tacticalAttributes: {
-          select: {
-            basketballIQ: true,
-            shotSelection: true,
-            courtVision: true,
-            defenseReading: true,
-            offenseReading: true,
-            decisionMaking: true,
-            offBallMovement: true,
-            spacing: true,
-            pickAndRollOffense: true,
-            pickAndRollDefense: true,
-            helpDefense: true,
-            discipline: true,
-          },
-        },
-        socialProfile: {
-          select: {
-            platform: true,
-            nickname: true,
-            followersCount: true,
-            followerGrowthWeekly: true,
-            engagementRate: true,
-            audienceSentiment: true,
-            mediaStatus: true,
-            hypeScore: true,
-            controversyScore: true,
-            marketabilityScore: true,
-            lastUpdatedAt: true,
-          },
-        },
-        team: {
-          select: {
-            id: true,
-            name: true,
-            shortName: true,
-          },
-        },
-      },
+      include: view === 'full' ? PLAYER_FULL_PUBLIC_INCLUDE : PLAYER_PUBLIC_PROFILE_INCLUDE,
       orderBy: [{ overall: 'desc' }, { name: 'asc' }],
     });
 
     return {
-      items: items.map((player) => this.mapPlayerResponse(player)),
+      items: items.map((player) => this.mapPlayerResponse(player, view)),
       total: items.length,
     };
   }
 
-  async getPlayerById(id: string) {
+  async getPlayerById(id: string, view: PlayerResponseView = 'full') {
     const player = await this.prisma.player.findUnique({
       where: { id },
-      include: {
-        physicalProfile: {
-          select: {
-            heightCm: true,
-            weightKg: true,
-            wingspanCm: true,
-            bodyType: true,
-            speed: true,
-            acceleration: true,
-            vertical: true,
-            strength: true,
-            endurance: true,
-            balance: true,
-            agility: true,
-            coordination: true,
-            reaction: true,
-            recovery: true,
-            explosiveness: true,
-          },
-        },
-        healthProfile: {
-          select: {
-            overallCondition: true,
-            fatigue: true,
-            postInjuryCondition: true,
-            injuryRisk: true,
-            durability: true,
-            recoveryRate: true,
-            painTolerance: true,
-            medicalOutlook: true,
-          },
-        },
-        mentalAttributes: {
-          select: {
-            confidence: true,
-            selfControl: true,
-            concentration: true,
-            determination: true,
-            workEthic: true,
-            leadership: true,
-            aggressiveness: true,
-            teamwork: true,
-          },
-        },
-        tacticalAttributes: {
-          select: {
-            basketballIQ: true,
-            shotSelection: true,
-            courtVision: true,
-            defenseReading: true,
-            offenseReading: true,
-            decisionMaking: true,
-            offBallMovement: true,
-            spacing: true,
-            pickAndRollOffense: true,
-            pickAndRollDefense: true,
-            helpDefense: true,
-            discipline: true,
-          },
-        },
-        socialProfile: {
-          select: {
-            platform: true,
-            nickname: true,
-            followersCount: true,
-            followerGrowthWeekly: true,
-            engagementRate: true,
-            audienceSentiment: true,
-            mediaStatus: true,
-            hypeScore: true,
-            controversyScore: true,
-            marketabilityScore: true,
-            lastUpdatedAt: true,
-          },
-        },
-        team: {
-          select: {
-            id: true,
-            name: true,
-            shortName: true,
-          },
-        },
-        seasonStats: {
-          select: {
-            id: true,
-            seasonLabel: true,
-            league: true,
-            gamesPlayed: true,
-            gamesStarted: true,
-            minutesPerGame: true,
-            pointsPerGame: true,
-            reboundsPerGame: true,
-            assistsPerGame: true,
-            stealsPerGame: true,
-            blocksPerGame: true,
-            turnoversPerGame: true,
-            foulsPerGame: true,
-            fgPct: true,
-            threePct: true,
-            ftPct: true,
-            efficiencyRating: true,
-            team: {
-              select: {
-                id: true,
-                name: true,
-                shortName: true,
-              },
-            },
-          },
-          orderBy: [{ seasonLabel: 'desc' }, { createdAt: 'desc' }],
-        },
-        awards: {
-          select: {
-            id: true,
-            seasonLabel: true,
-            awardType: true,
-            league: true,
-            description: true,
-            team: {
-              select: {
-                id: true,
-                name: true,
-                shortName: true,
-              },
-            },
-          },
-          orderBy: [{ seasonLabel: 'desc' }, { createdAt: 'desc' }],
-        },
-        careerHistory: {
-          select: {
-            id: true,
-            seasonLabel: true,
-            league: true,
-            role: true,
-            jerseyNumber: true,
-            status: true,
-            transferDate: true,
-            transferReason: true,
-            achievements: true,
-            team: {
-              select: {
-                id: true,
-                name: true,
-                shortName: true,
-              },
-            },
-          },
-          orderBy: [{ transferDate: 'desc' }, { createdAt: 'desc' }],
-        },
-      },
+      include: view === 'full' ? PLAYER_FULL_PUBLIC_INCLUDE : PLAYER_PUBLIC_PROFILE_INCLUDE,
     });
 
     if (!player) {
       throw new NotFoundException('Player not found');
     }
 
-    return this.mapPlayerResponse(player);
+    return this.mapPlayerResponse(player, view);
   }
 
   async getPlayerHealthById(id: string) {
@@ -1151,10 +1075,7 @@ export class PlayersService {
         Math.round(overall * overall * 38 + Math.max(0, overall - 70) * 4200),
       ),
       followerGrowthWeekly: Math.round(
-        Math.max(
-          1200,
-          overall * overall * 38 + Math.max(0, overall - 70) * 4200,
-        ) * 0.018,
+        Math.max(1200, overall * overall * 38 + Math.max(0, overall - 70) * 4200) * 0.018,
       ),
       engagementRate: this.roundStat(Math.min(100, 2.4 + Math.max(0, overall - 60) * 0.09), 1),
       audienceSentiment: overall >= 82 ? 'SUPPORTIVE' : overall >= 72 ? 'POSITIVE' : 'MIXED',
@@ -1585,218 +1506,231 @@ export class PlayersService {
     return Math.max(1, Math.min(100, value));
   }
 
-  private mapPlayerResponse(player: {
-    id: string;
-    name: string;
-    age: number;
-    dateOfBirth: Date | null;
-    dominantHand: string | null;
-    position: PlayerOverallInput['position'];
-    secondaryPositions: PlayerOverallInput['position'][];
-    shooting: number;
-    passing: number;
-    defense: number;
-    rebounding: number;
-    athleticism: number;
-    overall: number;
-    teamId: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-    physicalProfile: {
-      heightCm: number;
-      weightKg: number;
-      wingspanCm: number | null;
-      bodyType: string | null;
-      speed: number;
-      acceleration: number;
-      vertical: number;
-      strength: number;
-      endurance: number;
-      balance: number;
-      agility: number;
-      coordination: number;
-      reaction: number;
-      recovery: number;
-      explosiveness: number;
-    } | null;
-    healthProfile: {
-      overallCondition: number;
-      fatigue: number;
-      postInjuryCondition: number;
-      injuryRisk: number;
-      durability: number;
-      recoveryRate: number;
-      painTolerance: number;
-      medicalOutlook: number;
-    } | null;
-    mentalAttributes: {
-      confidence: number;
-      selfControl: number;
-      concentration: number;
-      determination: number;
-      workEthic: number;
-      leadership: number;
-      aggressiveness: number;
-      teamwork: number;
-    } | null;
-    tacticalAttributes: {
-      basketballIQ: number;
-      shotSelection: number;
-      courtVision: number;
-      defenseReading: number;
-      offenseReading: number;
-      decisionMaking: number;
-      offBallMovement: number;
-      spacing: number;
-      pickAndRollOffense: number;
-      pickAndRollDefense: number;
-      helpDefense: number;
-      discipline: number;
-    } | null;
-    socialProfile: {
-      platform: PlayerSocialPlatform;
-      nickname: string;
-      followersCount: number;
-      followerGrowthWeekly: number;
-      engagementRate: number;
-      audienceSentiment: PlayerAudienceSentiment;
-      mediaStatus: PlayerMediaStatus;
-      hypeScore: number;
-      controversyScore: number;
-      marketabilityScore: number;
-      lastUpdatedAt: Date;
-    } | null;
-    team?: {
+  private mapPlayerResponse(
+    player: {
       id: string;
       name: string;
-      shortName: string;
-    } | null;
-    careerHistory?: Array<{
-      id: string;
-      seasonLabel: string;
-      league: string;
-      role: string;
-      jerseyNumber: number | null;
-      status: PlayerCareerStatus;
-      transferDate: Date | null;
-      transferReason: string | null;
-      achievements: string[];
-      team: {
+      age: number;
+      dateOfBirth: Date | null;
+      dominantHand: string | null;
+      position: PlayerOverallInput['position'];
+      secondaryPositions: PlayerOverallInput['position'][];
+      shooting: number;
+      passing: number;
+      defense: number;
+      rebounding: number;
+      athleticism: number;
+      overall: number;
+      teamId: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+      physicalProfile: {
+        heightCm: number;
+        weightKg: number;
+        wingspanCm: number | null;
+        bodyType: string | null;
+        speed: number;
+        acceleration: number;
+        vertical: number;
+        strength: number;
+        endurance: number;
+        balance: number;
+        agility: number;
+        coordination: number;
+        reaction: number;
+        recovery: number;
+        explosiveness: number;
+      } | null;
+      healthProfile: {
+        overallCondition: number;
+        fatigue: number;
+        postInjuryCondition: number;
+        injuryRisk: number;
+        durability: number;
+        recoveryRate: number;
+        painTolerance: number;
+        medicalOutlook: number;
+      } | null;
+      mentalAttributes: {
+        confidence: number;
+        selfControl: number;
+        concentration: number;
+        determination: number;
+        workEthic: number;
+        leadership: number;
+        aggressiveness: number;
+        teamwork: number;
+      } | null;
+      tacticalAttributes: {
+        basketballIQ: number;
+        shotSelection: number;
+        courtVision: number;
+        defenseReading: number;
+        offenseReading: number;
+        decisionMaking: number;
+        offBallMovement: number;
+        spacing: number;
+        pickAndRollOffense: number;
+        pickAndRollDefense: number;
+        helpDefense: number;
+        discipline: number;
+      } | null;
+      socialProfile: {
+        platform: PlayerSocialPlatform;
+        nickname: string;
+        followersCount: number;
+        followerGrowthWeekly: number;
+        engagementRate: number;
+        audienceSentiment: PlayerAudienceSentiment;
+        mediaStatus: PlayerMediaStatus;
+        hypeScore: number;
+        controversyScore: number;
+        marketabilityScore: number;
+        lastUpdatedAt: Date;
+      } | null;
+      team?: {
         id: string;
         name: string;
         shortName: string;
       } | null;
-    }>;
-    seasonStats?: Array<{
-      id: string;
-      seasonLabel: string;
-      league: string;
-      gamesPlayed: number;
-      gamesStarted: number;
-      minutesPerGame: number;
-      pointsPerGame: number;
-      reboundsPerGame: number;
-      assistsPerGame: number;
-      stealsPerGame: number;
-      blocksPerGame: number;
-      turnoversPerGame: number;
-      foulsPerGame: number;
-      fgPct: number;
-      threePct: number;
-      ftPct: number;
-      efficiencyRating: number;
-      team: {
+      careerHistory?: Array<{
         id: string;
-        name: string;
-        shortName: string;
-      } | null;
-    }>;
-    awards?: Array<{
-      id: string;
-      seasonLabel: string;
-      awardType: string;
-      league: string;
-      description: string | null;
-      team: {
+        seasonLabel: string;
+        league: string;
+        role: string;
+        jerseyNumber: number | null;
+        status: PlayerCareerStatus;
+        transferDate: Date | null;
+        transferReason: string | null;
+        achievements: string[];
+        team: {
+          id: string;
+          name: string;
+          shortName: string;
+        } | null;
+      }>;
+      seasonStats?: Array<{
         id: string;
-        name: string;
-        shortName: string;
-      } | null;
-    }>;
-  }) {
-    return {
-      ...player,
+        seasonLabel: string;
+        league: string;
+        gamesPlayed: number;
+        gamesStarted: number;
+        minutesPerGame: number;
+        pointsPerGame: number;
+        reboundsPerGame: number;
+        assistsPerGame: number;
+        stealsPerGame: number;
+        blocksPerGame: number;
+        turnoversPerGame: number;
+        foulsPerGame: number;
+        fgPct: number;
+        threePct: number;
+        ftPct: number;
+        efficiencyRating: number;
+        team: {
+          id: string;
+          name: string;
+          shortName: string;
+        } | null;
+      }>;
+      awards?: Array<{
+        id: string;
+        seasonLabel: string;
+        awardType: string;
+        league: string;
+        description: string | null;
+        team: {
+          id: string;
+          name: string;
+          shortName: string;
+        } | null;
+      }>;
+    },
+    view: PlayerResponseView = 'full',
+  ) {
+    const { mentalAttributes, tacticalAttributes, ...publicPlayer } = player;
+    const response = {
+      ...publicPlayer,
       dateOfBirth: player.dateOfBirth?.toISOString() ?? null,
       createdAt: player.createdAt.toISOString(),
       updatedAt: player.updatedAt.toISOString(),
-      careerHistory: player.careerHistory?.map((entry) => ({
-        id: entry.id,
-        season: entry.seasonLabel,
-        league: entry.league,
-        role: entry.role,
-        jerseyNumber: entry.jerseyNumber,
-        status: entry.status,
-        transferDate: entry.transferDate?.toISOString() ?? null,
-        transferReason: entry.transferReason,
-        achievements: entry.achievements,
-        team: entry.team,
-      })),
-      seasonStats: player.seasonStats?.map((entry) => ({
-        id: entry.id,
-        season: entry.seasonLabel,
-        league: entry.league,
-        team: entry.team,
-        gamesPlayed: entry.gamesPlayed,
-        gamesStarted: entry.gamesStarted,
-        minutesPerGame: entry.minutesPerGame,
-        pointsPerGame: entry.pointsPerGame,
-        reboundsPerGame: entry.reboundsPerGame,
-        assistsPerGame: entry.assistsPerGame,
-        stealsPerGame: entry.stealsPerGame,
-        blocksPerGame: entry.blocksPerGame,
-        turnoversPerGame: entry.turnoversPerGame,
-        foulsPerGame: entry.foulsPerGame,
-        fgPct: entry.fgPct,
-        threePct: entry.threePct,
-        ftPct: entry.ftPct,
-        efficiencyRating: entry.efficiencyRating,
-      })),
-      awards: player.awards?.map((entry) => ({
-        id: entry.id,
-        season: entry.seasonLabel,
-        awardType: entry.awardType,
-        league: entry.league,
-        description: entry.description,
-        team: entry.team,
-      })),
-      careerTotals: this.calculateCareerTotals(player.seasonStats),
+      careerHistory:
+        view === 'full'
+          ? player.careerHistory?.map((entry) => ({
+              id: entry.id,
+              season: entry.seasonLabel,
+              league: entry.league,
+              role: entry.role,
+              jerseyNumber: entry.jerseyNumber,
+              status: entry.status,
+              transferDate: entry.transferDate?.toISOString() ?? null,
+              transferReason: entry.transferReason,
+              achievements: entry.achievements,
+              team: entry.team,
+            }))
+          : undefined,
+      seasonStats:
+        view === 'full'
+          ? player.seasonStats?.map((entry) => ({
+              id: entry.id,
+              season: entry.seasonLabel,
+              league: entry.league,
+              team: entry.team,
+              gamesPlayed: entry.gamesPlayed,
+              gamesStarted: entry.gamesStarted,
+              minutesPerGame: entry.minutesPerGame,
+              pointsPerGame: entry.pointsPerGame,
+              reboundsPerGame: entry.reboundsPerGame,
+              assistsPerGame: entry.assistsPerGame,
+              stealsPerGame: entry.stealsPerGame,
+              blocksPerGame: entry.blocksPerGame,
+              turnoversPerGame: entry.turnoversPerGame,
+              foulsPerGame: entry.foulsPerGame,
+              fgPct: entry.fgPct,
+              threePct: entry.threePct,
+              ftPct: entry.ftPct,
+              efficiencyRating: entry.efficiencyRating,
+            }))
+          : undefined,
+      awards:
+        view === 'full'
+          ? player.awards?.map((entry) => ({
+              id: entry.id,
+              season: entry.seasonLabel,
+              awardType: entry.awardType,
+              league: entry.league,
+              description: entry.description,
+              team: entry.team,
+            }))
+          : undefined,
+      careerTotals: view === 'full' ? this.calculateCareerTotals(player.seasonStats) : undefined,
       healthProfile: player.healthProfile,
-      psychologyProfile: player.mentalAttributes
+      psychologyProfile: mentalAttributes
         ? {
-            selfControl: player.mentalAttributes.selfControl,
-            concentration: player.mentalAttributes.concentration,
-            determination: player.mentalAttributes.determination,
-            leadership: player.mentalAttributes.leadership,
-            workEthic: player.mentalAttributes.workEthic,
-            aggressiveness: player.mentalAttributes.aggressiveness,
-            teamwork: player.mentalAttributes.teamwork,
-            confidence: player.mentalAttributes.confidence,
+            selfControl: mentalAttributes.selfControl,
+            concentration: mentalAttributes.concentration,
+            determination: mentalAttributes.determination,
+            leadership: mentalAttributes.leadership,
+            workEthic: mentalAttributes.workEthic,
+            aggressiveness: mentalAttributes.aggressiveness,
+            teamwork: mentalAttributes.teamwork,
+            confidence: mentalAttributes.confidence,
           }
         : null,
-      tacticalProfile: player.tacticalAttributes
+      tacticalProfile: tacticalAttributes
         ? {
-            basketballIQ: player.tacticalAttributes.basketballIQ,
-            shotSelection: player.tacticalAttributes.shotSelection,
-            courtVision: player.tacticalAttributes.courtVision,
-            defenseReading: player.tacticalAttributes.defenseReading,
-            offenseReading: player.tacticalAttributes.offenseReading,
-            decisionMaking: player.tacticalAttributes.decisionMaking,
-            offBallMovement: player.tacticalAttributes.offBallMovement,
-            spacing: player.tacticalAttributes.spacing,
-            pickAndRollOffense: player.tacticalAttributes.pickAndRollOffense,
-            pickAndRollDefense: player.tacticalAttributes.pickAndRollDefense,
-            helpDefense: player.tacticalAttributes.helpDefense,
-            discipline: player.tacticalAttributes.discipline,
+            basketballIQ: tacticalAttributes.basketballIQ,
+            shotSelection: tacticalAttributes.shotSelection,
+            courtVision: tacticalAttributes.courtVision,
+            defenseReading: tacticalAttributes.defenseReading,
+            offenseReading: tacticalAttributes.offenseReading,
+            decisionMaking: tacticalAttributes.decisionMaking,
+            offBallMovement: tacticalAttributes.offBallMovement,
+            spacing: tacticalAttributes.spacing,
+            pickAndRollOffense: tacticalAttributes.pickAndRollOffense,
+            pickAndRollDefense: tacticalAttributes.pickAndRollDefense,
+            helpDefense: tacticalAttributes.helpDefense,
+            discipline: tacticalAttributes.discipline,
           }
         : null,
       socialProfile: player.socialProfile
@@ -1815,6 +1749,15 @@ export class PlayersService {
           }
         : null,
     };
+
+    if (view === 'compact') {
+      delete response.careerHistory;
+      delete response.seasonStats;
+      delete response.awards;
+      delete response.careerTotals;
+    }
+
+    return response;
   }
 
   private mapPlayerHiddenProfile(player: {

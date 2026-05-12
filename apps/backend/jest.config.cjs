@@ -11,4 +11,7 @@ module.exports = {
       },
     ],
   },
+  moduleNameMapper: {
+    '^@basketball-manager/shared$': '<rootDir>/test/shared-test-module.cjs',
+  },
 };

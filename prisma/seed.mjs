@@ -5,6 +5,8 @@ const { PlayerBodyType, PlayerDominantHand, PlayerPosition } = prismaClientPkg;
 
 const prisma = createPrismaClient();
 
+const CURRENT_SEASON_ID = 'vtb-2025-26';
+
 function getCurrentSeasonLabel(referenceDate = new Date()) {
   const year = referenceDate.getUTCFullYear();
   const month = referenceDate.getUTCMonth() + 1;
@@ -19,7 +21,7 @@ const teamSeeds = [
     name: 'CSKA Moscow',
     city: 'Moscow',
     shortName: 'CSKA',
-    rating: 95,
+    rating: 84,
     targetFor: 93.1,
     targetAgainst: 74.3,
     winPct: 92.5,
@@ -47,7 +49,7 @@ const teamSeeds = [
     name: 'UNICS Kazan',
     city: 'Kazan',
     shortName: 'UNI',
-    rating: 90,
+    rating: 83,
     targetFor: 86.8,
     targetAgainst: 74.0,
     winPct: 82.5,
@@ -77,7 +79,7 @@ const teamSeeds = [
     name: 'Zenit Saint Petersburg',
     city: 'Saint Petersburg',
     shortName: 'ZEN',
-    rating: 87,
+    rating: 82,
     targetFor: 87.5,
     targetAgainst: 75.8,
     winPct: 70.0,
@@ -106,7 +108,7 @@ const teamSeeds = [
     name: 'Lokomotiv Kuban',
     city: 'Krasnodar',
     shortName: 'LOK',
-    rating: 85,
+    rating: 81,
     targetFor: 86.1,
     targetAgainst: 80.2,
     winPct: 67.5,
@@ -164,7 +166,7 @@ const teamSeeds = [
     name: 'Uralmash Yekaterinburg',
     city: 'Yekaterinburg',
     shortName: 'URA',
-    rating: 76,
+    rating: 78,
     targetFor: 79.7,
     targetAgainst: 78.0,
     winPct: 47.5,
@@ -191,7 +193,7 @@ const teamSeeds = [
     name: 'MBA-MAI Moscow',
     city: 'Moscow',
     shortName: 'MBA',
-    rating: 75,
+    rating: 77,
     targetFor: 80.3,
     targetAgainst: 82.2,
     winPct: 45.0,
@@ -219,7 +221,7 @@ const teamSeeds = [
     name: 'Enisey Krasnoyarsk',
     city: 'Krasnoyarsk',
     shortName: 'ENI',
-    rating: 72,
+    rating: 76,
     targetFor: 78.2,
     targetAgainst: 82.2,
     winPct: 37.5,
@@ -245,7 +247,7 @@ const teamSeeds = [
     name: 'Pari Nizhny Novgorod',
     city: 'Nizhny Novgorod',
     shortName: 'NNV',
-    rating: 68,
+    rating: 75,
     targetFor: 76.1,
     targetAgainst: 87.9,
     winPct: 30.0,
@@ -276,7 +278,7 @@ const teamSeeds = [
     name: 'Avtodor Saratov',
     city: 'Saratov',
     shortName: 'AVT',
-    rating: 62,
+    rating: 74,
     targetFor: 71.5,
     targetAgainst: 85.8,
     winPct: 17.5,
@@ -304,7 +306,7 @@ const teamSeeds = [
     name: 'Samara',
     city: 'Samara',
     shortName: 'SAM',
-    rating: 55,
+    rating: 73,
     targetFor: 71.8,
     targetAgainst: 94.3,
     winPct: 5.0,
@@ -329,6 +331,269 @@ const teamSeeds = [
     ],
   },
 ];
+
+const playerProfiles = {
+  'Melo Trimble': {
+    overall: 88,
+    potential: 88,
+    role: 'Primary creator',
+    attributes: { shooting: 90, passing: 86, defense: 81, rebounding: 68, athleticism: 84 },
+    seasonStats: {
+      gamesPlayed: 36,
+      gamesStarted: 34,
+      minutesPerGame: 29.8,
+      pointsPerGame: 19.0,
+      reboundsPerGame: 3.1,
+      assistsPerGame: 4.3,
+      stealsPerGame: 2.0,
+      blocksPerGame: 0.1,
+      turnoversPerGame: 2.4,
+      foulsPerGame: 2.2,
+      fgPct: 51.0,
+      threePct: 38.0,
+      ftPct: 93.0,
+      efficiencyRating: 25.8,
+    },
+    awards: [
+      ['2025/26', 'MVP_OF_MONTH', 'MVP of November 2025/26'],
+      ['2025/26', 'MVP_OF_MONTH', 'MVP of January 2025/26'],
+      ['2025', 'SUPERCUP_MVP', 'VTB United League SuperCup MVP'],
+      ['2024/25', 'PLAYOFFS_MVP', 'VTB United League Playoffs MVP'],
+      ['2023/24', 'PLAYOFFS_MVP', 'VTB United League Playoffs MVP'],
+    ],
+    careerAchievements: ['2025 VTB champion', 'Two-time Playoffs MVP', 'SuperCup 2025 MVP'],
+    social: { platform: 'INSTAGRAM', followersCount: 620000, followerGrowthWeekly: 12400 },
+  },
+  'Marcus Bingham Jr.': {
+    overall: 87,
+    potential: 88,
+    role: 'Two-way frontcourt star',
+    attributes: { shooting: 78, passing: 70, defense: 89, rebounding: 88, athleticism: 85 },
+    seasonStats: {
+      gamesPlayed: 37,
+      gamesStarted: 33,
+      minutesPerGame: 27.4,
+      pointsPerGame: 16.4,
+      reboundsPerGame: 7.3,
+      assistsPerGame: 1.5,
+      stealsPerGame: 0.8,
+      blocksPerGame: 1.1,
+      turnoversPerGame: 1.8,
+      foulsPerGame: 2.7,
+      fgPct: 58.0,
+      threePct: 34.0,
+      ftPct: 75.0,
+      efficiencyRating: 20.7,
+    },
+    awards: [['2025/26', 'MVP_OF_MONTH', 'MVP of October 2025/26']],
+    careerAchievements: ['2025/26 October MVP', 'EuroCup winner before joining UNICS'],
+    social: { platform: 'INSTAGRAM', followersCount: 410000, followerGrowthWeekly: 9800 },
+  },
+  'Patrick Miller': {
+    overall: 86,
+    potential: 86,
+    role: 'Lead guard',
+    attributes: { shooting: 84, passing: 88, defense: 78, rebounding: 72, athleticism: 84 },
+    seasonStats: {
+      gamesPlayed: 39,
+      gamesStarted: 37,
+      minutesPerGame: 30.6,
+      pointsPerGame: 15.8,
+      reboundsPerGame: 4.0,
+      assistsPerGame: 7.3,
+      stealsPerGame: 1.2,
+      blocksPerGame: 0.2,
+      turnoversPerGame: 2.8,
+      foulsPerGame: 2.4,
+      fgPct: 47.0,
+      threePct: 35.0,
+      ftPct: 82.0,
+      efficiencyRating: 25.0,
+    },
+    awards: [['2025/26', 'MVP_OF_MONTH', 'MVP of March 2025/26']],
+    careerAchievements: ['2025/26 March MVP'],
+    social: { platform: 'INSTAGRAM', followersCount: 350000, followerGrowthWeekly: 7600 },
+  },
+  'Trent Frazier': {
+    overall: 86,
+    potential: 86,
+    role: 'Two-way guard',
+    attributes: { shooting: 86, passing: 84, defense: 82, rebounding: 66, athleticism: 84 },
+    seasonStats: {
+      gamesPlayed: 38,
+      gamesStarted: 35,
+      minutesPerGame: 29.2,
+      pointsPerGame: 15.4,
+      reboundsPerGame: 3.0,
+      assistsPerGame: 5.8,
+      stealsPerGame: 1.6,
+      blocksPerGame: 0.2,
+      turnoversPerGame: 2.3,
+      foulsPerGame: 2.1,
+      fgPct: 46.0,
+      threePct: 39.0,
+      ftPct: 84.0,
+      efficiencyRating: 22.6,
+    },
+    awards: [['2025/26', 'MVP_OF_MONTH', 'MVP of February 2025/26']],
+    careerAchievements: ['2025/26 February MVP'],
+    social: { platform: 'INSTAGRAM', followersCount: 330000, followerGrowthWeekly: 7100 },
+  },
+  'Terrell Carter II': {
+    overall: 85,
+    potential: 85,
+    role: 'Interior hub',
+    attributes: { shooting: 75, passing: 74, defense: 84, rebounding: 86, athleticism: 79 },
+    seasonStats: {
+      gamesPlayed: 38,
+      gamesStarted: 34,
+      minutesPerGame: 28.5,
+      pointsPerGame: 14.0,
+      reboundsPerGame: 7.0,
+      assistsPerGame: 2.5,
+      stealsPerGame: 0.8,
+      blocksPerGame: 0.7,
+      turnoversPerGame: 1.9,
+      foulsPerGame: 2.8,
+      fgPct: 55.0,
+      threePct: 28.0,
+      ftPct: 73.0,
+      efficiencyRating: 19.3,
+    },
+    awards: [['2025/26', 'MVP_OF_MONTH', 'MVP of December 2025/26']],
+    careerAchievements: ['2025/26 December MVP'],
+    social: { platform: 'INSTAGRAM', followersCount: 270000, followerGrowthWeekly: 6200 },
+  },
+  'Anton Kardanakhishvili': {
+    overall: 84,
+    potential: 86,
+    role: 'Breakout lead guard',
+    attributes: { shooting: 82, passing: 85, defense: 77, rebounding: 64, athleticism: 83 },
+    seasonStats: {
+      gamesPlayed: 39,
+      gamesStarted: 35,
+      minutesPerGame: 29.0,
+      pointsPerGame: 15.2,
+      reboundsPerGame: 3.2,
+      assistsPerGame: 5.4,
+      stealsPerGame: 1.1,
+      blocksPerGame: 0.2,
+      turnoversPerGame: 2.6,
+      foulsPerGame: 2.3,
+      fgPct: 45.0,
+      threePct: 36.0,
+      ftPct: 80.0,
+      efficiencyRating: 21.5,
+    },
+    awards: [['2025/26', 'MVP_OF_MONTH', 'MVP of April 2025/26']],
+    careerAchievements: ['2025/26 April MVP'],
+    social: { platform: 'TELEGRAM', followersCount: 210000, followerGrowthWeekly: 5600 },
+  },
+  'Nikita Mikhailovsky': {
+    overall: 84,
+    potential: 86,
+    role: 'High-usage scorer',
+    attributes: { shooting: 87, passing: 75, defense: 72, rebounding: 70, athleticism: 81 },
+    seasonStats: {
+      gamesPlayed: 26,
+      gamesStarted: 25,
+      minutesPerGame: 31.2,
+      pointsPerGame: 20.5,
+      reboundsPerGame: 4.5,
+      assistsPerGame: 2.8,
+      stealsPerGame: 0.9,
+      blocksPerGame: 0.3,
+      turnoversPerGame: 2.7,
+      foulsPerGame: 2.5,
+      fgPct: 49.0,
+      threePct: 25.9,
+      ftPct: 80.0,
+      efficiencyRating: 18.8,
+    },
+    awards: [
+      ['2025/26', 'SCORING_LEADER', 'Regular season scoring leader'],
+      ['2020/21', 'YOUNG_PLAYER_OF_YEAR', 'VTB United League Young Player of the Year'],
+      ['2018/19', 'YOUNG_PLAYER_OF_YEAR', 'VTB United League Young Player of the Year'],
+    ],
+    careerAchievements: [
+      '2025/26 regular season scoring leader',
+      'Two-time Young Player of the Year',
+    ],
+    social: { platform: 'VK', followersCount: 240000, followerGrowthWeekly: 5900 },
+  },
+  'Casper Ware': {
+    overall: 84,
+    potential: 84,
+    role: 'Veteran shot creator',
+    attributes: { shooting: 86, passing: 82, defense: 74, rebounding: 60, athleticism: 78 },
+    seasonStats: {
+      gamesPlayed: 36,
+      gamesStarted: 18,
+      minutesPerGame: 23.0,
+      pointsPerGame: 10.5,
+      reboundsPerGame: 1.8,
+      assistsPerGame: 3.1,
+      stealsPerGame: 0.8,
+      blocksPerGame: 0.1,
+      turnoversPerGame: 1.7,
+      foulsPerGame: 1.9,
+      fgPct: 45.0,
+      threePct: 37.0,
+      ftPct: 86.0,
+      efficiencyRating: 10.5,
+    },
+    awards: [['2024/25', 'ALL_STAR', 'VTB United League All-Star']],
+    careerAchievements: ['VTB champion', 'Multiple-time All-Star'],
+    social: { platform: 'INSTAGRAM', followersCount: 390000, followerGrowthWeekly: 4300 },
+  },
+  'Paris Lee': {
+    overall: 84,
+    potential: 84,
+    role: 'Pressure guard',
+    attributes: { shooting: 81, passing: 86, defense: 84, rebounding: 62, athleticism: 83 },
+    seasonStats: {
+      gamesPlayed: 39,
+      gamesStarted: 36,
+      minutesPerGame: 28.4,
+      pointsPerGame: 13.0,
+      reboundsPerGame: 2.7,
+      assistsPerGame: 6.1,
+      stealsPerGame: 1.7,
+      blocksPerGame: 0.1,
+      turnoversPerGame: 2.4,
+      foulsPerGame: 2.2,
+      fgPct: 45.0,
+      threePct: 36.0,
+      ftPct: 81.0,
+      efficiencyRating: 18.4,
+    },
+    careerAchievements: ['EuroLeague steals leader profile before UNICS move'],
+  },
+  'Jalen Reynolds': {
+    overall: 84,
+    potential: 84,
+    role: 'Paint scorer',
+    attributes: { shooting: 76, passing: 69, defense: 84, rebounding: 86, athleticism: 80 },
+    seasonStats: {
+      gamesPlayed: 37,
+      gamesStarted: 16,
+      minutesPerGame: 23.8,
+      pointsPerGame: 12.8,
+      reboundsPerGame: 6.4,
+      assistsPerGame: 1.6,
+      stealsPerGame: 0.6,
+      blocksPerGame: 0.8,
+      turnoversPerGame: 1.8,
+      foulsPerGame: 2.6,
+      fgPct: 56.0,
+      threePct: 20.0,
+      ftPct: 72.0,
+      efficiencyRating: 17.8,
+    },
+    awards: [['2024/25', 'ALL_STAR', 'VTB United League All-Star']],
+    careerAchievements: ['All-Star', 'Defensive Player of the Year nominee'],
+  },
+};
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -409,59 +674,162 @@ function positionBias(position) {
   }
 }
 
+function overallWeights(position) {
+  switch (position) {
+    case PlayerPosition.PG:
+      return { shooting: 0.3, passing: 0.3, defense: 0.15, rebounding: 0.05, athleticism: 0.2 };
+    case PlayerPosition.SG:
+      return { shooting: 0.32, passing: 0.22, defense: 0.16, rebounding: 0.08, athleticism: 0.22 };
+    case PlayerPosition.SF:
+      return { shooting: 0.24, passing: 0.18, defense: 0.22, rebounding: 0.14, athleticism: 0.22 };
+    case PlayerPosition.PF:
+      return { shooting: 0.16, passing: 0.12, defense: 0.28, rebounding: 0.24, athleticism: 0.2 };
+    case PlayerPosition.C:
+    default:
+      return { shooting: 0.1, passing: 0.1, defense: 0.3, rebounding: 0.3, athleticism: 0.2 };
+  }
+}
+
+function calculateOverallFromCore(position, attributes) {
+  const weights = overallWeights(position);
+
+  return Math.round(
+    attributes.shooting * weights.shooting +
+      attributes.passing * weights.passing +
+      attributes.defense * weights.defense +
+      attributes.rebounding * weights.rebounding +
+      attributes.athleticism * weights.athleticism,
+  );
+}
+
+function alignCoreAttributesToOverall(position, attributes, targetOverall) {
+  const next = { ...attributes };
+  const priorityByPosition = {
+    [PlayerPosition.PG]: ['passing', 'shooting', 'athleticism', 'defense', 'rebounding'],
+    [PlayerPosition.SG]: ['shooting', 'athleticism', 'passing', 'defense', 'rebounding'],
+    [PlayerPosition.SF]: ['defense', 'athleticism', 'shooting', 'passing', 'rebounding'],
+    [PlayerPosition.PF]: ['rebounding', 'defense', 'athleticism', 'shooting', 'passing'],
+    [PlayerPosition.C]: ['rebounding', 'defense', 'athleticism', 'passing', 'shooting'],
+  };
+  const priority = priorityByPosition[position] ?? priorityByPosition[PlayerPosition.SF];
+
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    const currentOverall = calculateOverallFromCore(position, next);
+    const delta = targetOverall - currentOverall;
+
+    if (delta === 0) {
+      break;
+    }
+
+    const step = delta > 0 ? 1 : -1;
+    const magnitude = Math.min(4, Math.abs(delta));
+
+    for (const key of priority) {
+      next[key] = clamp(next[key] + step * magnitude, 35, 96);
+    }
+  }
+
+  return next;
+}
+
 function buildRoster(team, teamIndex) {
   const offenseIndex = team.targetFor - 80;
   const defenseIndex = 82 - team.targetAgainst;
-  const winIndex = (team.winPct - 50) / 5;
+  const winIndex = (team.winPct - 50) / 10;
   const strengthOffset = team.strengthOffset ?? 0;
+  const teamBalance = clamp(
+    (team.rating - 78) * 0.9 +
+      offenseIndex * 0.18 +
+      defenseIndex * 0.18 +
+      winIndex +
+      strengthOffset,
+    -5,
+    5,
+  );
 
   return team.roster.map(([name, position, age], playerIndex) => {
+    const profile = playerProfiles[name] ?? {};
     const rotationPenalty =
-      playerIndex < 2 ? 6 : playerIndex < 5 ? 3 : playerIndex < 8 ? 0 : playerIndex < 11 ? -4 : -8;
-    const baseOverall = clamp(
-      62 + offenseIndex * 0.45 + defenseIndex * 0.5 + winIndex + rotationPenalty + strengthOffset,
-      48,
-      86,
+      playerIndex < 1
+        ? 5
+        : playerIndex < 3
+          ? 3
+          : playerIndex < 5
+            ? 1
+            : playerIndex < 8
+              ? -1
+              : playerIndex < 11
+                ? -3
+                : -5;
+    const baseOverall = clamp(73 + teamBalance + rotationPenalty, 62, 86);
+    const variation = ((teamIndex * 7 + playerIndex * 5) % 5) - 2;
+    const overall = clamp(profile.overall ?? Math.round(baseOverall + variation), 58, 88);
+    const potential = clamp(
+      profile.potential ?? overall + 2 + ((teamIndex + playerIndex) % 5),
+      overall,
+      90,
     );
-    const variation = ((teamIndex * 7 + playerIndex * 5) % 7) - 3;
-    const overall = clamp(Math.round(baseOverall + variation), 46, 89);
-    const potential = clamp(overall + 2 + ((teamIndex + playerIndex) % 6), overall, 94);
     const bias = positionBias(position);
 
-    const shooting = clamp(
-      Math.round(
-        overall + bias.shooting + offenseIndex * 0.7 + ((teamIndex + playerIndex) % 5) - 2,
-      ),
-      35,
-      96,
-    );
-    const passing = clamp(
-      Math.round(
-        overall + bias.passing + offenseIndex * 0.35 + ((teamIndex * 2 + playerIndex) % 5) - 2,
-      ),
-      35,
-      96,
-    );
-    const defense = clamp(
-      Math.round(
-        overall + bias.defense + defenseIndex * 0.75 + ((teamIndex + playerIndex * 3) % 5) - 2,
-      ),
-      35,
-      96,
-    );
-    const rebounding = clamp(
-      Math.round(
-        overall + bias.rebounding + defenseIndex * 0.35 + ((teamIndex * 3 + playerIndex) % 5) - 2,
-      ),
-      35,
-      96,
-    );
-    const athleticism = clamp(
-      Math.round(
-        overall + bias.athleticism + offenseIndex * 0.15 + ((teamIndex + playerIndex * 4) % 5) - 2,
-      ),
-      35,
-      96,
+    const rawShooting =
+      profile.attributes?.shooting ??
+      clamp(
+        Math.round(
+          overall + bias.shooting + offenseIndex * 0.7 + ((teamIndex + playerIndex) % 5) - 2,
+        ),
+        35,
+        96,
+      );
+    const rawPassing =
+      profile.attributes?.passing ??
+      clamp(
+        Math.round(
+          overall + bias.passing + offenseIndex * 0.35 + ((teamIndex * 2 + playerIndex) % 5) - 2,
+        ),
+        35,
+        96,
+      );
+    const rawDefense =
+      profile.attributes?.defense ??
+      clamp(
+        Math.round(
+          overall + bias.defense + defenseIndex * 0.75 + ((teamIndex + playerIndex * 3) % 5) - 2,
+        ),
+        35,
+        96,
+      );
+    const rawRebounding =
+      profile.attributes?.rebounding ??
+      clamp(
+        Math.round(
+          overall + bias.rebounding + defenseIndex * 0.35 + ((teamIndex * 3 + playerIndex) % 5) - 2,
+        ),
+        35,
+        96,
+      );
+    const rawAthleticism =
+      profile.attributes?.athleticism ??
+      clamp(
+        Math.round(
+          overall +
+            bias.athleticism +
+            offenseIndex * 0.15 +
+            ((teamIndex + playerIndex * 4) % 5) -
+            2,
+        ),
+        35,
+        96,
+      );
+    const alignedAttributes = alignCoreAttributesToOverall(
+      position,
+      {
+        shooting: rawShooting,
+        passing: rawPassing,
+        defense: rawDefense,
+        rebounding: rawRebounding,
+        athleticism: rawAthleticism,
+      },
+      overall,
     );
 
     return {
@@ -471,19 +839,32 @@ function buildRoster(team, teamIndex) {
       dominantHand: buildDominantHand(`${team.shortName}-${name}`),
       position,
       secondaryPositions: buildSecondaryPositions(position),
-      shooting,
-      passing,
-      defense,
-      rebounding,
-      athleticism,
+      shooting: alignedAttributes.shooting,
+      passing: alignedAttributes.passing,
+      defense: alignedAttributes.defense,
+      rebounding: alignedAttributes.rebounding,
+      athleticism: alignedAttributes.athleticism,
       overall,
       potential,
+      role: profile.role ?? (playerIndex < 5 ? 'Rotation' : playerIndex < 10 ? 'Bench' : 'Depth'),
+      careerAchievements: profile.careerAchievements ?? [],
+      awards: profile.awards ?? [],
+      social: profile.social ?? {},
+      seasonStats: profile.seasonStats ?? null,
       physicalProfile: physicalDefaults(position),
     };
   });
 }
 
 function buildSeasonStatLine(player, playerIndex) {
+  if (player.seasonStats) {
+    return {
+      seasonLabel: getCurrentSeasonLabel(),
+      league: 'VTB United League',
+      ...player.seasonStats,
+    };
+  }
+
   const roleFactor = Math.max(0.55, 1.08 - playerIndex * 0.06);
   const gamesPlayed = clamp(Math.round(18 + player.overall * 0.22 + roleFactor * 8), 12, 44);
   const gamesStarted = clamp(
@@ -583,8 +964,352 @@ function buildSeasonStatLine(player, playerIndex) {
   };
 }
 
+function buildPlayerSlug(playerName) {
+  return playerName
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 24);
+}
+
+function buildTechnicalAttributes(player) {
+  const guardSkill = player.position === PlayerPosition.PG || player.position === PlayerPosition.SG;
+  const wingSkill = player.position === PlayerPosition.SF;
+  const bigSkill = player.position === PlayerPosition.PF || player.position === PlayerPosition.C;
+
+  return {
+    shooting: player.shooting,
+    passing: player.passing,
+    defense: player.defense,
+    rebounding: player.rebounding,
+    ballHandling: clamp(player.passing + (guardSkill ? 5 : bigSkill ? -5 : 0), 1, 100),
+    dribbling: clamp(player.passing + (guardSkill ? 4 : bigSkill ? -6 : 1), 1, 100),
+    midRangeShot: clamp(player.shooting + (bigSkill ? -1 : 2), 1, 100),
+    threePointShot: clamp(player.shooting + (guardSkill || wingSkill ? 3 : -8), 1, 100),
+    freeThrow: clamp(player.shooting + 4, 1, 100),
+    rimFinishing: clamp(
+      Math.round((player.shooting + player.athleticism) / 2) + (bigSkill ? 5 : 0),
+      1,
+      100,
+    ),
+    dunking: clamp(player.athleticism + (bigSkill ? 8 : wingSkill ? 3 : -6), 1, 100),
+    postMoves: clamp(player.shooting + (bigSkill ? 7 : wingSkill ? -2 : -10), 1, 100),
+    perimeterDefense: clamp(player.defense + (bigSkill ? -5 : 3), 1, 100),
+    interiorDefense: clamp(player.defense + (bigSkill ? 6 : guardSkill ? -8 : 0), 1, 100),
+    offensiveRebound: clamp(player.rebounding + (bigSkill ? 4 : -3), 1, 100),
+    defensiveRebound: clamp(player.rebounding + (bigSkill ? 5 : -1), 1, 100),
+  };
+}
+
+function buildPhysicalProfile(player) {
+  const ageWear = Math.max(0, player.age - 31);
+
+  return {
+    ...player.physicalProfile,
+    standingReachCm: player.physicalProfile.heightCm + 53,
+    speed: clamp(player.athleticism + 3 - ageWear, 1, 100),
+    acceleration: clamp(player.athleticism + 4 - ageWear, 1, 100),
+    strength: clamp(Math.round((player.defense + player.rebounding) / 2), 1, 100),
+    explosiveness: clamp(player.athleticism + 5 - ageWear, 1, 100),
+    agility: clamp(player.athleticism + 2 - ageWear, 1, 100),
+    balance: clamp(player.athleticism + 2, 1, 100),
+    coordination: clamp(player.athleticism + 3, 1, 100),
+    reaction: clamp(player.athleticism + 4, 1, 100),
+    vertical: clamp(player.athleticism + 1 - ageWear, 1, 100),
+    stamina: clamp(player.athleticism + 2 - Math.round(ageWear / 2), 1, 100),
+    endurance: clamp(player.athleticism + 1 - Math.round(ageWear / 2), 1, 100),
+    recovery: clamp(71 + Math.max(0, 28 - player.age) - Math.max(0, player.age - 34), 1, 100),
+    durability: clamp(74 + Math.round(player.overall / 10) - ageWear, 1, 100),
+  };
+}
+
+function buildHealthProfile(player) {
+  const ageRisk = Math.max(0, player.age - 32);
+
+  return {
+    overallCondition: clamp(80 + Math.round(player.athleticism / 12) - ageRisk, 1, 100),
+    fatigue: clamp(17 + Math.max(0, 30 - player.age), 1, 100),
+    postInjuryCondition: clamp(96 - ageRisk, 1, 100),
+    durability: clamp(70 + Math.round(player.athleticism / 9) - ageRisk, 1, 100),
+    recoveryRate: clamp(74 + Math.round(player.athleticism / 11) - ageRisk, 1, 100),
+    injuryRisk: clamp(28 + Math.round((100 - player.athleticism) / 7) + ageRisk, 1, 100),
+    fatigueBase: clamp(18 + ageRisk, 1, 100),
+    matchFitness: clamp(80 + Math.round(player.athleticism / 13) - ageRisk, 1, 100),
+    painTolerance: clamp(66 + Math.round(player.defense / 10), 1, 100),
+    medicalOutlook: clamp(
+      72 + Math.round((player.potential - player.overall) / 2) - ageRisk,
+      1,
+      100,
+    ),
+  };
+}
+
+function buildMentalAttributes(player, playerIndex) {
+  const starterBonus = playerIndex < 5 ? 4 : playerIndex < 9 ? 1 : -2;
+  const veteranBonus = player.age >= 31 ? 5 : player.age <= 22 ? -2 : 1;
+  const starBonus = player.overall >= 84 ? 5 : player.overall >= 78 ? 2 : 0;
+
+  return {
+    confidence: clamp(player.overall + starterBonus + starBonus, 1, 100),
+    selfControl: clamp(67 + veteranBonus + Math.round(player.defense / 12), 1, 100),
+    concentration: clamp(66 + veteranBonus + Math.round(player.overall / 8), 1, 100),
+    composure: clamp(65 + veteranBonus + starBonus + Math.round(player.overall / 10), 1, 100),
+    determination: clamp(70 + starBonus + Math.round(player.athleticism / 12), 1, 100),
+    workEthic: clamp(72 + Math.round(player.potential - player.overall) + starterBonus, 1, 100),
+    professionalism: clamp(68 + veteranBonus + Math.round(player.overall / 10), 1, 100),
+    leadership: clamp(55 + veteranBonus * 2 + starBonus + Math.round(player.passing / 10), 1, 100),
+    aggressiveness: clamp(58 + Math.round(player.defense / 8), 1, 100),
+    competitiveness: clamp(70 + starterBonus + starBonus, 1, 100),
+    teamwork: clamp(68 + Math.round(player.passing / 9), 1, 100),
+    teamOrientation: clamp(69 + Math.round(player.passing / 10), 1, 100),
+    loyalty: clamp(62 + veteranBonus + (player.overall >= 85 ? -3 : 2), 1, 100),
+    ego: clamp(45 + starBonus * 2 + Math.round(player.shooting / 12), 1, 100),
+    clutchFactor: clamp(
+      62 + starBonus * 2 + starterBonus + Math.round(player.shooting / 12),
+      1,
+      100,
+    ),
+  };
+}
+
+function buildHiddenAttributes(player, playerIndex) {
+  const rotationBonus = playerIndex < 5 ? 4 : playerIndex < 10 ? 1 : -3;
+  const prospectBonus = player.age <= 23 ? 5 : 0;
+
+  return {
+    consistency: clamp(64 + rotationBonus + Math.round(player.overall / 8), 1, 100),
+    injuryProneness: clamp(
+      38 + Math.max(0, player.age - 31) + Math.round((100 - player.athleticism) / 12),
+      1,
+      100,
+    ),
+    importantMatches: clamp(63 + rotationBonus + Math.round(player.overall / 7), 1, 100),
+    wantsToLeave: clamp(22 + (player.overall >= 84 ? 8 : 0) - rotationBonus, 1, 100),
+    declineResistance: clamp(
+      60 + Math.round(player.overall / 9) - Math.max(0, player.age - 33),
+      1,
+      100,
+    ),
+    adaptability: clamp(66 + Math.round(player.passing / 12) + prospectBonus, 1, 100),
+    discipline: clamp(66 + Math.round(player.defense / 12), 1, 100),
+    ambition: clamp(70 + prospectBonus + Math.round(player.potential - player.overall), 1, 100),
+    resilience: clamp(68 + rotationBonus + Math.round(player.defense / 12), 1, 100),
+    pressureHandling: clamp(63 + rotationBonus + Math.round(player.overall / 8), 1, 100),
+    setbackResponse: clamp(66 + prospectBonus + Math.round(player.overall / 10), 1, 100),
+  };
+}
+
+function buildTacticalAttributes(player) {
+  const guardSkill = player.position === PlayerPosition.PG || player.position === PlayerPosition.SG;
+  const bigSkill = player.position === PlayerPosition.PF || player.position === PlayerPosition.C;
+
+  return {
+    basketballIQ: clamp(
+      64 + Math.round(player.overall / 6) + Math.round(player.passing / 15),
+      1,
+      100,
+    ),
+    courtVision: clamp(player.passing + (guardSkill ? 5 : bigSkill ? -4 : 1), 1, 100),
+    defenseReading: clamp(player.defense + Math.round(player.overall / 18), 1, 100),
+    offenseReading: clamp(Math.round((player.shooting + player.passing) / 2) + 2, 1, 100),
+    decisionMaking: clamp(Math.round((player.passing + player.overall) / 2), 1, 100),
+    shotSelection: clamp(Math.round((player.shooting + player.overall) / 2), 1, 100),
+    offBallMovement: clamp(player.shooting + (guardSkill ? 2 : 0), 1, 100),
+    spacing: clamp(player.shooting + (bigSkill ? -5 : 3), 1, 100),
+    pickAndRollOffense: clamp(player.passing + (guardSkill ? 4 : bigSkill ? 1 : 0), 1, 100),
+    pickAndRollDefense: clamp(player.defense + (bigSkill ? 3 : 0), 1, 100),
+    helpDefense: clamp(player.defense + (bigSkill ? 4 : 1), 1, 100),
+    discipline: clamp(68 + Math.round(player.defense / 11), 1, 100),
+    helpDefenseAwareness: clamp(player.defense + (bigSkill ? 5 : 1), 1, 100),
+    offBallAwareness: clamp(Math.round((player.shooting + player.defense) / 2), 1, 100),
+    pickAndRollRead: clamp(
+      Math.round((player.passing + player.defense) / 2) + (guardSkill ? 4 : 0),
+      1,
+      100,
+    ),
+    spacingSense: clamp(player.shooting + (bigSkill ? -4 : 3), 1, 100),
+    playDiscipline: clamp(69 + Math.round(player.passing / 12), 1, 100),
+    foulDiscipline: clamp(69 + Math.round(player.defense / 12), 1, 100),
+    transitionInstincts: clamp(Math.round((player.athleticism + player.passing) / 2), 1, 100),
+  };
+}
+
+function buildPotentialProfile(player) {
+  return {
+    potential: player.potential,
+    potentialAbility: player.potential,
+    currentAbility: player.overall,
+    growthRate: clamp(68 + Math.round((player.potential - player.overall) * 2), 1, 100),
+    developmentFocus:
+      player.position === PlayerPosition.C
+        ? 'REBOUNDING'
+        : player.position === PlayerPosition.PG
+          ? 'PLAYMAKING'
+          : player.shooting >= player.defense
+            ? 'SCORING'
+            : 'DEFENSE',
+    peakStartAge: clamp(player.age - 1, 20, 28),
+    peakEndAge: clamp(player.age + 5, 24, 34),
+    declineStartAge: clamp(player.age + 8, 27, 37),
+    learningAbility: clamp(
+      70 + Math.round(player.potential - player.overall) + (player.age <= 23 ? 6 : 0),
+      1,
+      100,
+    ),
+    peakWindowStart: clamp(player.age - 1, 20, 28),
+    peakWindowEnd: clamp(player.age + 5, 24, 34),
+    ceilingTier: clamp(Math.round((player.potential + player.overall) / 2), 1, 100),
+    readiness: clamp(Math.round(player.overall * 0.72 + player.potential * 0.28), 1, 100),
+  };
+}
+
+function buildReputationProfile(player) {
+  const awardBonus = Math.min(8, player.awards.length * 2);
+
+  return {
+    reputation: clamp(Math.round(player.overall * 0.88) + awardBonus, 1, 100),
+    hiddenReputation: clamp(Math.round(player.overall * 0.88) + awardBonus, 1, 100),
+    leagueReputation: clamp(Math.round(player.overall * 0.87) + awardBonus, 1, 100),
+    internationalReputation: clamp(
+      Math.round(player.overall * 0.78) + Math.round(awardBonus / 2),
+      1,
+      100,
+    ),
+    starPower: clamp(Math.round(player.overall * 0.84) + awardBonus, 1, 100),
+    fanAppeal: clamp(Math.round(player.overall * 0.82) + awardBonus, 1, 100),
+    mediaHandling: clamp(66 + Math.round(player.overall / 8), 1, 100),
+    mediaAppeal: clamp(Math.round(player.overall * 0.83) + awardBonus, 1, 100),
+    agentInfluence: clamp(
+      52 + Math.round(player.overall / 10) + Math.round(awardBonus / 2),
+      1,
+      100,
+    ),
+  };
+}
+
+function buildSocialProfile(player) {
+  const followersCount =
+    player.social.followersCount ??
+    Math.max(
+      1200,
+      Math.round(player.overall * player.overall * 38 + Math.max(0, player.overall - 70) * 4200),
+    );
+
+  return {
+    platform:
+      player.social.platform ??
+      (player.overall >= 85 ? 'INSTAGRAM' : player.overall >= 78 ? 'TELEGRAM' : 'VK'),
+    nickname: `@${buildPlayerSlug(player.name) || 'player_profile'}`,
+    followersCount,
+    followerGrowthWeekly: player.social.followerGrowthWeekly ?? Math.round(followersCount * 0.018),
+    engagementRate: clamp(
+      Number((2.4 + Math.max(0, player.overall - 60) * 0.09).toFixed(1)),
+      0,
+      100,
+    ),
+    audienceSentiment:
+      player.overall >= 82 ? 'SUPPORTIVE' : player.overall >= 72 ? 'POSITIVE' : 'MIXED',
+    mediaStatus:
+      player.overall >= 88
+        ? 'ICON'
+        : player.overall >= 84
+          ? 'LEAGUE_STAR'
+          : player.overall >= 76
+            ? 'NATIONAL_NAME'
+            : player.overall >= 68
+              ? 'LOCAL_BUZZ'
+              : 'LOW_PROFILE',
+    hypeScore: clamp(
+      Math.round(player.overall * 0.88) + Math.min(10, player.awards.length * 2),
+      1,
+      100,
+    ),
+    controversyScore: clamp(Math.round(18 + Math.max(0, 78 - player.overall) * 0.45), 1, 100),
+    marketabilityScore: clamp(
+      Math.round(player.overall * 0.84) + Math.min(10, player.awards.length * 2),
+      1,
+      100,
+    ),
+    lastUpdatedAt: new Date(),
+  };
+}
+
+function buildCareerHistoryEntries(player, season, team) {
+  const previousRole =
+    player.overall >= 84 ? 'Team leader' : player.overall >= 77 ? 'Rotation' : 'Development';
+
+  return [
+    {
+      season: { connect: { id: season.id } },
+      team: { connect: { id: team.id } },
+      seasonLabel: getCurrentSeasonLabel(),
+      league: 'VTB United League',
+      role: player.role,
+      jerseyNumber: null,
+      status: 'ACTIVE',
+      transferDate: new Date('2025-09-01T00:00:00.000Z'),
+      transferReason: 'Current season roster assignment',
+      achievements: player.careerAchievements,
+    },
+    {
+      team: { connect: { id: team.id } },
+      seasonLabel: '2024/25',
+      league: 'VTB United League',
+      role: previousRole,
+      jerseyNumber: null,
+      status: 'FORMER',
+      transferDate: new Date('2024-09-01T00:00:00.000Z'),
+      transferReason: 'Previous season record',
+      achievements: player.awards
+        .filter(([seasonLabel]) => seasonLabel === '2024/25' || seasonLabel === '2023/24')
+        .map(([, , description]) => description),
+    },
+  ];
+}
+
+function buildAwardEntries(player, season, team) {
+  return player.awards.map(([seasonLabel, awardType, description]) => ({
+    ...(seasonLabel === getCurrentSeasonLabel() ? { season: { connect: { id: season.id } } } : {}),
+    team: { connect: { id: team.id } },
+    seasonLabel,
+    awardType,
+    league: 'VTB United League',
+    description,
+  }));
+}
+
 async function seed() {
   const seededTeams = [];
+  const currentSeasonLabel = getCurrentSeasonLabel();
+  const currentSeason = await prisma.season.upsert({
+    where: { id: CURRENT_SEASON_ID },
+    update: {
+      name: `VTB United League ${currentSeasonLabel}`,
+      year: Number(currentSeasonLabel.slice(0, 4)),
+      status: 'IN_PROGRESS',
+    },
+    create: {
+      id: CURRENT_SEASON_ID,
+      name: `VTB United League ${currentSeasonLabel}`,
+      year: Number(currentSeasonLabel.slice(0, 4)),
+      status: 'IN_PROGRESS',
+      currentRound: 1,
+    },
+  });
+  const oldSeededPlayers = await prisma.player.findMany({
+    select: { id: true },
+  });
+
+  if (oldSeededPlayers.length > 0) {
+    await prisma.player.deleteMany({
+      where: {
+        id: {
+          in: oldSeededPlayers.map((player) => player.id),
+        },
+      },
+    });
+  }
 
   for (const [teamIndex, teamSeed] of teamSeeds.entries()) {
     const team = await prisma.team.upsert({
@@ -605,12 +1330,6 @@ async function seed() {
     seededTeams.push(team);
     const roster = buildRoster(teamSeed, teamIndex);
 
-    await prisma.player.deleteMany({
-      where: {
-        teamId: team.id,
-      },
-    });
-
     for (const [playerIndex, player] of roster.entries()) {
       await prisma.player.create({
         data: {
@@ -628,194 +1347,45 @@ async function seed() {
           overall: player.overall,
           potential: player.potential,
           teamId: team.id,
+          technicalAttributes: {
+            create: buildTechnicalAttributes(player),
+          },
           physicalProfile: {
-            create: {
-              ...player.physicalProfile,
-              standingReachCm: player.physicalProfile.heightCm + 53,
-              speed: clamp(player.athleticism + 3, 1, 100),
-              acceleration: clamp(player.athleticism + 4, 1, 100),
-              strength: clamp(Math.round((player.defense + player.rebounding) / 2), 1, 100),
-              explosiveness: clamp(player.athleticism + 5, 1, 100),
-              agility: clamp(player.athleticism + 2, 1, 100),
-              balance: clamp(player.athleticism + 2, 1, 100),
-              coordination: clamp(player.athleticism + 3, 1, 100),
-              reaction: clamp(player.athleticism + 4, 1, 100),
-              vertical: clamp(player.athleticism + 1, 1, 100),
-              stamina: clamp(player.athleticism + 2, 1, 100),
-              endurance: clamp(player.athleticism + 1, 1, 100),
-              recovery: clamp(71 + Math.max(0, 28 - player.age), 1, 100),
-              durability: clamp(68 + Math.max(0, player.age - 24), 1, 100),
-            },
+            create: buildPhysicalProfile(player),
           },
           healthProfile: {
-            create: {
-              overallCondition: clamp(82 + Math.round(player.athleticism / 10), 1, 100),
-              fatigue: 18,
-              postInjuryCondition: 100,
-              durability: clamp(72 + Math.round(player.athleticism / 8), 1, 100),
-              recoveryRate: clamp(74 + Math.round(player.athleticism / 10), 1, 100),
-              injuryRisk: clamp(32 + Math.round((100 - player.athleticism) / 8), 1, 100),
-              fatigueBase: 20,
-              matchFitness: clamp(80 + Math.round(player.athleticism / 12), 1, 100),
-              painTolerance: clamp(68 + Math.round(player.athleticism / 10), 1, 100),
-              medicalOutlook: 72,
-            },
+            create: buildHealthProfile(player),
           },
           mentalAttributes: {
-            create: {
-              confidence: 72,
-              selfControl: 70,
-              concentration: 71,
-              composure: 70,
-              determination: 74,
-              workEthic: 76,
-              professionalism: 72,
-              leadership: 66,
-              aggressiveness: 64,
-              competitiveness: 73,
-              teamwork: 75,
-              teamOrientation: 75,
-              loyalty: 68,
-              ego: 55,
-              clutchFactor: 67,
-            },
+            create: buildMentalAttributes(player, playerIndex),
           },
           hiddenAttributes: {
-            create: {
-              consistency: 69,
-              injuryProneness: 45,
-              importantMatches: 70,
-              wantsToLeave: 28,
-              declineResistance: 64,
-              adaptability: 71,
-              discipline: 70,
-              ambition: 76,
-              resilience: 72,
-              pressureHandling: 68,
-              setbackResponse: 72,
-            },
+            create: buildHiddenAttributes(player, playerIndex),
           },
           tacticalAttributes: {
-            create: {
-              basketballIQ: 74,
-              courtVision: 73,
-              defenseReading: 70,
-              offenseReading: 72,
-              decisionMaking: 72,
-              shotSelection: 71,
-              offBallMovement: 70,
-              spacing: 71,
-              pickAndRollOffense: 70,
-              pickAndRollDefense: 69,
-              helpDefense: 70,
-              discipline: 74,
-              helpDefenseAwareness: 70,
-              offBallAwareness: 70,
-              pickAndRollRead: 70,
-              spacingSense: 71,
-              playDiscipline: 74,
-              foulDiscipline: 73,
-              transitionInstincts: 71,
-            },
+            create: buildTacticalAttributes(player),
           },
           potentialProfile: {
-            create: {
-              potential: player.potential,
-              potentialAbility: player.potential,
-              currentAbility: player.overall,
-              growthRate: clamp(72 + Math.round((player.potential - player.overall) / 4), 1, 100),
-              developmentFocus: 'BALANCED',
-              peakStartAge: clamp(player.age - 1, 20, 28),
-              peakEndAge: clamp(player.age + 5, 24, 34),
-              declineStartAge: clamp(player.age + 8, 27, 37),
-              learningAbility: 74,
-              peakWindowStart: clamp(player.age - 1, 20, 28),
-              peakWindowEnd: clamp(player.age + 5, 24, 34),
-              ceilingTier: clamp(Math.round((player.potential + player.overall) / 2), 1, 100),
-              readiness: clamp(Math.round(player.overall * 0.7 + player.potential * 0.3), 1, 100),
-            },
+            create: buildPotentialProfile(player),
           },
           reputationProfile: {
-            create: {
-              reputation: clamp(Math.round(player.overall * 0.88), 1, 100),
-              hiddenReputation: clamp(Math.round(player.overall * 0.88), 1, 100),
-              leagueReputation: clamp(Math.round(player.overall * 0.86), 1, 100),
-              internationalReputation: clamp(Math.round(player.overall * 0.78), 1, 100),
-              starPower: clamp(Math.round(player.overall * 0.84), 1, 100),
-              fanAppeal: clamp(Math.round(player.overall * 0.82), 1, 100),
-              mediaHandling: clamp(66 + Math.round(player.overall / 8), 1, 100),
-              mediaAppeal: clamp(Math.round(player.overall * 0.83), 1, 100),
-              agentInfluence: clamp(52 + Math.round(player.overall / 10), 1, 100),
-            },
+            create: buildReputationProfile(player),
           },
           socialProfile: {
-            create: {
-              platform: player.overall >= 85 ? 'INSTAGRAM' : player.overall >= 78 ? 'TELEGRAM' : 'VK',
-              nickname: (() => {
-                const slug = player.name
-                  .trim()
-                  .toLowerCase()
-                  .replace(/[^a-z0-9]+/g, '_')
-                  .replace(/^_+|_+$/g, '')
-                  .slice(0, 24);
-
-                return `@${slug || 'player_profile'}`;
-              })(),
-              followersCount: Math.max(
-                1200,
-                Math.round(
-                  player.overall * player.overall * 38 +
-                    Math.max(0, player.overall - 70) * 4200,
-                ),
-              ),
-              followerGrowthWeekly: Math.round(
-                Math.max(
-                  1200,
-                  player.overall * player.overall * 38 +
-                    Math.max(0, player.overall - 70) * 4200,
-                ) * 0.018,
-              ),
-              engagementRate: clamp(
-                Number((2.4 + Math.max(0, player.overall - 60) * 0.09).toFixed(1)),
-                0,
-                100,
-              ),
-              audienceSentiment:
-                player.overall >= 82 ? 'SUPPORTIVE' : player.overall >= 72 ? 'POSITIVE' : 'MIXED',
-              mediaStatus:
-                player.overall >= 90
-                  ? 'ICON'
-                  : player.overall >= 84
-                    ? 'LEAGUE_STAR'
-                    : player.overall >= 76
-                      ? 'NATIONAL_NAME'
-                      : player.overall >= 68
-                        ? 'LOCAL_BUZZ'
-                        : 'LOW_PROFILE',
-              hypeScore: clamp(Math.round(player.overall * 0.86), 1, 100),
-              controversyScore: clamp(
-                Math.round(18 + Math.max(0, 78 - player.overall) * 0.45),
-                1,
-                100,
-              ),
-              marketabilityScore: clamp(Math.round(player.overall * 0.82), 1, 100),
-              lastUpdatedAt: new Date(),
-            },
+            create: buildSocialProfile(player),
           },
           careerHistory: {
-            create: {
-              seasonLabel: getCurrentSeasonLabel(),
-              league: 'VTB United League',
-              role: 'Roster',
-              jerseyNumber: null,
-              status: 'ACTIVE',
-              transferDate: new Date(),
-              transferReason: 'Initial roster assignment',
-              achievements: [],
-            },
+            create: buildCareerHistoryEntries(player, currentSeason, team),
+          },
+          awards: {
+            create: buildAwardEntries(player, currentSeason, team),
           },
           seasonStats: {
-            create: buildSeasonStatLine(player, playerIndex),
+            create: {
+              ...buildSeasonStatLine(player, playerIndex),
+              season: { connect: { id: currentSeason.id } },
+              team: { connect: { id: team.id } },
+            },
           },
         },
       });
